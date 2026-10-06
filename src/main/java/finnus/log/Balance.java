@@ -1,6 +1,7 @@
 package finnus.log;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 
 /** Represents the balance value */
 public class Balance {
@@ -17,7 +18,8 @@ public class Balance {
         return value.compareTo(new BigDecimal(0)) < 0;
     }
 
-    /** Throws an IllegalArgumentException if the value is negative 
+    /** 
+     * Throws an IllegalArgumentException if the value is negative 
      * 
      *  @param value The BigDecimal value to check
      *  @throws IllegalArgumentException if the value is negative 
@@ -53,5 +55,33 @@ public class Balance {
     /** Returns the balance as a BigDecimal value */
     public BigDecimal getBalance() {
         return balance;
+    }
+
+    /** 
+     * Calculates the balance from lists of deposits and withdrawals,
+     * then return it
+     */
+    public BigDecimal getBalance(ArrayList<BigDecimal> deposits, ArrayList<BigDecimal> withdrawals) {
+        BigDecimal listBalance = balanceFromLists(deposits, withdrawals);
+
+        return listBalance;
+    }
+
+    /** 
+     * Returns balance from lists of deposits and withdrawals
+     * 
+     * @param deposits The list of deposits as BigDecimal values
+     * @param withdrawals  The list of withdrawals as BigDecimal values
+     */
+    private BigDecimal balanceFromLists(ArrayList<BigDecimal> deposits, ArrayList<BigDecimal> withdrawals) {
+        BigDecimal depositTotal = deposits.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal withdrawalTotal = withdrawals.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return depositTotal.subtract(withdrawalTotal);
+    }
+
+    /** Print balance, currently in balance */
+    public void printBalance() {
+        System.out.println("Your balance is: $" + balance);
     }
 }
