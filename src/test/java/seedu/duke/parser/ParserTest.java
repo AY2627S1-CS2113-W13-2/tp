@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 import seedu.duke.command.DepositCommand;
@@ -82,9 +84,10 @@ class ParserTest {
 
     @Test
     public void parseAmount_validAmounts_parsedCorrectly() throws FinNusException {
-        assertEquals(4.5, Parser.parseAmount("4.50", FORMAT));
-        assertEquals(500, Parser.parseAmount("500", FORMAT));
-        assertEquals(0.01, Parser.parseAmount("0.01", FORMAT));
+        assertEquals(new BigDecimal("4.50"), Parser.parseAmount("4.50", FORMAT));
+        assertEquals(new BigDecimal("500"), Parser.parseAmount("500", FORMAT));
+        assertEquals(new BigDecimal("0.01"), Parser.parseAmount("0.01", FORMAT));
+        assertEquals(new BigDecimal("1000000"), Parser.parseAmount("1000000", FORMAT));
     }
 
     @Test

@@ -1,5 +1,7 @@
 package seedu.duke.parser;
 
+import java.math.BigDecimal;
+
 import seedu.duke.command.Command;
 import seedu.duke.command.DepositCommand;
 import seedu.duke.command.ExitCommand;
@@ -14,7 +16,7 @@ public class Parser {
     public static final String DESCRIPTION_PREFIX = "d/";
 
     /** Amounts above this are almost certainly typos for a student budget. */
-    public static final double MAX_AMOUNT = 1_000_000;
+    public static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000");
 
     private static final String DEPOSIT_FORMAT = "deposit AMOUNT [d/DESCRIPTION]";
     private static final String WITHDRAW_FORMAT = "withdraw AMOUNT d/DESCRIPTION";
@@ -47,13 +49,13 @@ public class Parser {
 
     private static Command parseDeposit(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, DEPOSIT_FORMAT);
-        double amount = parseAmount(amountAndDescription[0], DEPOSIT_FORMAT);
+        BigDecimal amount = parseAmount(amountAndDescription[0], DEPOSIT_FORMAT);
         return new DepositCommand(amount, amountAndDescription[1]);
     }
 
     private static Command parseWithdraw(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, WITHDRAW_FORMAT);
-        double amount = parseAmount(amountAndDescription[0], WITHDRAW_FORMAT);
+        BigDecimal amount = parseAmount(amountAndDescription[0], WITHDRAW_FORMAT);
         String description = amountAndDescription[1];
         if (description.isEmpty()) {
             throw new FinNusException("A withdrawal needs a description so you know what you spent on.\n"
@@ -101,12 +103,12 @@ public class Parser {
     }
 
     /**
-     * Converts text such as {@code "4.50"} into a positive amount with at most 2 decimal places.
+     * Converts text such as {@code "4.50"} into an exact positive amount with at most 2 decimal places.
      *
      * @throws FinNusException If the text is missing, not a number, not positive,
      *     has more than 2 decimal places, or is unreasonably large.
      */
-    static double parseAmount(String text, String format) throws FinNusException {
+    static BigDecimal parseAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
@@ -116,11 +118,13 @@ public class Parser {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a positive number with at most 2 decimal places, e.g. 4.50");
         }
-        double amount = Double.parseDouble(text);
-        if (amount <= 0) {
+        // The String constructor keeps the exact value typed, e.g. "4.50" stays 4.50.
+        BigDecimal amount = new BigDecimal(text);
+        if (amount.signum() <= 0) {
             throw new FinNusException("Amount must be greater than 0.");
         }
-        if (amount > MAX_AMOUNT) {
+        // BigDecimal is compared with compareTo, not with < or >.
+        if (amount.compareTo(MAX_AMOUNT) > 0) {
             throw new FinNusException(String.format("Amount must not exceed %,.0f.", MAX_AMOUNT));
         }
         return amount;

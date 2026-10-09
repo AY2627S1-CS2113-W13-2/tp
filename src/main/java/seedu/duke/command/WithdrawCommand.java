@@ -1,5 +1,7 @@
 package seedu.duke.command;
 
+import java.math.BigDecimal;
+
 import seedu.duke.transaction.Transaction;
 import seedu.duke.transaction.TransactionList;
 import seedu.duke.transaction.TransactionType;
@@ -9,10 +11,10 @@ import seedu.duke.ui.Ui;
  * Records money spent, e.g. {@code withdraw 4.50 d/Lunch}.
  */
 public class WithdrawCommand extends Command {
-    private final double amount;
+    private final BigDecimal amount;
     private final String description;
 
-    public WithdrawCommand(double amount, String description) {
+    public WithdrawCommand(BigDecimal amount, String description) {
         assert !description.isBlank() : "A withdrawal must have a description";
         this.amount = amount;
         this.description = description;
