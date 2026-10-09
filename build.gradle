@@ -58,4 +58,6 @@ checkstyle {
 
 run {
     standardInput = System.in
+    // Turn on assert statements so they are checked when running the app via Gradle.
+    enableAssertions = true
 }
