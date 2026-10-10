@@ -92,7 +92,7 @@ public class Parser {
      */
     private static Command parseBalance(String arguments) throws FinNusException {
         if (!arguments.isBlank()) {
-            throw new FinNusException("Invalid argument format.");
+            throw new FinNusException("No arguments are expected.");
         }
         return new BalanceCommand();
     }
