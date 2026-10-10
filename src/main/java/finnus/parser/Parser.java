@@ -76,7 +76,7 @@ public class Parser {
         }
 
         if (length <= 0) {
-            throw new FinNusException("The input length must be positive.");
+            throw new FinNusException("The length must be positive.");
         }
 
         return new RecentTransactionCommand(length);
@@ -129,8 +129,8 @@ public class Parser {
 
     /**
      * Returns the index of the first {@code d/} that starts a word, or -1 if
-     * there is none. This avoids treating text like "and/or" inside a
-     * description as a prefix.
+     *     there is none. This avoids treating text like "and/or" inside a
+     *     description as a prefix.
      */
     private static int findDescriptionPrefix(String arguments) {
         int index = arguments.indexOf(DESCRIPTION_PREFIX);
