@@ -1,8 +1,8 @@
-package seedu.duke.command;
+package finnus.command;
 
-import seedu.duke.exception.FinNusException;
-import seedu.duke.transaction.TransactionList;
-import seedu.duke.ui.Ui;
+import finnus.exception.FinNusException;
+import finnus.transaction.TransactionList;
+import finnus.ui.Ui;
 
 /**
  * Represents one user command that has already been parsed and is ready to run.

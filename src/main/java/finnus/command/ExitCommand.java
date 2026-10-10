@@ -1,7 +1,7 @@
-package seedu.duke.command;
+package finnus.command;
 
-import seedu.duke.transaction.TransactionList;
-import seedu.duke.ui.Ui;
+import finnus.transaction.TransactionList;
+import finnus.ui.Ui;
 
 /**
  * Ends the application.

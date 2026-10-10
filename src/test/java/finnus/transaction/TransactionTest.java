@@ -1,9 +1,8 @@
-package seedu.duke.transaction;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+package finnus.transaction;
 
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 class TransactionTest {

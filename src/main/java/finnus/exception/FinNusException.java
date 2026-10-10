@@ -1,4 +1,4 @@
-package seedu.duke.exception;
+package finnus.exception;
 
 /**
  * Represents an error caused by invalid user input or an invalid application state.

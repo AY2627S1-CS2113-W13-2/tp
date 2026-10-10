@@ -1,4 +1,4 @@
-package seedu.duke.command;
+package finnus.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -6,10 +6,10 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
-import seedu.duke.transaction.Transaction;
-import seedu.duke.transaction.TransactionList;
-import seedu.duke.transaction.TransactionType;
-import seedu.duke.ui.Ui;
+import finnus.transaction.Transaction;
+import finnus.transaction.TransactionList;
+import finnus.transaction.TransactionType;
+import finnus.ui.Ui;
 
 class DepositWithdrawCommandTest {
     private final Ui ui = new Ui();

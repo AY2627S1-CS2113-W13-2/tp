@@ -1,11 +1,11 @@
-package seedu.duke.command;
+package finnus.command;
 
 import java.math.BigDecimal;
 
-import seedu.duke.transaction.Transaction;
-import seedu.duke.transaction.TransactionList;
-import seedu.duke.transaction.TransactionType;
-import seedu.duke.ui.Ui;
+import finnus.transaction.Transaction;
+import finnus.transaction.TransactionList;
+import finnus.transaction.TransactionType;
+import finnus.ui.Ui;
 
 /**
  * Records money spent, e.g. {@code withdraw 4.50 d/Lunch}.

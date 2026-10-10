@@ -1,21 +1,26 @@
-package seedu.duke.parser;
+package finnus.parser;
 
 import java.math.BigDecimal;
 
-import seedu.duke.command.Command;
-import seedu.duke.command.DepositCommand;
-import seedu.duke.command.ExitCommand;
-import seedu.duke.command.WithdrawCommand;
-import seedu.duke.exception.FinNusException;
+import finnus.command.Command;
+import finnus.command.DepositCommand;
+import finnus.command.ExitCommand;
+import finnus.command.WithdrawCommand;
+import finnus.exception.FinNusException;
 
 /**
  * Turns a line typed by the user into a {@link Command} object.
  */
 public class Parser {
-    /** Prefix that marks the start of a description, e.g. {@code d/Lunch}. */
+
+    /**
+     * Prefix that marks the start of a description, e.g. {@code d/Lunch}.
+     */
     public static final String DESCRIPTION_PREFIX = "d/";
 
-    /** Amounts above this are almost certainly typos for a student budget. */
+    /**
+     * Amounts above this are almost certainly typos for a student budget.
+     */
     public static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000");
 
     private static final String DEPOSIT_FORMAT = "deposit AMOUNT [d/DESCRIPTION]";
@@ -26,7 +31,8 @@ public class Parser {
      *
      * @param input The raw text typed by the user.
      * @return The command to execute.
-     * @throws FinNusException If the command word is unknown or its arguments are invalid.
+     * @throws FinNusException If the command word is unknown or its arguments
+     *                         are invalid.
      */
     public static Command parse(String input) throws FinNusException {
         String trimmed = input.trim();
@@ -36,14 +42,14 @@ public class Parser {
         String arguments = parts.length > 1 ? parts[1].trim() : "";
 
         switch (commandWord) {
-        case "deposit":
-            return parseDeposit(arguments);
-        case "withdraw":
-            return parseWithdraw(arguments);
-        case "exit":
-            return new ExitCommand();
-        default:
-            throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
+            case "deposit":
+                return parseDeposit(arguments);
+            case "withdraw":
+                return parseWithdraw(arguments);
+            case "exit":
+                return new ExitCommand();
+            default:
+                throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
         }
     }
 
@@ -65,14 +71,15 @@ public class Parser {
     }
 
     /**
-     * Splits arguments such as {@code "4.50 d/Lunch"} into {@code ["4.50", "Lunch"]}.
-     * The amount and the {@code d/} part may appear in either order.
-     * If there is no {@code d/} part, the description is an empty string.
+     * Splits arguments such as {@code "4.50 d/Lunch"} into
+     * {@code ["4.50", "Lunch"]}. The amount and the {@code d/} part may appear
+     * in either order. If there is no {@code d/} part, the description is an
+     * empty string.
      */
     static String[] splitAmountAndDescription(String arguments, String format) throws FinNusException {
         int prefixIndex = findDescriptionPrefix(arguments);
         if (prefixIndex == -1) {
-            return new String[] {arguments.trim(), ""};
+            return new String[] { arguments.trim(), "" };
         }
 
         String beforePrefix = arguments.substring(0, prefixIndex).trim();
@@ -80,19 +87,21 @@ public class Parser {
 
         if (!beforePrefix.isEmpty()) {
             // "AMOUNT d/DESCRIPTION": everything after d/ is the description.
-            return new String[] {beforePrefix, afterPrefix};
+            return new String[] { beforePrefix, afterPrefix };
         }
-        // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the description.
+        // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
+        // description.
         int lastSpace = afterPrefix.lastIndexOf(' ');
         if (lastSpace == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
-        return new String[] {afterPrefix.substring(lastSpace + 1), afterPrefix.substring(0, lastSpace).trim()};
+        return new String[] { afterPrefix.substring(lastSpace + 1), afterPrefix.substring(0, lastSpace).trim() };
     }
 
     /**
-     * Returns the index of the first {@code d/} that starts a word, or -1 if there is none.
-     * This avoids treating text like "and/or" inside a description as a prefix.
+     * Returns the index of the first {@code d/} that starts a word, or -1 if
+     * there is none. This avoids treating text like "and/or" inside a
+     * description as a prefix.
      */
     private static int findDescriptionPrefix(String arguments) {
         int index = arguments.indexOf(DESCRIPTION_PREFIX);
@@ -103,10 +112,12 @@ public class Parser {
     }
 
     /**
-     * Converts text such as {@code "4.50"} into an exact positive amount with at most 2 decimal places.
+     * Converts text such as {@code "4.50"} into an exact positive amount with
+     * at most 2 decimal places.
      *
-     * @throws FinNusException If the text is missing, not a number, not positive,
-     *     has more than 2 decimal places, or is unreasonably large.
+     * @throws FinNusException If the text is missing, not a number, not
+     *                         positive, has more than 2 decimal places, or is
+     *                         unreasonably large.
      */
     static BigDecimal parseAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
