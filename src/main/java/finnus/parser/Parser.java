@@ -32,7 +32,7 @@ public class Parser {
      * @param input The raw text typed by the user.
      * @return The command to execute.
      * @throws FinNusException If the command word is unknown or its arguments
-     *                         are invalid.
+     * are invalid.
      */
     public static Command parse(String input) throws FinNusException {
         String trimmed = input.trim();
@@ -42,14 +42,14 @@ public class Parser {
         String arguments = parts.length > 1 ? parts[1].trim() : "";
 
         switch (commandWord) {
-            case "deposit":
-                return parseDeposit(arguments);
-            case "withdraw":
-                return parseWithdraw(arguments);
-            case "exit":
-                return new ExitCommand();
-            default:
-                throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
+        case "deposit":
+            return parseDeposit(arguments);
+        case "withdraw":
+            return parseWithdraw(arguments);
+        case "exit":
+            return new ExitCommand();
+        default:
+            throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
         }
     }
 
@@ -79,7 +79,7 @@ public class Parser {
     static String[] splitAmountAndDescription(String arguments, String format) throws FinNusException {
         int prefixIndex = findDescriptionPrefix(arguments);
         if (prefixIndex == -1) {
-            return new String[] { arguments.trim(), "" };
+            return new String[]{arguments.trim(), ""};
         }
 
         String beforePrefix = arguments.substring(0, prefixIndex).trim();
@@ -87,7 +87,7 @@ public class Parser {
 
         if (!beforePrefix.isEmpty()) {
             // "AMOUNT d/DESCRIPTION": everything after d/ is the description.
-            return new String[] { beforePrefix, afterPrefix };
+            return new String[]{beforePrefix, afterPrefix};
         }
         // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
         // description.
@@ -95,7 +95,7 @@ public class Parser {
         if (lastSpace == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
-        return new String[] { afterPrefix.substring(lastSpace + 1), afterPrefix.substring(0, lastSpace).trim() };
+        return new String[]{afterPrefix.substring(lastSpace + 1), afterPrefix.substring(0, lastSpace).trim()};
     }
 
     /**
@@ -116,8 +116,7 @@ public class Parser {
      * at most 2 decimal places.
      *
      * @throws FinNusException If the text is missing, not a number, not
-     *                         positive, has more than 2 decimal places, or is
-     *                         unreasonably large.
+     * positive, has more than 2 decimal places, or is unreasonably large.
      */
     static BigDecimal parseAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
