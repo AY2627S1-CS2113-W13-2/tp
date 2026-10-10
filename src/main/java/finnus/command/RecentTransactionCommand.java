@@ -1,5 +1,6 @@
 package finnus.command;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import finnus.transaction.Transaction;
@@ -10,6 +11,7 @@ import finnus.ui.Ui;
  * Returns a list of the most recent transactions
  */
 public class RecentTransactionCommand extends Command {
+
     private final int length;
 
     /**
@@ -21,7 +23,7 @@ public class RecentTransactionCommand extends Command {
 
     /**
      * Creates a RecentTransactioNCommand with a specified desired length
-     * 
+     *
      * @param length The specified length of the recent transactions list
      */
     public RecentTransactionCommand(int length) {
@@ -30,7 +32,7 @@ public class RecentTransactionCommand extends Command {
 
     /**
      * Returns the transaction details as a String
-     * 
+     *
      * @param index The 1-based index of the transaction
      * @param transaction The transcation to print
      */
@@ -42,11 +44,12 @@ public class RecentTransactionCommand extends Command {
 
     /**
      * Returns the list of recent transactions as a String
-     * 
+     *
      * @param recentTransactions The list of recent transactions to show
      */
     private List<String> getMessageToShow(List<Transaction> recentTransactions) {
-        List<String> messageList = List.of();
+        List<String> messageList = new ArrayList<>();
+
         for (int i = 0; i < recentTransactions.size(); i++) {
             Transaction t = recentTransactions.get(i);
 
@@ -71,6 +74,7 @@ public class RecentTransactionCommand extends Command {
         }
 
         List<String> messageList = getMessageToShow(recentTransactionsList);
+        messageList.add(0, "Here is a list of the recent " + Integer.toString(messageList.size()) + " transaction(s):");
         ui.showMessage(messageList);
     }
 }

@@ -52,7 +52,7 @@ public class TransactionList {
      *     itself. The most recent transaction is at index 0
      *
      * @param length The number of transactions to show, starting from the most
-     * recent one.
+     *     recent one.
      */
     public List<Transaction> getRecentTransactions(int length) {
         // Safeguard against lists of size smaller than length
