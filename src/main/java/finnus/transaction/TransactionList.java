@@ -1,5 +1,6 @@
 package finnus.transaction;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -30,7 +31,7 @@ public class TransactionList {
 
     /**
      * Returns a read-only view of all transactions, so callers cannot modify
-     *     the list directly.
+     * the list directly.
      */
     public List<Transaction> getAll() {
         return List.copyOf(transactions);
@@ -38,7 +39,7 @@ public class TransactionList {
 
     /**
      * Returns an immutable sub-list of transactions.
-     * 
+     *
      * @param start The starting index of the sublist (inclusive)
      * @param end The ending index of the sublist (exclusive)
      */
@@ -48,8 +49,8 @@ public class TransactionList {
 
     /**
      * Returns a read-only list of the most recent transactions of a specified
-     *     length. If the list size is smaller than the length, returns the list
-     *     itself. The most recent transaction is at index 0
+     * length. If the list size is smaller than the length, returns the list
+     * itself. The most recent transaction is at index 0
      *
      * @param length The number of transactions to show, starting from the most
      *     recent one.
@@ -63,4 +64,12 @@ public class TransactionList {
         return subList;
     }
 
+    /**
+     * Calculates the balance from lists of transactions, then return it
+     */
+    public BigDecimal getBalance() {
+        return transactions.stream()
+                .map((Transaction t) -> t.getSignedAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }
