@@ -2,6 +2,7 @@ package finnus.parser;
 
 import java.math.BigDecimal;
 
+import finnus.command.BalanceCommand;
 import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
@@ -49,6 +50,8 @@ public class Parser {
             return parseWithdraw(arguments);
         case "recent":
             return parseRecent(arguments);
+        case "balance":
+            return parseBalance(arguments);
         case "exit":
             return new ExitCommand();
         default:
@@ -80,6 +83,18 @@ public class Parser {
         }
 
         return new RecentTransactionCommand(length);
+    }
+
+    /**
+     * Returns BalanceCommand instance
+     * 
+     * @param arguments is expected to be blank
+     */
+    private static Command parseBalance(String arguments) throws FinNusException {
+        if (!arguments.isBlank()) {
+            throw new FinNusException("Invalid argument format.");
+        }
+        return new BalanceCommand();
     }
 
     private static Command parseDeposit(String arguments) throws FinNusException {
