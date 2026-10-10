@@ -41,7 +41,7 @@ public class Transaction {
     public String getDescription() {
         return description;
     }
-
+    
     /**
      * Returns the effect of this transaction on the balance:
      * positive for a deposit, negative for a withdrawal.
@@ -50,6 +50,13 @@ public class Transaction {
         return type == TransactionType.DEPOSIT ? amount : amount.negate();
     }
 
+    /**
+     * Returns transaction details as string
+     *  
+     * Examples
+     * [DEPOSIT] +100.00 (DESCRIPTION)
+     * [WITHDRAWAL] -50.00 (DESCRIPTION)
+     */
     @Override
     public String toString() {
         String sign = type == TransactionType.DEPOSIT ? "+" : "-";

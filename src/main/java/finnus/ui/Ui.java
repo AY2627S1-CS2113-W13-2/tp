@@ -1,5 +1,6 @@
 package finnus.ui;
 
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -27,10 +28,25 @@ public class Ui {
 
     /**
      * Prints one or more lines between two dividers.
+     * 
+     * @param lines A String[] of messages to show
      */
     public void showMessage(String... lines) {
         System.out.println(DIVIDER);
         for (String line : lines) {
+            System.out.println(line);
+        }
+        System.out.println(DIVIDER);
+    }
+
+    /**
+     * Overload showMessage to accept  a List as input parameter
+     * 
+     * @param lines A List of messages to show
+     */
+    public void showMessage(List<String> lines) {
+        System.out.println(DIVIDER);
+        for (String line: lines) {
             System.out.println(line);
         }
         System.out.println(DIVIDER);
