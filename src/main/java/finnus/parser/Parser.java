@@ -32,7 +32,7 @@ public class Parser {
      * @param input The raw text typed by the user.
      * @return The command to execute.
      * @throws FinNusException If the command word is unknown or its arguments
-     * are invalid.
+     *     are invalid.
      */
     public static Command parse(String input) throws FinNusException {
         String trimmed = input.trim();
@@ -116,7 +116,7 @@ public class Parser {
      * at most 2 decimal places.
      *
      * @throws FinNusException If the text is missing, not a number, not
-     * positive, has more than 2 decimal places, or is unreasonably large.
+     *     positive, has more than 2 decimal places, or is unreasonably large.
      */
     static BigDecimal parseAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
