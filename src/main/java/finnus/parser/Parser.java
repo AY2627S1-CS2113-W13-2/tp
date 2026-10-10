@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
 
@@ -46,11 +47,39 @@ public class Parser {
             return parseDeposit(arguments);
         case "withdraw":
             return parseWithdraw(arguments);
+        case "recent":
+            return parseRecent(arguments);
         case "exit":
             return new ExitCommand();
         default:
             throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
         }
+    }
+
+    /**
+     * Returns RecentTransactionCommand instance
+     * 
+     * @param arguments Either a blank String, or a positive number parsed as a String
+     */
+    private static Command parseRecent(String arguments) throws FinNusException {
+        // Create the RecentTransactionCommand with no length provided
+        if (arguments.isBlank()) {
+            return new RecentTransactionCommand();
+        }
+
+        // Catch invalid argument formats
+        int length;
+        try {
+            length = Integer.parseInt(arguments);
+        } catch (NumberFormatException e) {
+            throw new FinNusException("Invalid argument for recent.");
+        }
+
+        if (length <= 0) {
+            throw new FinNusException("The input length must be positive.");
+        }
+
+        return new RecentTransactionCommand(length);
     }
 
     private static Command parseDeposit(String arguments) throws FinNusException {
