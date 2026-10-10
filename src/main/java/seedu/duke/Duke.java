@@ -1,21 +1,46 @@
 package seedu.duke;
 
-import java.util.Scanner;
+import seedu.duke.command.Command;
+import seedu.duke.exception.FinNusException;
+import seedu.duke.parser.Parser;
+import seedu.duke.transaction.TransactionList;
+import seedu.duke.ui.Ui;
 
+/**
+ * Entry point of FinNUS: reads commands in a loop and executes them until the user exits.
+ */
 public class Duke {
+    private final Ui ui = new Ui();
+    private final TransactionList transactions = new TransactionList();
+
     /**
-     * Main entry-point for the java.duke.Duke application.
+     * Main entry-point for the FinNUS application.
      */
     public static void main(String[] args) {
-        String banner = " ____        _        \n"
-                + "|  _ \\ _   _| | _____ \n"
-                + "| | | | | | | |/ / _ \\\n"
-                + "| |_| | |_| |   <  __/\n"
-                + "|____/ \\__,_|_|\\_\\___|\n";
-        System.out.println(banner);
-        System.out.println("What is your name?");
+        new Duke().run();
+    }
 
-        Scanner in = new Scanner(System.in);
-        System.out.println("Hello " + in.nextLine());
+    /**
+     * Runs the read-parse-execute loop until an exit command is given or input ends.
+     */
+    public void run() {
+        ui.showWelcome();
+        boolean isExit = false;
+        while (!isExit) {
+            String input = ui.readCommand();
+            if (input == null) {
+                break;
+            }
+            if (input.isBlank()) {
+                continue;
+            }
+            try {
+                Command command = Parser.parse(input);
+                command.execute(transactions, ui);
+                isExit = command.isExit();
+            } catch (FinNusException e) {
+                ui.showError(e.getMessage());
+            }
+        }
     }
 }
