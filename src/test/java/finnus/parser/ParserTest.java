@@ -1,19 +1,18 @@
-package seedu.duke.parser;
+package finnus.parser;
+
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.math.BigDecimal;
-
 import org.junit.jupiter.api.Test;
 
-import seedu.duke.command.DepositCommand;
-import seedu.duke.command.ExitCommand;
-import seedu.duke.command.WithdrawCommand;
-import seedu.duke.exception.FinNusException;
+import finnus.command.DepositCommand;
+import finnus.command.ExitCommand;
+import finnus.command.WithdrawCommand;
+import finnus.exception.FinNusException;
 
 class ParserTest {
     private static final String FORMAT = "test format";

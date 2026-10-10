@@ -1,4 +1,4 @@
-package seedu.duke.transaction;
+package finnus.transaction;
 
 import java.math.BigDecimal;
 

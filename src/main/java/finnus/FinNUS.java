@@ -1,15 +1,15 @@
-package seedu.duke;
+package finnus;
 
-import seedu.duke.command.Command;
-import seedu.duke.exception.FinNusException;
-import seedu.duke.parser.Parser;
-import seedu.duke.transaction.TransactionList;
-import seedu.duke.ui.Ui;
+import finnus.command.Command;
+import finnus.exception.FinNusException;
+import finnus.parser.Parser;
+import finnus.transaction.TransactionList;
+import finnus.ui.Ui;
 
 /**
  * Entry point of FinNUS: reads commands in a loop and executes them until the user exits.
  */
-public class Duke {
+public class FinNUS {
     private final Ui ui = new Ui();
     private final TransactionList transactions = new TransactionList();
 
@@ -17,7 +17,7 @@ public class Duke {
      * Main entry-point for the FinNUS application.
      */
     public static void main(String[] args) {
-        new Duke().run();
+        new FinNUS().run();
     }
 
     /**
@@ -44,3 +44,4 @@ public class Duke {
         }
     }
 }
+
