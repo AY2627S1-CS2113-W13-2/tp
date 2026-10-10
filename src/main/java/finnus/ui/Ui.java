@@ -1,4 +1,4 @@
-package seedu.duke.ui;
+package finnus.ui;
 
 import java.util.Scanner;
 
