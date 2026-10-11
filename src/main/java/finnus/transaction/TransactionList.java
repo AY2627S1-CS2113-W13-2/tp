@@ -43,6 +43,7 @@ public class TransactionList {
      * @param end The ending index of the sublist (exclusive)
      */
     public List<Transaction> getSubList(int start, int end) {
+        assert (start < end && start >= 0 && end <= transactions.size());
         return Collections.unmodifiableList(transactions.subList(start, end));
     }
 
