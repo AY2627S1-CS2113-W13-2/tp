@@ -11,9 +11,13 @@ import org.junit.jupiter.api.Test;
 
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.HelpCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
 
+/**
+ * Checks command recognition and argument validation in the parser.
+ */
 class ParserTest {
     private static final String FORMAT = "test format";
 
@@ -51,6 +55,27 @@ class ParserTest {
     @Test
     public void parse_exit_returnsExitCommand() throws FinNusException {
         assertInstanceOf(ExitCommand.class, Parser.parse("exit"));
+    }
+
+    @Test
+    public void parse_help_returnsHelpCommand() throws FinNusException {
+        assertInstanceOf(HelpCommand.class, Parser.parse("help"));
+    }
+
+    @Test
+    public void parse_helpInUpperCase_returnsHelpCommand() throws FinNusException {
+        assertInstanceOf(HelpCommand.class, Parser.parse("HELP"));
+    }
+
+    @Test
+    public void parse_helpWithSurroundingWhitespace_returnsHelpCommand() throws FinNusException {
+        assertInstanceOf(HelpCommand.class, Parser.parse("  help  "));
+    }
+
+    @Test
+    public void parse_helpWithArguments_throwsException() {
+        FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse("help deposit"));
+        assertEquals("The help command does not accept arguments.\nFormat: help", exception.getMessage());
     }
 
     @Test
