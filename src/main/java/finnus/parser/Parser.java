@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.HelpCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
 
@@ -46,6 +47,11 @@ public class Parser {
             return parseDeposit(arguments);
         case "withdraw":
             return parseWithdraw(arguments);
+        case "help":
+            if (!arguments.isEmpty()) {
+                throw new FinNusException("The help command does not accept arguments.\nFormat: help");
+            }
+            return new HelpCommand();
         case "exit":
             return new ExitCommand();
         default:
