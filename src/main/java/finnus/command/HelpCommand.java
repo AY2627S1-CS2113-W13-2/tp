@@ -13,10 +13,12 @@ public class HelpCommand extends Command {
      */
     private static final String[] HELP_LINES = {
         "Available commands:",
-        "  deposit AMOUNT [d/DESCRIPTION] — Record money received.",
-        "  withdraw AMOUNT d/DESCRIPTION — Record money spent.",
-        "  help — Show available commands.",
-        "  exit — Close FinNUS.",
+        "Command  | Description      | Syntax",
+        "---------+------------------+-------------------------------",
+        "deposit  | Record income.   | deposit AMOUNT [d/DESCRIPTION]",
+        "withdraw | Record spending. | withdraw AMOUNT d/DESCRIPTION",
+        "help     | List commands.   | help",
+        "exit     | Close FinNUS.    | exit",
         "",
         "[] means optional."
     };
