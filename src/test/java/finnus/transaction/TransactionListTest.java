@@ -16,7 +16,7 @@ public class TransactionListTest {
     private static Transaction newWithdrawal;
 
     @BeforeEach
-    public static void initEach() {
+    public void initEach() {
         transactions = new TransactionList();
         transactions.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal(100), ""));
         transactions.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(30), "Food"));
