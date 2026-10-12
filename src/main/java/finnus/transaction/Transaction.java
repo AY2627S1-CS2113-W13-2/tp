@@ -54,8 +54,8 @@ public class Transaction {
      * Returns transaction details as string
      *  
      * Examples
-     * [DEPOSIT] +100.00 (DESCRIPTION)
-     * [WITHDRAWAL] -50.00 (DESCRIPTION)
+     * [DEPOSIT] +$100.00 (DESCRIPTION)
+     * [WITHDRAWAL] -$50.00 (DESCRIPTION)
      */
     @Override
     public String toString() {
