@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
@@ -97,5 +99,19 @@ class ParserTest {
             assertThrows(FinNusException.class, () -> Parser.parseAmount(amount, FORMAT),
                     "Expected an exception for amount: '" + amount + "'");
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1 2", "abc", "4.5", "1e3", "NaN", "Infinity"})
+    public void parseRecent_invalidArgumentFormat_throwException(String str) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("recent " + str));
+        assertEquals("Invalid argument for recent.", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "-5"})
+    public void parseRecent_invalidArgumentValue_throwsException(String str) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("recent "+ str));
+        assertEquals("The length must be positive.", e.getMessage());
     }
 }
