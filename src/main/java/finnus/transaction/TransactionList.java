@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import finnus.currency.CurrencyRates;
+
 /**
  * Holds all recorded transactions in the order they were added (oldest first).
  * Other features (balance, recent, delete, storage) should read and modify
@@ -12,6 +14,11 @@ import java.util.List;
 public class TransactionList {
 
     private final List<Transaction> transactions = new ArrayList<>();
+
+    /**
+     * Exchange rates the user has set, used to convert foreign amounts to SGD.
+     */
+    private final CurrencyRates rates = new CurrencyRates();
 
     public void add(Transaction transaction) {
         transactions.add(transaction);
@@ -26,6 +33,10 @@ public class TransactionList {
 
     public int size() {
         return transactions.size();
+    }
+
+    public CurrencyRates getRates() {
+        return rates;
     }
 
     /**
