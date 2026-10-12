@@ -3,6 +3,7 @@ package finnus.parser;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.command.BalanceCommand;
+import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.WithdrawCommand;
@@ -113,5 +116,18 @@ class ParserTest {
     public void parseRecent_invalidArgumentValue_throwsException(String str) {
         FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("recent "+ str));
         assertEquals("The length must be positive.", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"   ", " abc", " 123 abc"})
+    public void parse_validBalanceCommands_returnsBalanceCommand(String str) {
+        Command cmd = assertDoesNotThrow(() -> Parser.parse("balance" + str));
+        assertTrue(cmd instanceof BalanceCommand);
+    }
+
+    @Test
+    public void parse_balanceCommandWithLeadingWhitespace_returnsBalanceCommand() {
+        Command cmd = assertDoesNotThrow(() -> Parser.parse("  balance"));
+        assertTrue(cmd instanceof BalanceCommand);
     }
 }

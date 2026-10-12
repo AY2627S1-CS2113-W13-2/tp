@@ -5,7 +5,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -15,8 +15,8 @@ public class TransactionListTest {
     private static TransactionList transactions;
     private static Transaction newWithdrawal;
 
-    @BeforeAll
-    public static void initAll() {
+    @BeforeEach
+    public static void initEach() {
         transactions = new TransactionList();
         transactions.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal(100), ""));
         transactions.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(30), "Food"));
@@ -58,4 +58,16 @@ public class TransactionListTest {
         assertEquals(2, recentTransactions.size());
     }
 
+    @Test
+    public void getBalance_balance_returnsPositiveBalance() {
+        BigDecimal balance = transactions.getBalance();
+        assertEquals(new BigDecimal(95), balance);
+    }
+
+    @Test
+    public void getBalance_balance_returnsNegativeBalance() {
+        transactions.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(205), ""));
+        BigDecimal balance = transactions.getBalance();
+        assertEquals(new BigDecimal(-110), balance);
+    }
 }
