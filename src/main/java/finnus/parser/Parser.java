@@ -51,7 +51,7 @@ public class Parser {
         case "recent":
             return parseRecent(arguments);
         case "balance":
-            return parseBalance(arguments);
+            return parseBalance();
         case "exit":
             return new ExitCommand();
         default:
@@ -90,10 +90,7 @@ public class Parser {
      * 
      * @param arguments is expected to be blank
      */
-    private static Command parseBalance(String arguments) throws FinNusException {
-        if (!arguments.isBlank()) {
-            throw new FinNusException("No arguments are expected.");
-        }
+    private static Command parseBalance() {
         return new BalanceCommand();
     }
 
