@@ -22,7 +22,7 @@ public class RecentTransactionCommand extends Command {
     }
 
     /**
-     * Creates a RecentTransactioNCommand with a specified desired length
+     * Creates a RecentTransactionCommand with a specified desired length
      *
      * @param length The specified length of the recent transactions list
      */
@@ -34,7 +34,7 @@ public class RecentTransactionCommand extends Command {
      * Returns the transaction details as a String
      *
      * @param index The 1-based index of the transaction
-     * @param transaction The transcation to print
+     * @param transaction The transaction to print
      */
     private String getMessageToAppend(int index, Transaction transaction) {
         String messageToAppend = "";
@@ -68,7 +68,7 @@ public class RecentTransactionCommand extends Command {
         List<Transaction> recentTransactionsList = transactions.getRecentTransactions(length);
 
         // Inform user if transaction list is currently empty
-        if (recentTransactionsList.size() <= 0) {
+        if (recentTransactionsList.isEmpty()) {
             ui.showMessage("Your list of transactions is currently empty.");
             return;
         }
