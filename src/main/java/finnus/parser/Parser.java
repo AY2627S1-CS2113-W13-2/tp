@@ -7,6 +7,7 @@ import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
+import finnus.command.DeleteCommand;
 import finnus.exception.FinNusException;
 
 /**
@@ -51,9 +52,34 @@ public class Parser {
             return parseRecent(arguments);
         case "exit":
             return new ExitCommand();
+        case "delete":
+            return parseDelete(arguments);
         default:
             throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
         }
+    }
+
+    /**
+     * Parses the arguments for the delete command.
+     *
+     * @param arguments The arguments for the delete command.
+     * @return The delete command.
+     * @throws FinNusException If the arguments are invalid.
+     */
+    private static Command parseDelete(String arguments) throws FinNusException {
+        if (arguments.isBlank()) {
+            throw new FinNusException("Missing index of transaction to delete.");
+        }
+        int index;
+        try {
+            index = Integer.parseInt(arguments);
+        } catch (NumberFormatException e) {
+            throw new FinNusException("Invalid argument for delete.");
+        }
+        if (index <= 0) {
+            throw new FinNusException("The index must be positive.");
+        }
+        return new DeleteCommand(index);
     }
 
     /**

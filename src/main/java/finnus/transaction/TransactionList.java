@@ -64,4 +64,13 @@ public class TransactionList {
         return subList;
     }
 
+    /**
+     * Deletes the transaction at the given zero-based index and returns it.
+     *
+     * @param index The zero-based index of the transaction to delete.
+     * @return The deleted transaction.
+     */
+    public Transaction delete(int index) {
+        return transactions.remove(index);
+    }
 }
