@@ -2,6 +2,7 @@ package finnus.parser;
 
 import java.math.BigDecimal;
 import java.util.Currency;
+import java.util.logging.Logger;
 
 import finnus.command.BalanceCommand;
 import finnus.command.Command;
@@ -41,6 +42,8 @@ public class Parser {
     private static final String OPENING_FORMAT = "opening AMOUNT";
     private static final String RATE_FORMAT = "rate [CURRENCY RATE]";
 
+    private static final Logger logger = Logger.getLogger(Parser.class.getName());
+
     /**
      * Parses a full line of user input.
      * Extra arguments for commands that take no parameters, such as help and
@@ -57,6 +60,7 @@ public class Parser {
         String[] parts = trimmed.split("\\s+", 2);
         String commandWord = parts[0].toLowerCase();
         String arguments = parts.length > 1 ? parts[1].trim() : "";
+        logger.fine("Parsing command word '" + commandWord + "' with arguments '" + arguments + "'");
 
         switch (commandWord) {
         case "deposit":

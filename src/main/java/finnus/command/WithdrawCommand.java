@@ -1,6 +1,7 @@
 package finnus.command;
 
 import java.math.BigDecimal;
+import java.util.logging.Logger;
 
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -11,6 +12,8 @@ import finnus.ui.Ui;
  * Records money spent, e.g. {@code withdraw 4.50 d/Lunch}.
  */
 public class WithdrawCommand extends Command {
+    private static final Logger logger = Logger.getLogger(WithdrawCommand.class.getName());
+
     private final BigDecimal amount;
     private final String description;
 
@@ -24,6 +27,7 @@ public class WithdrawCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         Transaction withdrawal = new Transaction(TransactionType.WITHDRAWAL, amount, description);
         transactions.add(withdrawal);
+        logger.info("Added " + withdrawal + ", total transactions: " + transactions.size());
         ui.showMessage("Withdrawal added:", "  " + withdrawal,
                 "You now have " + transactions.size() + " transaction(s).");
     }
