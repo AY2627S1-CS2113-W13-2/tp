@@ -3,14 +3,15 @@ package finnus.parser;
 import java.math.BigDecimal;
 import java.util.Currency;
 
+import finnus.command.BalanceCommand;
 import finnus.command.Command;
+import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
-import finnus.command.DeleteCommand;
 import finnus.currency.CurrencyRates;
 import finnus.exception.FinNusException;
 
@@ -63,6 +64,8 @@ public class Parser {
             return parseRecent(arguments);
         case "opening":
             return parseOpening(arguments);
+        case "balance":
+            return parseBalance();
         case "exit":
             return new ExitCommand();
         case "delete":
@@ -186,6 +189,15 @@ public class Parser {
             throw new FinNusException(String.format("Rate must not exceed %,.0f.", MAX_RATE));
         }
         return rate;
+    }
+
+    /**
+     * Returns BalanceCommand instance
+     * 
+     * @param arguments is expected to be blank
+     */
+    private static Command parseBalance() {
+        return new BalanceCommand();
     }
 
     private static Command parseDeposit(String arguments) throws FinNusException {
