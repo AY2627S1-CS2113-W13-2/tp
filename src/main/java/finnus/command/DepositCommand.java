@@ -1,6 +1,7 @@
 package finnus.command;
 
 import java.math.BigDecimal;
+import java.util.logging.Logger;
 
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -11,6 +12,8 @@ import finnus.ui.Ui;
  * Records money received, e.g. {@code deposit 500 d/Monthly Allowance}.
  */
 public class DepositCommand extends Command {
+    private static final Logger logger = Logger.getLogger(DepositCommand.class.getName());
+
     private final BigDecimal amount;
     private final String description;
 
@@ -30,6 +33,7 @@ public class DepositCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         Transaction deposit = new Transaction(TransactionType.DEPOSIT, amount, description);
         transactions.add(deposit);
+        logger.info("Added " + deposit + ", total transactions: " + transactions.size());
         ui.showMessage("Deposit added:", "  " + deposit,
                 "You now have " + transactions.size() + " transaction(s).");
     }

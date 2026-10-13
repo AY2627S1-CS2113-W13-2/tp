@@ -21,3 +21,7 @@ text-ui-test/EXPECTED-UNIX.TXT
 
 # VS Code files
 /.vscode/
+
+# FinNUS log files
+*.log
+*.log.lck
