@@ -77,6 +77,11 @@ public class TransactionList {
      *     recent one.
      */
     public List<Transaction> getRecentTransactions(int length) {
+        // Safeguard against empty transactions list
+        if (transactions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         // Safeguard against lists of size smaller than length
         int fromIndex = Math.max(0, transactions.size() - length);
 
