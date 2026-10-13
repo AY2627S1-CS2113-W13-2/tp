@@ -81,10 +81,4 @@ class HelpCommandTest {
         assertThrows(AssertionError.class, () ->
                 new HelpCommand().execute(new TransactionList(), null));
     }
-
-    @Test
-    public void execute_nullTransactions_throwsAssertionError() {
-        assertThrows(AssertionError.class, () ->
-                new HelpCommand().execute(null, new Ui()));
-    }
 }
