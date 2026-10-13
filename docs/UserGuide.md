@@ -15,19 +15,117 @@
 
 {Give detailed description of each feature}
 
-### Adding a todo: `todo`
-Adds a new item to the list of todo items.
+### Adding a deposit: `deposit`
+Records money you receive, such as your monthly allowance, and adds it to your balance.
 
-Format: `todo n/TODO_NAME d/DEADLINE`
+Format: `deposit AMOUNT [d/DESCRIPTION]`
 
-* The `DEADLINE` can be in a natural language format.
-* The `TODO_NAME` cannot contain punctuation.  
+* `AMOUNT` is in SGD and must be a positive number with at most 2 decimal places, e.g. `500`, `12.5` or `4.50`.
+* `AMOUNT` must not be more than `1000000`. Do not include `$` or commas.
+* `DESCRIPTION` is optional. Everything after `d/` is taken as the description.
+* `AMOUNT` and `d/DESCRIPTION` can be given in either order.
 
-Example of usage: 
+Examples:
 
-`todo n/Write the rest of the User Guide d/next week`
+* `deposit 500 d/Monthly Allowance`
+* `deposit d/Part-time job 120.50`
+* `deposit 50`
 
-`todo n/Refactor the User Guide to remove passive voice d/13/04/2020`
+Expected output for `deposit 500 d/Monthly Allowance`:
+```
+____________________________________________________________
+Deposit added:
+  [Deposit] +$500.00 (Monthly Allowance)
+You now have 1 transaction(s).
+____________________________________________________________
+```
+
+### Adding a withdrawal: `withdraw`
+Records money you spend and removes it from your balance.
+
+Format: `withdraw AMOUNT d/DESCRIPTION`
+
+* `AMOUNT` follows the same rules as for `deposit`.
+* `DESCRIPTION` is required, so you always know what the money was spent on.
+* `AMOUNT` and `d/DESCRIPTION` can be given in either order.
+
+Examples:
+
+* `withdraw 4.50 d/Lunch`
+* `withdraw d/Chicken rice 4.50`
+
+Expected output for `withdraw 4.50 d/Lunch`:
+```
+____________________________________________________________
+Withdrawal added:
+  [Withdrawal] -$4.50 (Lunch)
+You now have 2 transaction(s).
+____________________________________________________________
+```
+
+Example of an invalid command, `withdraw 4.50` (no description):
+```
+____________________________________________________________
+Error: A withdrawal needs a description so you know what you spent on.
+Format: withdraw AMOUNT d/DESCRIPTION
+____________________________________________________________
+```
+
+### Setting your opening balance: `opening`
+Sets how much money you had before you started using FinNUS, so your balance starts from an accurate figure.
+
+Format: `opening AMOUNT`
+
+* `AMOUNT` follows the same rules as for `deposit`, except that `0` is also allowed.
+* If you never set it, your opening balance is `0`.
+* Running `opening` again replaces the previous value. It does not add a transaction, so it will not show up in `recent` and cannot be removed with `delete`.
+* Changing the opening balance also changes your balance by the same difference, even if you have already recorded transactions.
+
+Examples:
+
+* `opening 1200.50`
+* `opening 0` (resets the opening balance)
+
+Expected output for `opening 1200.50` after recording a deposit of `500` and a withdrawal of `4.50`:
+```
+____________________________________________________________
+Opening balance updated: $0.00 -> $1200.50
+Your balance is now $1696.00.
+Note: this also changes the balance for your 2 existing transaction(s).
+____________________________________________________________
+```
+
+### Setting an exchange rate: `rate`
+Sets how much of another currency 1 SGD buys, so FinNUS can convert amounts in that currency to SGD.
+Rates are entered by you rather than fetched online, so FinNUS works without internet.
+
+Format: `rate CURRENCY RATE` to set a rate, or `rate` to list all rates.
+
+* `CURRENCY` is a 3-letter currency code such as `JPY`, `USD` or `MYR`, in upper or lower case. `SGD` cannot be given a rate, because all amounts are already in SGD.
+* `RATE` is how many units of `CURRENCY` 1 SGD buys, e.g. `110` for 1 SGD = 110 JPY. It must be a positive number with at most 6 decimal places, and not more than `1000000`.
+* Setting a rate for a currency that already has one replaces the old rate.
+
+Examples:
+
+* `rate JPY 110`
+* `rate usd 0.74`
+* `rate`
+
+Expected output for `rate JPY 110`:
+```
+____________________________________________________________
+Exchange rate set: 1 SGD = 110 JPY
+____________________________________________________________
+```
+
+Expected output for `rate` after setting rates for JPY and MYR:
+```
+____________________________________________________________
+Exchange rates:
+  1 SGD = 110 JPY
+  1 SGD = 3.45 MYR
+____________________________________________________________
+```
 
 ## FAQ
 
@@ -39,4 +137,7 @@ Example of usage:
 
 {Give a 'cheat sheet' of commands here}
 
-* Add todo `todo n/TODO_NAME d/DEADLINE`
+* Add a deposit: `deposit AMOUNT [d/DESCRIPTION]`
+* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION`
+* Set opening balance: `opening AMOUNT`
+* Set or list exchange rates: `rate [CURRENCY RATE]`
