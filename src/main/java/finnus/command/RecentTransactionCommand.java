@@ -2,6 +2,8 @@ package finnus.command;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -11,6 +13,7 @@ import finnus.ui.Ui;
  * Returns a list of the most recent transactions
  */
 public class RecentTransactionCommand extends Command {
+    private static final Logger logger = Logger.getLogger("RecentTransactionCommand");
 
     private final int length;
 
@@ -18,6 +21,9 @@ public class RecentTransactionCommand extends Command {
      * Creates a RecentTransactionCommand with a default length of 5
      */
     public RecentTransactionCommand() {
+        // Log default length set
+        logger.log(Level.INFO, "Setting length to default value");
+
         this.length = 5;
     }
 
@@ -27,6 +33,10 @@ public class RecentTransactionCommand extends Command {
      * @param length The specified length of the recent transactions list
      */
     public RecentTransactionCommand(int length) {
+        // Log specified length
+        String logMessage = "Setting length to " + Integer.toString(length);
+        logger.log(Level.INFO, logMessage);
+
         this.length = length;
     }
 
@@ -64,17 +74,25 @@ public class RecentTransactionCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        logger.log(Level.INFO, "Getting recent transactions");
+
         // Get a list of the most recent transactions with a specified length
         List<Transaction> recentTransactionsList = transactions.getRecentTransactions(length);
 
         // Inform user if transaction list is currently empty
         if (recentTransactionsList.isEmpty()) {
+            logger.log(Level.INFO, "Empty list returned");
+
             ui.showMessage("Your list of transactions is currently empty.");
             return;
         }
 
+        logger.log(Level.INFO, "Generating list of recent transactions");
+
         List<String> messageList = getMessageToShow(recentTransactionsList);
         messageList.add(0, "Here is a list of the recent " + Integer.toString(messageList.size()) + " transaction(s):");
         ui.showMessage(messageList);
+
+        logger.log(Level.INFO, "Successful output of recent transactions");
     }
 }
