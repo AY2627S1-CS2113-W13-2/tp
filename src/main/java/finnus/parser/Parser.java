@@ -1,13 +1,18 @@
 package finnus.parser;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 import finnus.command.BalanceCommand;
 import finnus.command.Command;
+import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.OpeningBalanceCommand;
+import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
+import finnus.currency.CurrencyRates;
 import finnus.exception.FinNusException;
 
 /**
@@ -25,8 +30,15 @@ public class Parser {
      */
     public static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000");
 
+    /**
+     * No real currency is anywhere near 1,000,000 units per SGD, so larger rates are typos.
+     */
+    public static final BigDecimal MAX_RATE = new BigDecimal("1000000");
+
     private static final String DEPOSIT_FORMAT = "deposit AMOUNT [d/DESCRIPTION]";
     private static final String WITHDRAW_FORMAT = "withdraw AMOUNT d/DESCRIPTION";
+    private static final String OPENING_FORMAT = "opening AMOUNT";
+    private static final String RATE_FORMAT = "rate [CURRENCY RATE]";
 
     /**
      * Parses a full line of user input.
@@ -50,13 +62,42 @@ public class Parser {
             return parseWithdraw(arguments);
         case "recent":
             return parseRecent(arguments);
+        case "opening":
+            return parseOpening(arguments);
         case "balance":
             return parseBalance();
         case "exit":
             return new ExitCommand();
+        case "delete":
+            return parseDelete(arguments);
+        case "rate":
+            return parseRate(arguments);
         default:
             throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
         }
+    }
+
+    /**
+     * Parses the arguments for the delete command.
+     *
+     * @param arguments The arguments for the delete command.
+     * @return The delete command.
+     * @throws FinNusException If the arguments are invalid.
+     */
+    private static Command parseDelete(String arguments) throws FinNusException {
+        if (arguments.isBlank()) {
+            throw new FinNusException("Missing index of transaction to delete.");
+        }
+        int index;
+        try {
+            index = Integer.parseInt(arguments);
+        } catch (NumberFormatException e) {
+            throw new FinNusException("Invalid argument for delete.");
+        }
+        if (index <= 0) {
+            throw new FinNusException("The index must be positive.");
+        }
+        return new DeleteCommand(index);
     }
 
     /**
@@ -83,6 +124,71 @@ public class Parser {
         }
 
         return new RecentTransactionCommand(length);
+    }
+
+    /**
+     * Parses {@code opening AMOUNT}. Unlike deposits, 0 is allowed so the user can reset it.
+     */
+    private static Command parseOpening(String arguments) throws FinNusException {
+        BigDecimal amount = parseNonNegativeAmount(arguments, OPENING_FORMAT);
+        return new OpeningBalanceCommand(amount);
+    }
+
+    /**
+     * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set one rate).
+     */
+    private static Command parseRate(String arguments) throws FinNusException {
+        if (arguments.isEmpty()) {
+            return new RateCommand();
+        }
+        String[] parts = arguments.split("\\s+");
+        if (parts.length != 2) {
+            throw new FinNusException("Give a currency and a rate, e.g. rate JPY 110.\nFormat: " + RATE_FORMAT);
+        }
+        return new RateCommand(parseCurrencyCode(parts[0]), parseRateValue(parts[1]));
+    }
+
+    /**
+     * Converts text such as {@code "jpy"} into an upper-case ISO 4217 code such as {@code "JPY"}.
+     *
+     * @throws FinNusException If the code is not a real currency, or is SGD.
+     */
+    static String parseCurrencyCode(String text) throws FinNusException {
+        String code = text.toUpperCase();
+        try {
+            // Java's built-in currency list lets us reject typos such as "JYP" without
+            // maintaining our own list.
+            Currency.getInstance(code);
+        } catch (IllegalArgumentException e) {
+            throw new FinNusException("'" + text + "' is not a valid currency code, e.g. JPY, USD or MYR.");
+        }
+        if (code.equals(CurrencyRates.BASE_CURRENCY)) {
+            throw new FinNusException("Amounts are already in SGD, so SGD does not need a rate.");
+        }
+        return code;
+    }
+
+    /**
+     * Converts text such as {@code "110"} or {@code "0.5425"} into a positive rate
+     * with at most 6 decimal places.
+     *
+     * @throws FinNusException If the text is not a number, not positive, has more
+     *     than 6 decimal places, or is unreasonably large.
+     */
+    static BigDecimal parseRateValue(String text) throws FinNusException {
+        // Rates need more precision than money, e.g. 1 SGD = 0.5425 GBP.
+        if (!text.matches("\\d+(\\.\\d{1,6})?")) {
+            throw new FinNusException("'" + text + "' is not a valid rate. "
+                    + "Use a number with at most 6 decimal places, e.g. 110 or 0.5425");
+        }
+        BigDecimal rate = new BigDecimal(text);
+        if (rate.signum() == 0) {
+            throw new FinNusException("Rate must be greater than 0.");
+        }
+        if (rate.compareTo(MAX_RATE) > 0) {
+            throw new FinNusException(String.format("Rate must not exceed %,.0f.", MAX_RATE));
+        }
+        return rate;
     }
 
     /**
@@ -160,6 +266,22 @@ public class Parser {
      *     positive, has more than 2 decimal places, or is unreasonably large.
      */
     static BigDecimal parseAmount(String text, String format) throws FinNusException {
+        BigDecimal amount = parseNonNegativeAmount(text, format);
+        if (amount.signum() == 0) {
+            throw new FinNusException("Amount must be greater than 0.");
+        }
+        return amount;
+    }
+
+    /**
+     * Converts text such as {@code "4.50"} into an exact amount with at most
+     * 2 decimal places, allowing 0. Used directly where 0 is meaningful, such
+     * as an opening balance.
+     *
+     * @throws FinNusException If the text is missing, not a number, negative,
+     *     has more than 2 decimal places, or is unreasonably large.
+     */
+    static BigDecimal parseNonNegativeAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
@@ -167,13 +289,10 @@ public class Parser {
         // "1e3", "NaN", "Infinity", "-5" and "$5" in one simple check.
         if (!text.matches("\\d+(\\.\\d{1,2})?")) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
-                    + "Use a positive number with at most 2 decimal places, e.g. 4.50");
+                    + "Use a number with at most 2 decimal places, e.g. 4.50");
         }
         // The String constructor keeps the exact value typed, e.g. "4.50" stays 4.50.
         BigDecimal amount = new BigDecimal(text);
-        if (amount.signum() <= 0) {
-            throw new FinNusException("Amount must be greater than 0.");
-        }
         // BigDecimal is compared with compareTo, not with < or >.
         if (amount.compareTo(MAX_AMOUNT) > 0) {
             throw new FinNusException(String.format("Amount must not exceed %,.0f.", MAX_AMOUNT));

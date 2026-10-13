@@ -58,6 +58,42 @@ public class TransactionListTest {
         assertEquals(2, recentTransactions.size());
     }
 
+    // The balance tests below build their own list so they do not depend on the shared fixture.
+
+    @Test
+    public void getBalance_newList_isZero() {
+        assertEquals(0, new TransactionList().getBalance().signum());
+    }
+
+    @Test
+    public void getBalance_openingPlusTransactions_addsUpCorrectly() {
+        TransactionList list = new TransactionList();
+        list.setOpeningBalance(new BigDecimal("10.10"));
+        list.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal("0.20"), ""));
+        list.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal("5.05"), "Snack"));
+
+        assertEquals(new BigDecimal("5.25"), list.getBalance());
+    }
+
+    @Test
+    public void getBalance_spendingMoreThanOpening_canBeNegative() {
+        TransactionList list = new TransactionList();
+        list.setOpeningBalance(new BigDecimal("5"));
+        list.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal("8"), "Taxi"));
+
+        assertEquals(new BigDecimal("-3"), list.getBalance());
+    }
+
+    @Test
+    public void setOpeningBalance_existingTransactions_doesNotAddTransaction() {
+        TransactionList list = new TransactionList();
+        list.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal("50"), ""));
+        list.setOpeningBalance(new BigDecimal("100"));
+
+        assertEquals(1, list.size());
+        assertEquals(new BigDecimal("100"), list.getOpeningBalance());
+    }
+
     @Test
     public void getBalance_balance_returnsPositiveBalance() {
         BigDecimal balance = transactions.getBalance();
