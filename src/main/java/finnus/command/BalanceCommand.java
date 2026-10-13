@@ -18,6 +18,6 @@ public class BalanceCommand extends Command {
     @Override
     public void execute(TransactionList transactions, Ui ui) {
         BigDecimal balance = transactions.getBalance();
-        ui.showMessage("Your current balance is: $" + balance); 
+        ui.showMessage("Your current balance is: $" + balance.setScale(2)); 
     }
 }
