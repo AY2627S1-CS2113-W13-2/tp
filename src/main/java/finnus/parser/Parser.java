@@ -42,6 +42,8 @@ public class Parser {
 
     /**
      * Parses a full line of user input.
+     * Extra arguments for commands that take no parameters, such as help and
+     * exit, are ignored.
      *
      * @param input The raw text typed by the user.
      * @return The command to execute.
@@ -61,9 +63,6 @@ public class Parser {
         case "withdraw":
             return parseWithdraw(arguments);
         case "help":
-            if (!arguments.isEmpty()) {
-                throw new FinNusException("The help command does not accept arguments.\nFormat: help");
-            }
             return new HelpCommand();
         case "recent":
             return parseRecent(arguments);
