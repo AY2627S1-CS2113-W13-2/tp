@@ -128,8 +128,7 @@ ____________________________________________________________
 ```
 
 ### Viewing balance: `balance`
-Shows the remaining balance of the user's account and how many transactions have been recorded. The balance amount 
-uses the exchange rate between the set currency and SGD.
+Shows the remaining balance of the user's account. The balance amount uses the exchange rate between the set currency and SGD.
 
 Format: `balance`
 
