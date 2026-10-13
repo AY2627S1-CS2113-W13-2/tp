@@ -8,6 +8,7 @@ import finnus.command.Command;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.HelpCommand;
 import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
@@ -42,6 +43,8 @@ public class Parser {
 
     /**
      * Parses a full line of user input.
+     * Extra arguments for commands that take no parameters, such as help and
+     * exit, are ignored.
      *
      * @param input The raw text typed by the user.
      * @return The command to execute.
@@ -60,6 +63,8 @@ public class Parser {
             return parseDeposit(arguments);
         case "withdraw":
             return parseWithdraw(arguments);
+        case "help":
+            return new HelpCommand();
         case "recent":
             return parseRecent(arguments);
         case "opening":
