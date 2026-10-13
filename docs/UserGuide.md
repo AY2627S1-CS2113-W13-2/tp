@@ -71,6 +71,30 @@ Format: withdraw AMOUNT d/DESCRIPTION
 ____________________________________________________________
 ```
 
+### Setting your opening balance: `opening`
+Sets how much money you had before you started using FinNUS, so your balance starts from an accurate figure.
+
+Format: `opening AMOUNT`
+
+* `AMOUNT` follows the same rules as for `deposit`, except that `0` is also allowed.
+* If you never set it, your opening balance is `0`.
+* Running `opening` again replaces the previous value. It does not add a transaction, so it will not show up in `recent` and cannot be removed with `delete`.
+* Changing the opening balance also changes your balance by the same difference, even if you have already recorded transactions.
+
+Examples:
+
+* `opening 1200.50`
+* `opening 0` (resets the opening balance)
+
+Expected output for `opening 1200.50` after recording a deposit of `500` and a withdrawal of `4.50`:
+```
+____________________________________________________________
+Opening balance updated: $0.00 -> $1200.50
+Your balance is now $1696.00.
+Note: this also changes the balance for your 2 existing transaction(s).
+____________________________________________________________
+```
+
 ### Setting an exchange rate: `rate`
 Sets how much of another currency 1 SGD buys, so FinNUS can convert amounts in that currency to SGD.
 Rates are entered by you rather than fetched online, so FinNUS works without internet.
@@ -115,4 +139,5 @@ ____________________________________________________________
 
 * Add a deposit: `deposit AMOUNT [d/DESCRIPTION]`
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION`
+* Set opening balance: `opening AMOUNT`
 * Set or list exchange rates: `rate [CURRENCY RATE]`

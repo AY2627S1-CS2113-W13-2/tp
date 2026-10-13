@@ -6,6 +6,7 @@ import java.util.Currency;
 import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -35,6 +36,7 @@ public class Parser {
 
     private static final String DEPOSIT_FORMAT = "deposit AMOUNT [d/DESCRIPTION]";
     private static final String WITHDRAW_FORMAT = "withdraw AMOUNT d/DESCRIPTION";
+    private static final String OPENING_FORMAT = "opening AMOUNT";
     private static final String RATE_FORMAT = "rate [CURRENCY RATE]";
 
     /**
@@ -59,6 +61,8 @@ public class Parser {
             return parseWithdraw(arguments);
         case "recent":
             return parseRecent(arguments);
+        case "opening":
+            return parseOpening(arguments);
         case "exit":
             return new ExitCommand();
         case "delete":
@@ -117,6 +121,14 @@ public class Parser {
         }
 
         return new RecentTransactionCommand(length);
+    }
+
+    /**
+     * Parses {@code opening AMOUNT}. Unlike deposits, 0 is allowed so the user can reset it.
+     */
+    private static Command parseOpening(String arguments) throws FinNusException {
+        BigDecimal amount = parseNonNegativeAmount(arguments, OPENING_FORMAT);
+        return new OpeningBalanceCommand(amount);
     }
 
     /**
@@ -242,6 +254,22 @@ public class Parser {
      *     positive, has more than 2 decimal places, or is unreasonably large.
      */
     static BigDecimal parseAmount(String text, String format) throws FinNusException {
+        BigDecimal amount = parseNonNegativeAmount(text, format);
+        if (amount.signum() == 0) {
+            throw new FinNusException("Amount must be greater than 0.");
+        }
+        return amount;
+    }
+
+    /**
+     * Converts text such as {@code "4.50"} into an exact amount with at most
+     * 2 decimal places, allowing 0. Used directly where 0 is meaningful, such
+     * as an opening balance.
+     *
+     * @throws FinNusException If the text is missing, not a number, negative,
+     *     has more than 2 decimal places, or is unreasonably large.
+     */
+    static BigDecimal parseNonNegativeAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
@@ -249,13 +277,10 @@ public class Parser {
         // "1e3", "NaN", "Infinity", "-5" and "$5" in one simple check.
         if (!text.matches("\\d+(\\.\\d{1,2})?")) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
-                    + "Use a positive number with at most 2 decimal places, e.g. 4.50");
+                    + "Use a number with at most 2 decimal places, e.g. 4.50");
         }
         // The String constructor keeps the exact value typed, e.g. "4.50" stays 4.50.
         BigDecimal amount = new BigDecimal(text);
-        if (amount.signum() <= 0) {
-            throw new FinNusException("Amount must be greater than 0.");
-        }
         // BigDecimal is compared with compareTo, not with < or >.
         if (amount.compareTo(MAX_AMOUNT) > 0) {
             throw new FinNusException(String.format("Amount must not exceed %,.0f.", MAX_AMOUNT));

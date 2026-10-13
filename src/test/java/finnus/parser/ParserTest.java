@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
@@ -114,6 +115,36 @@ class ParserTest {
     public void parseRecent_invalidArgumentValue_throwsException(String str) {
         FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("recent "+ str));
         assertEquals("The length must be positive.", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"opening 1200.50", "opening 0", "  OPENING 100  "})
+    public void parse_validOpening_returnsOpeningBalanceCommand(String input) throws FinNusException {
+        assertInstanceOf(OpeningBalanceCommand.class, Parser.parse(input));
+    }
+
+    @Test
+    public void parse_openingWithoutAmount_throwsException() {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("opening"));
+        assertEquals("Missing amount.\nFormat: opening AMOUNT", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-5", "abc", "4.555", "100 d/Savings", "1000000.01"})
+    public void parse_openingWithInvalidAmount_throwsException(String amount) {
+        assertThrows(FinNusException.class, () -> Parser.parse("opening " + amount));
+    }
+
+    @Test
+    public void parseNonNegativeAmount_zero_isAccepted() throws FinNusException {
+        assertEquals(new BigDecimal("0"), Parser.parseNonNegativeAmount("0", FORMAT));
+        assertEquals(new BigDecimal("0.00"), Parser.parseNonNegativeAmount("0.00", FORMAT));
+    }
+
+    @Test
+    public void parseAmount_zero_throwsGreaterThanZeroMessage() {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseAmount("0", FORMAT));
+        assertEquals("Amount must be greater than 0.", e.getMessage());
     }
 
     @ParameterizedTest
