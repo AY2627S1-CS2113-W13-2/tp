@@ -1,8 +1,10 @@
 package finnus.transaction;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +58,13 @@ public class TransactionListTest {
     public void getRecentTransactions_lengthLessThanSize_returnsSmallerSublist() {
         List<Transaction> recentTransactions = transactions.getRecentTransactions(2);
         assertEquals(2, recentTransactions.size());
+    }
+
+    @Test
+    public void getRecentTransactions_noTransactionsMade_returnsEmptyList() {
+        TransactionList emptyTransactionList = new TransactionList();
+        List<Transaction> recentTransactions = assertDoesNotThrow(() -> emptyTransactionList.getRecentTransactions(0));
+        assertEquals(Collections.emptyList(), recentTransactions);
     }
 
     // The balance tests below build their own list so they do not depend on the shared fixture.
