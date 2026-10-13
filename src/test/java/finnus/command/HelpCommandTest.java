@@ -45,6 +45,7 @@ class HelpCommandTest {
                 "| recent   | Recent activity | recent [NUMBER]                |",
                 "| delete   | Delete a record | delete INDEX                   |",
                 "| opening  | Opening balance | opening AMOUNT                 |",
+                "| balance  | Current balance | balance                        |",
                 "| rate     | Manage FX rates | rate [CURRENCY RATE]           |",
                 "| help     | List commands   | help                           |",
                 "| exit     | Close FinNUS    | exit                           |",
