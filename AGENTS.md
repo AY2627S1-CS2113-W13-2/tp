@@ -33,3 +33,11 @@ Ensure that Java 25 is used when running the application or build tasks. On macO
 Use lightweight tags unless the user requests an annotated tag.
 When proposing or creating a commit message, include enough detail to explain the rationale for the change.
 Do not commit or push unless explicitly asked.
+
+## Shared skills
+
+All project skills live in `.agents/skills/<skill-name>/SKILL.md`. This is the
+single source for Codex, Gemini, Claude, and other AI agents working in this
+repository. Read a skill when the user names it or its description fits the
+task. Resolve paths in a skill from the repository root unless stated otherwise.
+The catalog and any bundled scripts are in `.agents/skills/README.md`.

@@ -127,6 +127,39 @@ Exchange rates:
 ____________________________________________________________
 ```
 
+### Viewing command usage: `help`
+
+Displays a table of command names, descriptions and syntax so you can look up how to use them.
+
+Format: `help`
+
+* No parameters are required. Extra text after `help` is ignored, so `help 123` displays the same table as `help`.
+* Help does not change your transactions or exit the application.
+* In the displayed syntax, `[]` means optional.
+
+Example: `help` or `help 123`
+
+Expected output:
+```text
+____________________________________________________________
+Available commands:
++----------+-----------------+--------------------------------+
+| Command  | Description     | Syntax                         |
++----------+-----------------+--------------------------------+
+| deposit  | Record income   | deposit AMOUNT [d/DESCRIPTION] |
+| withdraw | Record spending | withdraw AMOUNT d/DESCRIPTION  |
+| recent   | Recent activity | recent [NUMBER]                |
+| delete   | Delete a record | delete INDEX                   |
+| opening  | Opening balance | opening AMOUNT                 |
+| rate     | Manage FX rates | rate [CURRENCY RATE]           |
+| help     | List commands   | help                           |
+| exit     | Close FinNUS    | exit                           |
++----------+-----------------+--------------------------------+
+
+[] means optional.
+____________________________________________________________
+```
+
 ## FAQ
 
 **Q**: How do I transfer my data to another computer? 
@@ -139,5 +172,9 @@ ____________________________________________________________
 
 * Add a deposit: `deposit AMOUNT [d/DESCRIPTION]`
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION`
+* View recent transactions: `recent [NUMBER]`
+* Delete a transaction: `delete INDEX`
 * Set opening balance: `opening AMOUNT`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
+* View command usage: `help`
+* Exit the application: `exit`
