@@ -1,7 +1,5 @@
 package finnus.command;
 
-import java.util.logging.Logger;
-
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -9,8 +7,6 @@ import finnus.ui.Ui;
  * Displays the available commands and their syntax without changing transactions.
  */
 public class HelpCommand extends Command {
-    private static final Logger LOGGER = Logger.getLogger(HelpCommand.class.getName());
-
     /**
      * Manually maintained usage instructions. Update this list whenever a command
      * is added, removed, or its syntax changes.
@@ -36,7 +32,7 @@ public class HelpCommand extends Command {
 
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        assert ui != null : "UI must not be null";
         ui.showMessage(HELP_LINES);
-        LOGGER.fine("Displayed help message");
     }
 }
