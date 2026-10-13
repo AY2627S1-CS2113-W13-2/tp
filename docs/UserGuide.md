@@ -13,12 +13,11 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 4. Open a terminal, `cd` to the folder containing the JAR file, and run the application using the following command:
 
    ```bash
-   java -jar FinNUS.jar
+   java -jar finnus.jar
    ```
 
-5. On your first use, you will be prompted to set your home currency and your expected allowance date.
-6. Type a command in the command box and press Enter to execute it. For example, type `help` and press Enter to open the help window.
-7. Refer to the Features section below for details of each command.
+5. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
+6. Refer to the Features section below for details of each command.
 
 ## Features 
 
@@ -135,7 +134,7 @@ ____________________________________________________________
 ```
 
 ### Viewing balance: `balance`
-Shows the remaining balance of the user's account. The balance amount uses the exchange rate between the set currency and SGD.
+Shows the remaining balance of the user's account. 
 
 Format: `balance`
 
