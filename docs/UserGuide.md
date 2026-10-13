@@ -8,7 +8,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 1. Ensure that Java 25 or later is installed on your computer.
    - Mac users: Ensure you have the precise JDK version prescribed here.
-2. Download the latest `FinNUS.jar` file from here.
+2. Download the latest `finnus.jar` file from here.
 3. Copy the file to the folder you want to use as the home folder for your FinNUS.
 4. Open a terminal, `cd` to the folder containing the JAR file, and run the application using the following command:
 
