@@ -31,7 +31,8 @@ public class CurrencyRates {
      * @param rate How many units of the currency 1 SGD buys; must be positive.
      */
     public void setRate(String currencyCode, BigDecimal rate) {
-        assert currencyCode != null && !currencyCode.equals(BASE_CURRENCY) : "SGD does not need a rate";
+        assert currencyCode != null : "Currency code must not be null";
+        assert !currencyCode.equals(BASE_CURRENCY) : "SGD does not need a rate";
         assert rate != null && rate.signum() > 0 : "Rate must be positive";
         rates.put(currencyCode, rate);
     }
