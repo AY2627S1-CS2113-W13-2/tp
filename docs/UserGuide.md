@@ -95,6 +95,38 @@ Note: this also changes the balance for your 2 existing transaction(s).
 ____________________________________________________________
 ```
 
+### Setting an exchange rate: `rate`
+Sets how much of another currency 1 SGD buys, so FinNUS can convert amounts in that currency to SGD.
+Rates are entered by you rather than fetched online, so FinNUS works without internet.
+
+Format: `rate CURRENCY RATE` to set a rate, or `rate` to list all rates.
+
+* `CURRENCY` is a 3-letter currency code such as `JPY`, `USD` or `MYR`, in upper or lower case. `SGD` cannot be given a rate, because all amounts are already in SGD.
+* `RATE` is how many units of `CURRENCY` 1 SGD buys, e.g. `110` for 1 SGD = 110 JPY. It must be a positive number with at most 6 decimal places, and not more than `1000000`.
+* Setting a rate for a currency that already has one replaces the old rate.
+
+Examples:
+
+* `rate JPY 110`
+* `rate usd 0.74`
+* `rate`
+
+Expected output for `rate JPY 110`:
+```
+____________________________________________________________
+Exchange rate set: 1 SGD = 110 JPY
+____________________________________________________________
+```
+
+Expected output for `rate` after setting rates for JPY and MYR:
+```
+____________________________________________________________
+Exchange rates:
+  1 SGD = 110 JPY
+  1 SGD = 3.45 MYR
+____________________________________________________________
+```
+
 ## FAQ
 
 **Q**: How do I transfer my data to another computer? 
@@ -108,3 +140,4 @@ ____________________________________________________________
 * Add a deposit: `deposit AMOUNT [d/DESCRIPTION]`
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION`
 * Set opening balance: `opening AMOUNT`
+* Set or list exchange rates: `rate [CURRENCY RATE]`

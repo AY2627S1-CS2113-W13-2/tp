@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.OpeningBalanceCommand;
+import finnus.command.RateCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
 
@@ -144,5 +145,49 @@ class ParserTest {
     public void parseAmount_zero_throwsGreaterThanZeroMessage() {
         FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseAmount("0", FORMAT));
         assertEquals("Amount must be greater than 0.", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"rate", "rate JPY 110", "rate jpy 0.5425", "  RATE  MYR   3.45  "})
+    public void parse_validRate_returnsRateCommand(String input) throws FinNusException {
+        assertInstanceOf(RateCommand.class, Parser.parse(input));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"rate JPY", "rate 110", "rate JPY 110 extra"})
+    public void parse_rateWithWrongArgumentCount_throwsException(String input) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse(input));
+        assertTrue(e.getMessage().contains("Format: rate [CURRENCY RATE]"));
+    }
+
+    @Test
+    public void parseCurrencyCode_lowerCase_returnsUpperCase() throws FinNusException {
+        assertEquals("JPY", Parser.parseCurrencyCode("jpy"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"JYP", "YEN", "JP", "1234", ""})
+    public void parseCurrencyCode_unknownCode_throwsException(String code) {
+        assertThrows(FinNusException.class, () -> Parser.parseCurrencyCode(code));
+    }
+
+    @Test
+    public void parseCurrencyCode_sgd_throwsException() {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseCurrencyCode("sgd"));
+        assertEquals("Amounts are already in SGD, so SGD does not need a rate.", e.getMessage());
+    }
+
+    @Test
+    public void parseRateValue_validRates_parsedCorrectly() throws FinNusException {
+        assertEquals(new BigDecimal("110"), Parser.parseRateValue("110"));
+        assertEquals(new BigDecimal("0.5425"), Parser.parseRateValue("0.5425"));
+        assertEquals(new BigDecimal("0.000001"), Parser.parseRateValue("0.000001"));
+        assertEquals(new BigDecimal("1000000"), Parser.parseRateValue("1000000"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "0.000000", "-1", "abc", "1.1234567", "1e3", "1000000.1"})
+    public void parseRateValue_invalidRates_throwException(String rate) {
+        assertThrows(FinNusException.class, () -> Parser.parseRateValue(rate));
     }
 }

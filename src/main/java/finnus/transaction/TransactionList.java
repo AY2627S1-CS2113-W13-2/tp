@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import finnus.currency.CurrencyRates;
+
 /**
  * Holds all recorded transactions in the order they were added (oldest first),
  * together with the opening balance the ledger starts from.
@@ -23,6 +25,11 @@ public class TransactionList {
      */
     private BigDecimal openingBalance = BigDecimal.ZERO;
 
+    /**
+     * Exchange rates the user has set, used to convert foreign amounts to SGD.
+     */
+    private final CurrencyRates rates = new CurrencyRates();
+
     public void add(Transaction transaction) {
         transactions.add(transaction);
     }
@@ -36,6 +43,10 @@ public class TransactionList {
 
     public int size() {
         return transactions.size();
+    }
+
+    public CurrencyRates getRates() {
+        return rates;
     }
 
     /**

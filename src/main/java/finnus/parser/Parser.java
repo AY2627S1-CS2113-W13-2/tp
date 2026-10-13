@@ -1,14 +1,17 @@
 package finnus.parser;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.OpeningBalanceCommand;
+import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
 import finnus.command.DeleteCommand;
+import finnus.currency.CurrencyRates;
 import finnus.exception.FinNusException;
 
 /**
@@ -26,9 +29,15 @@ public class Parser {
      */
     public static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000");
 
+    /**
+     * No real currency is anywhere near 1,000,000 units per SGD, so larger rates are typos.
+     */
+    public static final BigDecimal MAX_RATE = new BigDecimal("1000000");
+
     private static final String DEPOSIT_FORMAT = "deposit AMOUNT [d/DESCRIPTION]";
     private static final String WITHDRAW_FORMAT = "withdraw AMOUNT d/DESCRIPTION";
     private static final String OPENING_FORMAT = "opening AMOUNT";
+    private static final String RATE_FORMAT = "rate [CURRENCY RATE]";
 
     /**
      * Parses a full line of user input.
@@ -58,6 +67,8 @@ public class Parser {
             return new ExitCommand();
         case "delete":
             return parseDelete(arguments);
+        case "rate":
+            return parseRate(arguments);
         default:
             throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
         }
@@ -118,6 +129,63 @@ public class Parser {
     private static Command parseOpening(String arguments) throws FinNusException {
         BigDecimal amount = parseNonNegativeAmount(arguments, OPENING_FORMAT);
         return new OpeningBalanceCommand(amount);
+    }
+
+    /**
+     * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set one rate).
+     */
+    private static Command parseRate(String arguments) throws FinNusException {
+        if (arguments.isEmpty()) {
+            return new RateCommand();
+        }
+        String[] parts = arguments.split("\\s+");
+        if (parts.length != 2) {
+            throw new FinNusException("Give a currency and a rate, e.g. rate JPY 110.\nFormat: " + RATE_FORMAT);
+        }
+        return new RateCommand(parseCurrencyCode(parts[0]), parseRateValue(parts[1]));
+    }
+
+    /**
+     * Converts text such as {@code "jpy"} into an upper-case ISO 4217 code such as {@code "JPY"}.
+     *
+     * @throws FinNusException If the code is not a real currency, or is SGD.
+     */
+    static String parseCurrencyCode(String text) throws FinNusException {
+        String code = text.toUpperCase();
+        try {
+            // Java's built-in currency list lets us reject typos such as "JYP" without
+            // maintaining our own list.
+            Currency.getInstance(code);
+        } catch (IllegalArgumentException e) {
+            throw new FinNusException("'" + text + "' is not a valid currency code, e.g. JPY, USD or MYR.");
+        }
+        if (code.equals(CurrencyRates.BASE_CURRENCY)) {
+            throw new FinNusException("Amounts are already in SGD, so SGD does not need a rate.");
+        }
+        return code;
+    }
+
+    /**
+     * Converts text such as {@code "110"} or {@code "0.5425"} into a positive rate
+     * with at most 6 decimal places.
+     *
+     * @throws FinNusException If the text is not a number, not positive, has more
+     *     than 6 decimal places, or is unreasonably large.
+     */
+    static BigDecimal parseRateValue(String text) throws FinNusException {
+        // Rates need more precision than money, e.g. 1 SGD = 0.5425 GBP.
+        if (!text.matches("\\d+(\\.\\d{1,6})?")) {
+            throw new FinNusException("'" + text + "' is not a valid rate. "
+                    + "Use a number with at most 6 decimal places, e.g. 110 or 0.5425");
+        }
+        BigDecimal rate = new BigDecimal(text);
+        if (rate.signum() == 0) {
+            throw new FinNusException("Rate must be greater than 0.");
+        }
+        if (rate.compareTo(MAX_RATE) > 0) {
+            throw new FinNusException(String.format("Rate must not exceed %,.0f.", MAX_RATE));
+        }
+        return rate;
     }
 
     private static Command parseDeposit(String arguments) throws FinNusException {
