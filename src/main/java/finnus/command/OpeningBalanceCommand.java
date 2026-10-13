@@ -3,6 +3,7 @@ package finnus.command;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -12,6 +13,8 @@ import finnus.ui.Ui;
  * Running it again replaces the old value; it is not recorded as a transaction.
  */
 public class OpeningBalanceCommand extends Command {
+    private static final Logger logger = Logger.getLogger(OpeningBalanceCommand.class.getName());
+
     private final BigDecimal amount;
 
     /**
@@ -28,6 +31,9 @@ public class OpeningBalanceCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         BigDecimal oldAmount = transactions.getOpeningBalance();
         transactions.setOpeningBalance(amount);
+        // The old value is replaced, so record it here in case a balance later looks wrong.
+        logger.info("Opening balance changed from " + oldAmount + " to " + amount
+                + " with " + transactions.size() + " existing transaction(s)");
 
         List<String> lines = new ArrayList<>();
         lines.add("Opening balance updated: " + formatMoney(oldAmount) + " -> " + formatMoney(amount));
