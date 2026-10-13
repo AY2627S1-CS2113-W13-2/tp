@@ -3,6 +3,7 @@ package finnus.parser;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.command.BalanceCommand;
+import finnus.command.Command;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.OpeningBalanceCommand;
@@ -220,5 +223,18 @@ class ParserTest {
     @ValueSource(strings = {"0", "0.000000", "-1", "abc", "1.1234567", "1e3", "1000000.1"})
     public void parseRateValue_invalidRates_throwException(String rate) {
         assertThrows(FinNusException.class, () -> Parser.parseRateValue(rate));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"   ", " abc", " 123 abc"})
+    public void parse_validBalanceCommands_returnsBalanceCommand(String str) {
+        Command cmd = assertDoesNotThrow(() -> Parser.parse("balance" + str));
+        assertInstanceOf(BalanceCommand.class, cmd);
+    }
+
+    @Test
+    public void parse_balanceCommandWithLeadingWhitespace_returnsBalanceCommand() {
+        Command cmd = assertDoesNotThrow(() -> Parser.parse("  balance"));
+        assertInstanceOf(BalanceCommand.class, cmd);
     }
 }
