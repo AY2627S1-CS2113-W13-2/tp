@@ -2,6 +2,7 @@ package finnus.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -73,5 +74,11 @@ class HelpCommandTest {
     @Test
     public void isExit_help_returnsFalse() {
         assertFalse(new HelpCommand().isExit());
+    }
+
+    @Test
+    public void execute_nullUi_throwsAssertionError() {
+        assertThrows(AssertionError.class, () ->
+                new HelpCommand().execute(new TransactionList(), null));
     }
 }
