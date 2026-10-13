@@ -127,8 +127,66 @@ Exchange rates:
 ____________________________________________________________
 ```
 
-### Viewing command usage: `help`
+### Viewing balance: `balance`
+Shows the remaining balance of the user's account and how many transactions have been recorded. The balance amount 
+uses the exchange rate between the set currency and SGD.
 
+Format: `balance`
+
+* No parameters required. Additional text after `balance` is ignored.
+* Does not modify existing transactions
+
+Example: `balance` or `balance 123`
+
+Expected output:
+```text
+____________________________________________________________
+Your curent balance is: $100.00
+
+____________________________________________________________
+```
+
+### Viewing recent transactions: `recent`
+Shows the user's most recent tranactions, ordered by recency where the newest transaction is shown first.
+
+Format: `recent [NUMBER]`
+
+* `[NUMBER]` is optional. It is set to 5 by default.
+* If `[NUMBER]` is more than the total number of transactions, the program outputs the entire list of transactions.
+* `[NUMBER]` must be positive 
+
+Examples:
+
+* `recent`
+* `recent 10`
+
+Example output for `recent 2`:
+```text
+Here is a list of the recent 2 transaction(s):
+1. [Deposit] +$30.50
+2. [Withdraw] -$30.00 (Food)
+
+```
+
+### Deleting a transaction: `delete`
+Deletes a transaction permanently.
+
+Format: `delete INDEX`
+
+* `INDEX` uses the list of recent transactions as reference. Use `recent` to get the necessary index of the transaction to delete.
+* `INDEX` must be within the range of the transaction list's size.
+
+Example:
+
+* `delete 1` permanently deletes the most recent transaction.
+
+Example output for `delete 3`:
+```text
+Transaction deleted: [Withdrawal] -$30.00 (BBQ)
+
+```
+
+### Viewing command usage: `help`
 Displays a table of command names, descriptions and syntax so you can look up how to use them.
 
 Format: `help`
