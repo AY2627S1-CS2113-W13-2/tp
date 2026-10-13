@@ -76,10 +76,16 @@ class ParserTest {
         assertInstanceOf(HelpCommand.class, Parser.parse("  help  "));
     }
 
-    @Test
-    public void parse_helpWithArguments_throwsException() {
-        FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse("help deposit"));
-        assertEquals("The help command does not accept arguments.\nFormat: help", exception.getMessage());
+    @ParameterizedTest
+    @ValueSource(strings = {"help 123", "help deposit", "help anything else", "  HELP\t123  "})
+    public void parse_helpWithArguments_returnsHelpCommand(String input) throws FinNusException {
+        assertInstanceOf(HelpCommand.class, Parser.parse(input));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"exit 123", "exit anything else", "  EXIT\t123  "})
+    public void parse_exitWithArguments_returnsExitCommand(String input) throws FinNusException {
+        assertInstanceOf(ExitCommand.class, Parser.parse(input));
     }
 
     @Test
