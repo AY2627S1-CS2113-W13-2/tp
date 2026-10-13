@@ -2,18 +2,24 @@
 
 ## Introduction
 
-{Give a product intro}
+FinNUS is a desktop finance tracker designed for tech-savvy university students managing a tight monthly budget. Whether you are an international student juggling foreign currency allowances or a local student managing daily campus expenses, FinNUS provides a streamlined Command Line Interface (CLI) to help you determine exactly how much is safe to spend each day.
 
 ## Quick Start
 
-{Give steps to get started quickly}
+1. Ensure that Java 25 or later is installed on your computer.
+   - Mac users: Ensure you have the precise JDK version prescribed here.
+2. Download the latest `finnus.jar` file from here.
+3. Copy the file to the folder you want to use as the home folder for your FinNUS.
+4. Open a terminal, `cd` to the folder containing the JAR file, and run the application using the following command:
 
-1. Ensure that you have Java 25 or above installed.
-1. Down the latest version of `Duke` from [here](http://link.to/duke).
+   ```bash
+   java -jar finnus.jar
+   ```
+
+5. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
+6. Refer to the Features section below for details of each command.
 
 ## Features 
-
-{Give detailed description of each feature}
 
 ### Adding a deposit: `deposit`
 Records money you receive, such as your monthly allowance, and adds it to your balance.
@@ -128,7 +134,7 @@ ____________________________________________________________
 ```
 
 ### Viewing balance: `balance`
-Shows the remaining balance of the user's account. The balance amount uses the exchange rate between the set currency and SGD.
+Shows the remaining balance of the user's account. 
 
 Format: `balance`
 
