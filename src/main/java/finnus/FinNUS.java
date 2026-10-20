@@ -1,6 +1,7 @@
 package finnus;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -11,6 +12,10 @@ import java.util.logging.SimpleFormatter;
 import finnus.command.Command;
 import finnus.exception.FinNusException;
 import finnus.parser.Parser;
+import finnus.storage.FileStorage;
+import finnus.storage.LedgerSnapshot;
+import finnus.storage.LoadResult;
+import finnus.storage.Storage;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -23,8 +28,26 @@ public class FinNUS {
 
     private static final Logger logger = Logger.getLogger(FinNUS.class.getName());
 
-    private final Ui ui = new Ui();
-    private final TransactionList transactions = new TransactionList();
+    private final Ui ui;
+    private final Storage storage;
+    private TransactionList transactions;
+    private boolean hasUnsavedChanges;
+    private boolean savingAllowed;
+
+    /**
+     * Creates the console application with persistent storage beside the packaged JAR.
+     */
+    public FinNUS() {
+        this(new Ui(), new FileStorage(FileStorage.defaultPath()));
+    }
+
+    /**
+     * Supplies independent UI and storage implementations for launchers and isolated tests.
+     */
+    public FinNUS(Ui ui, Storage storage) {
+        this.ui = Objects.requireNonNull(ui);
+        this.storage = Objects.requireNonNull(storage);
+    }
 
     /**
      * Main entry-point for the FinNUS application.
@@ -61,7 +84,7 @@ public class FinNUS {
      */
     public void run() {
         logger.info("FinNUS started");
-        ui.showWelcome();
+        restoreSession();
         boolean isExit = false;
         while (!isExit) {
             String input = ui.readCommand();
@@ -72,16 +95,64 @@ public class FinNUS {
                 continue;
             }
             try {
-                Command command = Parser.parse(input);
-                logger.fine("Executing " + command.getClass().getSimpleName());
-                command.execute(transactions, ui);
-                isExit = command.isExit();
+                isExit = executeCommand(input);
             } catch (FinNusException e) {
                 logger.log(Level.WARNING, "Command failed for input '" + input + "': " + e.getMessage());
                 ui.showError(e.getMessage());
             }
         }
+        savePendingChanges();
+        if (hasUnsavedChanges) {
+            ui.showError("Unsaved changes were not written to disk and will be lost after exit.");
+        }
         logger.info("FinNUS exited");
+    }
+
+    private void restoreSession() {
+        LoadResult loaded = storage.load();
+        transactions = loaded.snapshot().toTransactionList();
+        savingAllowed = loaded.savingAllowed();
+        hasUnsavedChanges = false;
+        ui.showWelcome();
+        if (!loaded.warnings().isEmpty()) {
+            ui.showMessage(loaded.warnings());
+        }
+    }
+
+    /**
+     * Detects actual changes without requiring every command to declare whether it writes data.
+     */
+    private boolean executeCommand(String input) throws FinNusException {
+        Command command = Parser.parse(input);
+        LedgerSnapshot before = LedgerSnapshot.capture(transactions);
+        logger.fine("Executing " + command.getClass().getSimpleName());
+        command.execute(transactions, ui);
+        hasUnsavedChanges |= !before.equals(LedgerSnapshot.capture(transactions));
+        if (!command.isExit()) {
+            savePendingChanges();
+        }
+        return command.isExit();
+    }
+
+    /**
+     * Keeps failed saves dirty so a later successful command or shutdown can retry them.
+     */
+    private void savePendingChanges() {
+        if (!hasUnsavedChanges) {
+            return;
+        }
+        if (!savingAllowed) {
+            ui.showError("Changes are in memory only. Saving is disabled for this session to protect existing data.");
+            return;
+        }
+        try {
+            storage.save(LedgerSnapshot.capture(transactions));
+            hasUnsavedChanges = false;
+        } catch (IOException e) {
+            logger.warning("Automatic save failed (" + e.getClass().getSimpleName() + ").");
+            ui.showError("Automatic save failed. Changes remain in memory and will be retried after a later "
+                    + "successful command and before exit.");
+        }
     }
 }
 
