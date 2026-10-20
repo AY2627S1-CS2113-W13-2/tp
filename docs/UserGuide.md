@@ -21,77 +21,11 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 ## Saving and recovering your data
 
-FinNUS automatically saves your transactions, opening balance, and exchange rates after a successful command changes
-financial state. Reopening the app restores these values, including transaction order and exact decimal amounts.
-There is no separate save command. Read-only commands normally do not write files.
+FinNUS automatically saves transactions, opening balance, and exchange rates whenever a command changes them.
+The save file is `finnus.txt`.
 
-### Save location
-
-The save file, `finnus.txt`, lives directly beside `finnus.jar`. This location is based on the JAR's folder, so launching
-the same JAR from another terminal folder still opens the same saved data. Moving the JAR to another folder requires
-moving its save file too. When running through Gradle or an IDE, the file lives in the working directory, normally the
-project folder. No save file is created until financial state changes.
-
-FinNUS writes a complete snapshot through a temporary file before replacing the save file. After subsequent saves,
-`finnus.txt.bak` contains the previous successfully saved state. Temporary writes and replacement failures do not
-deliberately truncate the existing save. A filesystem that does not support atomic replacement cannot save;
-FinNUS reports the failure and retains your changes in memory.
-
-Use one running FinNUS instance per save file. Close the app before editing, moving, or replacing its data files.
-
-### Save failures
-
-If an automatic save fails, FinNUS displays a warning. Your changes remain available in the current session, but they
-are not yet safely stored. The app retries after a later successful command, including a read-only command, and before
-exiting or reaching the end of input. If saving still fails at shutdown, a final warning explains that unsaved changes
-will be lost. The previous saved state remains available for the next session.
-
-If the file could not be read at startup, or its format version is unsupported, saving is disabled for that session.
-Commands can still run in memory, but their changes will not survive exit. Correct the file access problem or use a
-compatible FinNUS version, then restart the app; it does not reload external edits during an active session.
-
-### Corrupt data and recovery
-
-* **Some rows are corrupt:** FinNUS loads valid rows and reports skipped row numbers and reasons. Missing or invalid
-  opening balances default to zero with a warning. Balances may be incomplete because some financial history was skipped.
-* **The main file is missing or wholly corrupt:** FinNUS attempts to load a fully valid `finnus.txt.bak` and reports
-  backup recovery. A partially corrupt backup is not used automatically.
-* **No saved state can be recovered:** FinNUS warns that the save is corrupted and starts with an empty ledger in memory.
-  The original file is left untouched at startup. If you want to inspect or repair it, exit without adding or deleting
-  transactions or changing the opening balance or exchange rates. Open the file path shown in the warning, repair it,
-  then reopen FinNUS. Read-only commands and exit do not replace the original.
-
-Before a later save replaces damaged data, FinNUS preserves the original bytes in a uniquely named
-`finnus.txt.corrupt-*` file in the same folder. A damaged backup is likewise preserved as `finnus.txt.bak.corrupt-*`
-before it is replaced. If preservation fails, FinNUS refuses that save and keeps the changes in memory.
-Recovered sessions do not automatically rewrite files during startup or exit unless financial state has changed.
-
-For manual backup restoration, close FinNUS, keep a separate copy of the damaged file, copy a known valid backup to
-`finnus.txt`, and restart. Restoring a backup returns to that earlier saved state; newer changes may be absent.
-Recovery detects malformed records and invalid values, but cannot identify valid-looking manual edits as mistakes.
-
-### File format for manual repair
-
-Files use UTF-8, a version header, and one pipe-separated record per line:
-
-```text
-FINNUS|1
-OPENING|100.00
-RATE|JPY|110
-TRANSACTION|DEPOSIT|50.00|QWxsb3dhbmNl
-TRANSACTION|WITHDRAWAL|4.50|THVuY2g=
-```
-
-* Keep the `FINNUS|1` header and one non-negative opening balance.
-* Transaction types are `DEPOSIT` and `WITHDRAWAL`. Amounts and foreign exchange rates must be positive plain decimals.
-  Scientific notation is not accepted. Transaction records are stored oldest first; identical rows are kept as
-  separate transactions.
-* Rate codes must be valid uppercase ISO currency codes other than SGD. The first valid opening balance and the first
-  valid rate for each currency are used; later duplicates are skipped with warnings.
-* Descriptions are UTF-8 text encoded using Base64. The example descriptions are `Allowance` and `Lunch`.
-  An empty description leaves the final field empty, for example `TRANSACTION|DEPOSIT|5|`.
-  Encode descriptions before editing this field so pipes, Unicode, and line breaks remain safe. Base64 is not encryption.
-* Blank lines, Windows or Unix line endings, and an optional UTF-8 byte-order mark are accepted.
+If a data row is corrupt, FinNUS skips it and reports a warning, the recovered ledger may be incomplete.
+If the main file is unusable, FinNUS tries its backup. If neither can be recovered, it starts with an empty ledger in memory and leaves the original file untouched until data changes.
 
 ## Features 
 
