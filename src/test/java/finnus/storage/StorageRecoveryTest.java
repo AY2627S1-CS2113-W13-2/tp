@@ -103,6 +103,18 @@ class StorageRecoveryTest {
     }
 
     @Test
+    public void load_onlyNewerBackup_disablesSaving() throws IOException {
+        Path path = directory.resolve("finnus.txt");
+        String newer = "FINNUS|10\nOPENING|10\n";
+        Files.writeString(directory.resolve("finnus.txt.bak"), newer);
+        FileStorage storage = new FileStorage(path);
+        assertFalse(storage.load().savingAllowed());
+        assertThrows(IOException.class, () -> storage.save(LedgerSnapshot.empty()));
+        assertFalse(Files.exists(path));
+        assertEquals(newer, Files.readString(directory.resolve("finnus.txt.bak")));
+    }
+
+    @Test
     public void load_unreadablePath_disablesSavingInsteadOfQuarantining() throws IOException {
         Path path = Files.createDirectory(directory.resolve("finnus.txt"));
         FileStorage storage = new FileStorage(path);

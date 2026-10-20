@@ -125,6 +125,12 @@ public class FileStorage implements Storage {
                         + ". Files will remain unchanged until a state-changing command is used.");
                 return result(backup.snapshot(), warnings);
             }
+            if (backup != null && backup.status() == LedgerCodec.Status.UNSUPPORTED) {
+                savingAllowed = false;
+                warnings.add("Unsupported backup format at " + backupPath()
+                        + ". Starting an unsaved session. Saving is disabled to protect incompatible data.");
+                return result(LedgerSnapshot.empty(), warnings);
+            }
             if (backup != null) {
                 warnings.add("The backup is not fully valid and was not used: " + backupPath());
             }
