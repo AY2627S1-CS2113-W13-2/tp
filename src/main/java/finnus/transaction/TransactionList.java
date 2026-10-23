@@ -31,7 +31,9 @@ public class TransactionList {
     private final CurrencyRates rates = new CurrencyRates();
 
     public void add(Transaction transaction) {
+        int oldSize = transactions.size();
         transactions.add(transaction);
+        assert transactions.size() == oldSize + 1 : "Adding a transaction must increase the list size";
     }
 
     /**
@@ -64,7 +66,8 @@ public class TransactionList {
      * @param end The ending index of the sublist (exclusive)
      */
     public List<Transaction> getSubList(int start, int end) {
-        assert (start < end && start >= 0 && end <= transactions.size());
+        assert start >= 0 && start < end && end <= transactions.size()
+                : "Sublist bounds must be within the transaction list";
         return Collections.unmodifiableList(transactions.subList(start, end));
     }
 
@@ -97,7 +100,10 @@ public class TransactionList {
      * @return The deleted transaction.
      */
     public Transaction delete(int index) {
-        return transactions.remove(index);
+        int oldSize = transactions.size();
+        Transaction removed = transactions.remove(index);
+        assert transactions.size() == oldSize - 1 : "Deleting a transaction must reduce the list size";
+        return removed;
     }
 
     public BigDecimal getOpeningBalance() {

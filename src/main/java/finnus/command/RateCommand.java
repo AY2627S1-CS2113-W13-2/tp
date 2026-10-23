@@ -42,6 +42,8 @@ public class RateCommand extends Command {
 
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
         CurrencyRates rates = transactions.getRates();
         if (currencyCode == null) {
             listRates(rates, ui);

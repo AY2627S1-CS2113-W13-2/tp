@@ -57,14 +57,14 @@ public class Parser {
         String[] parts = trimmed.split("\\s+", 2);
         String commandWord = parts[0].toLowerCase(Locale.ROOT);
         String arguments = parts.length > 1 ? parts[1].trim() : "";
-        logger.fine("Parsing command word '" + commandWord + "' with arguments '" + arguments + "'");
+        logger.fine("Parsing command word '" + commandWord + "'");
 
         CommandWord command = CommandWord.fromWord(commandWord).orElseThrow(() ->
                 new FinNusException("Unknown command: '" + commandWord + "'. Type '"
                         + CommandWord.HELP.getWord() + "' to see all commands."));
 
         // Exhaustiveness makes a new enum entry require a corresponding parser case.
-        return switch (command) {
+        Command parsed = switch (command) {
         case DEPOSIT -> parseDeposit(arguments);
         case WITHDRAW -> parseWithdraw(arguments);
         case HELP -> new HelpCommand();
@@ -75,6 +75,8 @@ public class Parser {
         case DELETE -> parseDelete(arguments);
         case RATE -> parseRate(arguments);
         };
+        logger.fine("Parsed command " + parsed.getClass().getSimpleName());
+        return parsed;
     }
 
     /**

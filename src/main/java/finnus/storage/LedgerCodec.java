@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.TransactionType;
@@ -17,6 +18,7 @@ import finnus.transaction.TransactionType;
  * Encodes versioned UTF-8 records and recovers valid rows without filesystem or UI access.
  */
 public class LedgerCodec {
+    private static final Logger LOGGER = Logger.getLogger(LedgerCodec.class.getName());
     private static final String HEADER = "FINNUS|1";
     private static final String OPENING = "OPENING";
     private static final String RATE = "RATE";
@@ -45,6 +47,7 @@ public class LedgerCodec {
      * Produces deterministic records with Base64 descriptions and a final newline.
      */
     public String encode(LedgerSnapshot snapshot) {
+        assert snapshot != null : "Cannot encode a null ledger snapshot";
         StringBuilder text = new StringBuilder(HEADER).append('\n');
         text.append(OPENING).append('|').append(snapshot.openingBalance().toPlainString()).append('\n');
         new TreeMap<>(snapshot.rates()).forEach((code, rate) -> text.append(RATE).append('|')
@@ -55,7 +58,10 @@ public class LedgerCodec {
             text.append(TRANSACTION).append('|').append(transaction.type()).append('|')
                     .append(transaction.amount().toPlainString()).append('|').append(description).append('\n');
         }
-        return text.toString();
+        String encoded = text.toString();
+        assert encoded.startsWith(HEADER + '\n') && encoded.endsWith("\n")
+                : "Encoded ledger must have a header and final newline";
+        return encoded;
     }
 
     /**
@@ -63,6 +69,7 @@ public class LedgerCodec {
      * Blank lines are ignored and an optional UTF-8 byte-order mark is accepted.
      */
     public DecodeResult decode(String text) {
+        assert text != null : "Cannot decode null storage text";
         List<String> lines = text.replaceFirst("^\uFEFF", "").lines().toList();
         if (lines.isEmpty() || !HEADER.equals(lines.getFirst())) {
             boolean newer = !lines.isEmpty() && lines.getFirst().matches("FINNUS\\|[0-9]+");
@@ -78,6 +85,7 @@ public class LedgerCodec {
                 parseRecord(lines.get(index), records);
                 records.validRecords++;
             } catch (IllegalArgumentException e) {
+                LOGGER.fine("Skipped invalid storage row " + (index + 1) + ": " + e.getMessage());
                 records.warnings.add("Skipped row " + (index + 1) + ": " + e.getMessage() + ".");
             }
         }
@@ -172,7 +180,10 @@ public class LedgerCodec {
             }
             Status status = validRecords == 0 ? Status.UNRECOVERABLE
                     : warnings.isEmpty() ? Status.CLEAN : Status.PARTIAL;
-            return new DecodeResult(new LedgerSnapshot(opening, transactions, rates), warnings, status);
+            LedgerSnapshot snapshot = new LedgerSnapshot(opening, transactions, rates);
+            assert snapshot != null : "Decoded ledger snapshot must exist";
+            LOGGER.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
+            return new DecodeResult(snapshot, warnings, status);
         }
     }
 }

@@ -75,6 +75,7 @@ public class FileStorage implements Storage {
      */
     @Override
     public LoadResult load() {
+        LOGGER.fine("Loading ledger from " + path);
         initialized = true;
         knownClean = false;
         preserveOriginal = false;
@@ -99,14 +100,17 @@ public class FileStorage implements Storage {
         switch (decoded.status()) {
         case CLEAN:
             knownClean = true;
+            LOGGER.fine("Loaded clean ledger file");
             return result(decoded.snapshot(), warnings);
         case PARTIAL:
             preserveOriginal = true;
+            LOGGER.warning("Loaded partially recoverable ledger file");
             warnings.add("Recovered valid rows from " + path + ". Balances may be incomplete. "
                     + "The original file will be preserved before any save.");
             return result(decoded.snapshot(), warnings);
         case UNSUPPORTED:
             savingAllowed = false;
+            LOGGER.warning("Storage format is unsupported; saving disabled");
             warnings.add("Unsupported save format at " + path + ". Saving is disabled for this session.");
             return result(LedgerSnapshot.empty(), warnings);
         case UNRECOVERABLE:
@@ -121,6 +125,7 @@ public class FileStorage implements Storage {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
             if (backup != null && backup.status() == LedgerCodec.Status.CLEAN) {
+                LOGGER.warning("Recovered ledger from backup file");
                 warnings.add("Recovered financial state from backup: " + backupPath()
                         + ". Files will remain unchanged until a state-changing command is used.");
                 return result(backup.snapshot(), warnings);
@@ -151,6 +156,7 @@ public class FileStorage implements Storage {
 
     private LoadResult readFailure(Path source) {
         savingAllowed = false;
+        LOGGER.log(java.util.logging.Level.WARNING, "Unable to read storage file " + source);
         return result(LedgerSnapshot.empty(), List.of("Unable to read " + source
                 + ". Starting an unsaved session. Saving is disabled to protect data that could not be loaded."));
     }
@@ -177,6 +183,7 @@ public class FileStorage implements Storage {
      */
     @Override
     public void save(LedgerSnapshot snapshot) throws IOException {
+        LOGGER.fine("Saving ledger to " + path);
         if (!initialized) {
             load();
         }
@@ -197,6 +204,9 @@ public class FileStorage implements Storage {
             knownClean = true;
             preserveOriginal = false;
             LOGGER.fine("Saved ledger snapshot");
+        } catch (IOException e) {
+            LOGGER.log(java.util.logging.Level.WARNING, "Failed to save ledger to " + path, e);
+            throw e;
         } finally {
             removeTemporary(temporary);
         }
@@ -257,7 +267,7 @@ public class FileStorage implements Storage {
         try {
             Files.deleteIfExists(temporary);
         } catch (IOException e) {
-            LOGGER.fine("Could not remove a temporary storage file");
+            LOGGER.log(java.util.logging.Level.FINE, "Could not remove temporary storage file " + temporary, e);
         }
     }
 
