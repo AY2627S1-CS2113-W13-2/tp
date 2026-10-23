@@ -20,10 +20,15 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class CommandWordTest {
     @ParameterizedTest
-    @EnumSource(CommandWord.class)
+    @EnumSource(value = CommandWord.class, names = "OPENING", mode = EnumSource.Mode.EXCLUDE)
     public void fromWord_registeredWord_returnsCommand(CommandWord command) {
         assertEquals(Optional.of(command), CommandWord.fromWord(command.getWord()));
         assertEquals(Optional.of(command), CommandWord.fromWord(command.getWord().toUpperCase(Locale.ROOT)));
+    }
+
+    @Test
+    public void fromWord_openingDuringNormalUse_returnsEmpty() {
+        assertTrue(CommandWord.fromWord("opening").isEmpty());
     }
 
     @ParameterizedTest

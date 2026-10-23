@@ -30,6 +30,8 @@ public class FileStorage implements Storage {
     private boolean initialized;
     /** False when the source format or read failure makes overwriting unsafe. */
     private boolean savingAllowed = true;
+    /** True when the main file records that first-run setup is still incomplete. */
+    private boolean setupRequired;
     /** Requests preserving damaged source bytes before the next successful replacement. */
     private boolean preserveOriginal;
     /** Prevents the same damaged source from being copied more than once per session. */
@@ -87,10 +89,14 @@ public class FileStorage implements Storage {
         knownClean = false;
         preserveOriginal = false;
         savingAllowed = true;
+        setupRequired = false;
         preservedSources.clear();
         try {
             LedgerCodec.DecodeResult decoded = read(path);
             if (decoded == null) {
+                if (!Files.exists(backupPath())) {
+                    return createSetupPendingFile(new ArrayList<>());
+                }
                 return recoverBackup(false, new ArrayList<>());
             }
             return handleMainFile(decoded);
@@ -104,8 +110,13 @@ public class FileStorage implements Storage {
 
     /** Applies the recovery policy for a decoded main file. */
     private LoadResult handleMainFile(LedgerCodec.DecodeResult decoded) {
+        assert decoded != null : "Decoded main file result must not be null";
         List<String> warnings = new ArrayList<>(decoded.warnings());
         switch (decoded.status()) {
+        case SETUP_PENDING:
+            setupRequired = true;
+            LOGGER.info("First-run setup is incomplete; prompting for an opening balance");
+            return result(LedgerSnapshot.empty(), warnings);
         case CLEAN:
             knownClean = true;
             LOGGER.fine("Loaded clean ledger file");
@@ -139,6 +150,11 @@ public class FileStorage implements Storage {
                         + ". Files will remain unchanged until a state-changing command is used.");
                 return result(backup.snapshot(), warnings);
             }
+            if (backup != null && backup.status() == LedgerCodec.Status.SETUP_PENDING) {
+                LOGGER.info("Resuming setup from pending backup state");
+                warnings.add("First-run setup was not completed. Enter and confirm an opening balance to continue.");
+                return createSetupPendingFile(warnings);
+            }
             if (backup != null && backup.status() == LedgerCodec.Status.UNSUPPORTED) {
                 savingAllowed = false;
                 warnings.add("Unsupported backup format at " + backupPath()
@@ -153,13 +169,14 @@ public class FileStorage implements Storage {
         } catch (IOException e) {
             return readFailure(backupPath());
         }
-        if (damagedMain || !warnings.isEmpty()) {
-            warnings.add("The save file is corrupted and no saved state could be recovered. "
-                    + "FinNUS is starting with an empty ledger. To inspect or repair the original, "
-                    + "exit without changing transactions, opening balance or rates. Open "
-                    + (damagedMain ? path : backupPath())
-                    + ", repair it, then restart FinNUS.");
+        if (!damagedMain) {
+            LOGGER.warning("No usable main ledger exists; creating a pending setup file");
+            return createSetupPendingFile(warnings);
         }
+        warnings.add("The save file is corrupted and no saved state could be recovered. "
+                + "FinNUS is starting with an empty ledger. To inspect or repair the original, "
+                + "exit without changing transactions, opening balance or rates. Open "
+                + path + ", repair it, then restart FinNUS.");
         return result(LedgerSnapshot.empty(), warnings);
     }
 
@@ -176,7 +193,36 @@ public class FileStorage implements Storage {
         for (String warning : warnings) {
             LOGGER.warning(warning);
         }
-        return new LoadResult(snapshot, warnings, savingAllowed);
+        return new LoadResult(snapshot, warnings, savingAllowed, setupRequired);
+    }
+
+    /** Creates the main file in a pending state before asking the user to complete setup. */
+    private LoadResult createSetupPendingFile(List<String> warnings) {
+        setupRequired = true;
+        Path temporary = null;
+        try {
+            Files.createDirectories(path.getParent());
+            if (Files.exists(path) && preserveOriginal) {
+                preserveFile(path);
+            }
+            temporary = Files.createTempFile(path.getParent(), ".finnus-", ".tmp");
+            Files.writeString(temporary, codec.encodeSetupPending(), StandardCharsets.UTF_8);
+            replacement.replace(temporary, path);
+            assert Files.exists(path) : "Pending setup replacement must create the ledger file";
+            preserveOriginal = false;
+            LOGGER.info("Created pending setup file at " + path);
+            return result(LedgerSnapshot.empty(), warnings);
+        } catch (IOException e) {
+            savingAllowed = false;
+            LOGGER.log(java.util.logging.Level.SEVERE, "Could not create pending setup file at " + path, e);
+            warnings.add("Unable to initialize " + path + ". Setup can continue, but the opening balance "
+                    + "cannot be saved.");
+            return result(LedgerSnapshot.empty(), warnings);
+        } finally {
+            if (temporary != null) {
+                removeTemporary(temporary);
+            }
+        }
     }
 
     /** Decodes a storage file, returning {@code null} when it does not exist. */
@@ -195,6 +241,7 @@ public class FileStorage implements Storage {
      */
     @Override
     public void save(LedgerSnapshot snapshot) throws IOException {
+        assert snapshot != null : "Cannot save a null ledger snapshot";
         LOGGER.fine("Saving ledger to " + path);
         if (!initialized) {
             load();

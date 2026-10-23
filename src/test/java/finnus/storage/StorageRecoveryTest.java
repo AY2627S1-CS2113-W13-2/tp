@@ -25,12 +25,15 @@ class StorageRecoveryTest {
     Path directory;
 
     @Test
-    public void load_missingFile_startsEmptyWithoutWriting() {
+    public void load_missingFile_createsPendingSetupFile() throws IOException {
         Path path = directory.resolve("finnus.txt");
         LoadResult loaded = new FileStorage(path).load();
         assertEquals(LedgerSnapshot.empty(), loaded.snapshot());
         assertTrue(loaded.warnings().isEmpty());
-        assertFalse(Files.exists(path));
+        assertTrue(loaded.setupRequired());
+        assertTrue(Files.exists(path));
+        assertTrue(Files.readString(path).contains("SETUP_PENDING"));
+        assertTrue(new FileStorage(path).load().setupRequired());
     }
 
     @Test

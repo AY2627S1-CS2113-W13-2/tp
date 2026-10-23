@@ -31,7 +31,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_twoSessions_restoresBalanceRatesAndRecentOrdering() {
         Path path = directory.resolve("finnus.txt");
-        new FinNUS(new ScriptedUi("opening 100.00", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
+        new FinNUS(new ScriptedUi("100.00", "yes", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
                 "rate JPY 110.00", "exit"), new FileStorage(path)).run();
         ScriptedUi second = new ScriptedUi("balance", "recent", "rate", "deposit 1", "delete 2", "exit");
         new FinNUS(second, new FileStorage(path)).run();
@@ -44,6 +44,36 @@ class PersistenceIntegrationTest {
         assertEquals(2, restored.transactions().size());
         assertEquals(TransactionType.DEPOSIT, restored.transactions().getLast().type());
         assertEquals(new BigDecimal("110.00"), restored.rates().get("JPY"));
+    }
+
+    @Test
+    public void run_setupConfirmation_persistsOpeningBalanceAndSkipsSetupNextTime() {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi setup = new ScriptedUi("67", "yes", "exit");
+        new FinNUS(setup, new FileStorage(path)).run();
+
+        LedgerSnapshot saved = new FileStorage(path).load().snapshot();
+        assertEquals(new BigDecimal("67"), saved.openingBalance());
+        assertTrue(saved.transactions().isEmpty());
+        assertFalse(new FileStorage(path).load().setupRequired());
+
+        ScriptedUi nextRun = new ScriptedUi("balance", "exit");
+        new FinNUS(nextRun, new FileStorage(path)).run();
+        assertTrue(nextRun.output().contains("$67.00"));
+        assertFalse(nextRun.output().contains("First-time setup"));
+    }
+
+    @Test
+    public void run_interruptedSetup_keepsPendingMarkerAndRepeatsSetup() throws IOException {
+        Path path = directory.resolve("finnus.txt");
+        new FinNUS(new ScriptedUi("67"), new FileStorage(path)).run();
+
+        assertTrue(new FileStorage(path).load().setupRequired());
+
+        ScriptedUi retry = new ScriptedUi("67", "yes", "exit");
+        new FinNUS(retry, new FileStorage(path)).run();
+        assertFalse(new FileStorage(path).load().setupRequired());
+        assertEquals(new BigDecimal("67"), new FileStorage(path).load().snapshot().openingBalance());
     }
 
     @Test
@@ -98,18 +128,17 @@ class PersistenceIntegrationTest {
     public void run_bothFilesCorrupt_preservesBothAcrossSaves() throws IOException {
         Path path = Files.writeString(directory.resolve("finnus.txt"), "broken main");
         Files.writeString(directory.resolve("finnus.txt.bak"), "broken backup");
-        new FinNUS(new ScriptedUi("opening 10", "deposit 1", "exit"), new FileStorage(path)).run();
+        new FinNUS(new ScriptedUi("deposit 1", "exit"), new FileStorage(path)).run();
         List<String> preserved = recoveryContents();
-        assertEquals(2, preserved.size());
         assertTrue(preserved.contains("broken main"));
-        assertTrue(preserved.contains("broken backup"));
-        assertEquals(new BigDecimal("11"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
+        assertEquals("broken backup", Files.readString(directory.resolve("finnus.txt.bak")));
+        assertEquals(new BigDecimal("1"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
     }
 
     @Test
     public void run_interruptedBeforeExit_changesAreAlreadySaved() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi interrupted = new ScriptedUi("deposit 3") {
+        ScriptedUi interrupted = new ScriptedUi("3", "yes", "deposit 3") {
             @Override
             public String readCommand() {
                 String command = super.readCommand();
@@ -120,7 +149,7 @@ class PersistenceIntegrationTest {
             }
         };
         assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
-        assertEquals(new BigDecimal("3"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
+        assertEquals(new BigDecimal("6"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
     }
 
     @Test
