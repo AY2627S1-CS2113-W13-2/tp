@@ -78,8 +78,15 @@ class LedgerCodecTest {
 
     @Test
     public void decode_duplicateRecords_keepsFirstSingletonAndAllTransactions() {
-        LedgerCodec.DecodeResult result = codec.decode("FINNUS|1\nOPENING|10\nOPENING|20\n"
-                + "RATE|JPY|110\nRATE|JPY|120\nTRANSACTION|DEPOSIT|1|\nTRANSACTION|DEPOSIT|1|\n");
+        LedgerCodec.DecodeResult result = codec.decode("""
+                FINNUS|1
+                OPENING|10
+                OPENING|20
+                RATE|JPY|110
+                RATE|JPY|120
+                TRANSACTION|DEPOSIT|1|
+                TRANSACTION|DEPOSIT|1|
+                """);
         assertEquals(new BigDecimal("10"), result.snapshot().openingBalance());
         assertEquals(new BigDecimal("110"), result.snapshot().rates().get("JPY"));
         assertEquals(2, result.snapshot().transactions().size());
