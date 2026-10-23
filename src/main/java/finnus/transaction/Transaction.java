@@ -23,6 +23,7 @@ public class Transaction {
      * @param description A short note, or an empty string if none was given.
      */
     public Transaction(TransactionType type, BigDecimal amount, String description) {
+        assert type != null : "Transaction type must not be null";
         assert amount != null && amount.signum() > 0 : "Transaction amount must be positive";
         assert description != null : "Description must not be null (use \"\" instead)";
         this.type = type;

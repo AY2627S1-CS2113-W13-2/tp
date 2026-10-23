@@ -24,10 +24,15 @@ public class FileStorage implements Storage {
     private final Path path;
     private final LedgerCodec codec = new LedgerCodec();
     private final AtomicReplacement replacement;
+    /** True after a clean main file was loaded or saved, so it can safely become a backup. */
     private boolean knownClean;
+    /** Tracks whether load has initialized recovery and overwrite policy. */
     private boolean initialized;
+    /** False when the source format or read failure makes overwriting unsafe. */
     private boolean savingAllowed = true;
+    /** Requests preserving damaged source bytes before the next successful replacement. */
     private boolean preserveOriginal;
+    /** Prevents the same damaged source from being copied more than once per session. */
     private final Set<Path> preservedSources = new HashSet<>();
 
     /**
@@ -38,6 +43,7 @@ public class FileStorage implements Storage {
                 StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
 
+    /** Creates storage with an injected replacement strategy for controlled failure handling. */
     FileStorage(Path path, AtomicReplacement replacement) {
         this.path = path.toAbsolutePath().normalize();
         this.replacement = replacement;
@@ -55,6 +61,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Chooses the JAR directory for packaged runs or the working directory for development runs. */
     static Path resolvePath(Path codeLocation, Path workingDirectory) {
         Path location = codeLocation.toAbsolutePath().normalize();
         Path folder = location.getFileName().toString().endsWith(".jar")
@@ -75,6 +82,7 @@ public class FileStorage implements Storage {
      */
     @Override
     public LoadResult load() {
+        LOGGER.fine("Loading ledger from " + path);
         initialized = true;
         knownClean = false;
         preserveOriginal = false;
@@ -94,19 +102,23 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Applies the recovery policy for a decoded main file. */
     private LoadResult handleMainFile(LedgerCodec.DecodeResult decoded) {
         List<String> warnings = new ArrayList<>(decoded.warnings());
         switch (decoded.status()) {
         case CLEAN:
             knownClean = true;
+            LOGGER.fine("Loaded clean ledger file");
             return result(decoded.snapshot(), warnings);
         case PARTIAL:
             preserveOriginal = true;
+            LOGGER.warning("Loaded partially recoverable ledger file");
             warnings.add("Recovered valid rows from " + path + ". Balances may be incomplete. "
                     + "The original file will be preserved before any save.");
             return result(decoded.snapshot(), warnings);
         case UNSUPPORTED:
             savingAllowed = false;
+            LOGGER.warning("Storage format is unsupported; saving disabled");
             warnings.add("Unsupported save format at " + path + ". Saving is disabled for this session.");
             return result(LedgerSnapshot.empty(), warnings);
         case UNRECOVERABLE:
@@ -117,10 +129,12 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Uses a clean backup when available and otherwise returns an empty, safely unsaved state. */
     private LoadResult recoverBackup(boolean damagedMain, List<String> warnings) {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
             if (backup != null && backup.status() == LedgerCodec.Status.CLEAN) {
+                LOGGER.warning("Recovered ledger from backup file");
                 warnings.add("Recovered financial state from backup: " + backupPath()
                         + ". Files will remain unchanged until a state-changing command is used.");
                 return result(backup.snapshot(), warnings);
@@ -149,12 +163,15 @@ public class FileStorage implements Storage {
         return result(LedgerSnapshot.empty(), warnings);
     }
 
+    /** Disables saving after a source cannot be read, protecting data that may be inaccessible. */
     private LoadResult readFailure(Path source) {
         savingAllowed = false;
+        LOGGER.log(java.util.logging.Level.WARNING, "Unable to read storage file " + source);
         return result(LedgerSnapshot.empty(), List.of("Unable to read " + source
                 + ". Starting an unsaved session. Saving is disabled to protect data that could not be loaded."));
     }
 
+    /** Logs recovery warnings and packages the result with the current saving policy. */
     private LoadResult result(LedgerSnapshot snapshot, List<String> warnings) {
         for (String warning : warnings) {
             LOGGER.warning(warning);
@@ -162,6 +179,7 @@ public class FileStorage implements Storage {
         return new LoadResult(snapshot, warnings, savingAllowed);
     }
 
+    /** Decodes a storage file, returning {@code null} when it does not exist. */
     private LedgerCodec.DecodeResult read(Path source) throws IOException {
         try {
             return codec.decode(Files.readString(source, StandardCharsets.UTF_8));
@@ -177,6 +195,7 @@ public class FileStorage implements Storage {
      */
     @Override
     public void save(LedgerSnapshot snapshot) throws IOException {
+        LOGGER.fine("Saving ledger to " + path);
         if (!initialized) {
             load();
         }
@@ -197,11 +216,15 @@ public class FileStorage implements Storage {
             knownClean = true;
             preserveOriginal = false;
             LOGGER.fine("Saved ledger snapshot");
+        } catch (IOException e) {
+            LOGGER.log(java.util.logging.Level.WARNING, "Failed to save ledger to " + path, e);
+            throw e;
         } finally {
             removeTemporary(temporary);
         }
     }
 
+    /** Copies the current clean ledger into the backup using atomic replacement. */
     private void rotateBackup() throws IOException {
         protectDamagedBackup();
         Path temporary = Files.createTempFile(path.getParent(), ".finnus-", ".tmp");
@@ -213,6 +236,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Preserves a damaged backup before rotating another ledger over it. */
     private void protectDamagedBackup() throws IOException {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
@@ -249,15 +273,17 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Returns the sibling path used for the previous clean ledger. */
     private Path backupPath() {
         return path.resolveSibling(path.getFileName() + ".bak");
     }
 
+    /** Removes a temporary file and logs cleanup failures without hiding the main result. */
     private void removeTemporary(Path temporary) {
         try {
             Files.deleteIfExists(temporary);
         } catch (IOException e) {
-            LOGGER.fine("Could not remove a temporary storage file");
+            LOGGER.log(java.util.logging.Level.FINE, "Could not remove temporary storage file " + temporary, e);
         }
     }
 
@@ -266,6 +292,7 @@ public class FileStorage implements Storage {
      */
     @FunctionalInterface
     interface AtomicReplacement {
+        /** Atomically replaces the target with the source when supported by the filesystem. */
         void replace(Path source, Path target) throws IOException;
     }
 }

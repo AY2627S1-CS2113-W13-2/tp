@@ -12,6 +12,7 @@ public record LoadResult(LedgerSnapshot snapshot, List<String> warnings, boolean
      */
     public LoadResult {
         Objects.requireNonNull(snapshot);
+        Objects.requireNonNull(warnings);
         warnings = List.copyOf(warnings);
     }
 }

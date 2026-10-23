@@ -17,7 +17,10 @@ public class DepositCommand extends Command {
     private final BigDecimal amount;
     private final String description;
 
+    /** Creates a deposit command with the supplied amount and description. */
     public DepositCommand(BigDecimal amount, String description) {
+        assert amount != null && amount.signum() > 0 : "Deposit amount must be positive";
+        assert description != null : "Deposit description must not be null";
         this.amount = amount;
         this.description = description;
     }
@@ -29,8 +32,11 @@ public class DepositCommand extends Command {
         this(amount, "");
     }
 
+    /** Adds the deposit to the ledger and confirms the updated transaction count. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
         Transaction deposit = new Transaction(TransactionType.DEPOSIT, amount, description);
         transactions.add(deposit);
         logger.info("Added " + deposit + ", total transactions: " + transactions.size());

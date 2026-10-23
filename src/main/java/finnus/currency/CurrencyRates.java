@@ -37,6 +37,7 @@ public class CurrencyRates {
         rates.put(currencyCode, rate);
     }
 
+    /** Returns whether a rate has been set for the given currency code. */
     public boolean hasRate(String currencyCode) {
         return rates.containsKey(currencyCode);
     }

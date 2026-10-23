@@ -22,6 +22,8 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
      * Copies mutable collections and rejects values that cannot represent a valid ledger.
      */
     public LedgerSnapshot {
+        assert transactions != null : "Transactions must not be null";
+        assert rates != null : "Rates must not be null";
         Objects.requireNonNull(openingBalance);
         validateOpeningBalance(openingBalance);
         transactions = List.copyOf(transactions);
