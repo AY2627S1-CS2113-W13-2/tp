@@ -100,9 +100,10 @@ public class LedgerCodec {
     private void parseOpening(String[] fields, Records records) {
         requireFields(fields, 2);
         BigDecimal amount = parseDecimal(fields[1]);
-        if (amount.signum() < 0 || records.hasOpening) {
-            throw new IllegalArgumentException("Negative or duplicate opening balance");
+        if (records.hasOpening) {
+            throw new IllegalArgumentException("Duplicate opening balance");
         }
+        LedgerSnapshot.validateOpeningBalance(amount);
         records.opening = amount;
         records.hasOpening = true;
     }

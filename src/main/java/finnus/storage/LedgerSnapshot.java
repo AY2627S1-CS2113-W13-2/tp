@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import finnus.currency.CurrencyRates;
+import finnus.parser.Parser;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -22,9 +23,7 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
      */
     public LedgerSnapshot {
         Objects.requireNonNull(openingBalance);
-        if (openingBalance.signum() < 0) {
-            throw new IllegalArgumentException("Opening balance must not be negative");
-        }
+        validateOpeningBalance(openingBalance);
         transactions = List.copyOf(transactions);
         rates = Map.copyOf(rates);
         rates.forEach(LedgerSnapshot::validateRate);
@@ -43,6 +42,9 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
             Objects.requireNonNull(description, "Description must not be null");
             if (amount.signum() <= 0) {
                 throw new IllegalArgumentException("Transaction amount must be positive");
+            }
+            if (amount.compareTo(Parser.MAX_AMOUNT) > 0) {
+                throw new IllegalArgumentException("Transaction amount must not exceed " + Parser.MAX_AMOUNT);
             }
         }
     }
@@ -79,6 +81,18 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
     }
 
     /**
+     * Checks the domain rules for a stored opening balance.
+     */
+    static void validateOpeningBalance(BigDecimal amount) {
+        if (amount == null || amount.signum() < 0) {
+            throw new IllegalArgumentException("Opening balance must not be negative");
+        }
+        if (amount.compareTo(Parser.MAX_AMOUNT) > 0) {
+            throw new IllegalArgumentException("Opening balance must not exceed " + Parser.MAX_AMOUNT);
+        }
+    }
+
+    /**
      * Checks the domain rules for a stored rate without depending on console argument limits.
      */
     static void validateRate(String code, BigDecimal rate) {
@@ -89,6 +103,9 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
         }
         if (CurrencyRates.BASE_CURRENCY.equals(code) || rate == null || rate.signum() <= 0) {
             throw new IllegalArgumentException("Rate must be positive and use a foreign currency");
+        }
+        if (rate.compareTo(Parser.MAX_RATE) > 0) {
+            throw new IllegalArgumentException("Rate must not exceed " + Parser.MAX_RATE);
         }
     }
 }

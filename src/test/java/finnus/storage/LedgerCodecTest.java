@@ -35,7 +35,7 @@ class LedgerCodecTest {
     public void encode_completeLedger_preservesValuesAndDescriptions() {
         List<StoredTransaction> transactions = List.of(
                 new StoredTransaction(TransactionType.DEPOSIT, new BigDecimal("500.00"), "Allowance"),
-                new StoredTransaction(TransactionType.WITHDRAWAL, new BigDecimal("0.005"), "|\t\n午餐\r\n"),
+                new StoredTransaction(TransactionType.WITHDRAWAL, new BigDecimal("0.005"), "|\t\n\u5348\u9910\r\n"),
                 new StoredTransaction(TransactionType.DEPOSIT, new BigDecimal("1"), ""));
         LedgerSnapshot snapshot = new LedgerSnapshot(new BigDecimal("12.30"), transactions,
                 Map.of("JPY", new BigDecimal("110.00"), "MYR", new BigDecimal("3.450000")));
@@ -48,8 +48,10 @@ class LedgerCodecTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"UNKNOWN|x", "OPENING|-1", "RATE|SGD|1", "RATE|JYP|1", "RATE|JPY|0",
-        "RATE|JPY|NaN", "RATE|JPY|1E+999999", "TRANSACTION|OTHER|1|", "TRANSACTION|DEPOSIT|0|",
-        "TRANSACTION|DEPOSIT|-1|",
+        "RATE|JPY|NaN", "RATE|JPY|1E+999999", "RATE|JPY|1000000.01", "RATE|JPY|99999999999",
+        "TRANSACTION|OTHER|1|", "TRANSACTION|DEPOSIT|0|", "TRANSACTION|DEPOSIT|-1|",
+        "TRANSACTION|DEPOSIT|1000000.01|", "TRANSACTION|DEPOSIT|99999999999|",
+        "TRANSACTION|WITHDRAWAL|1000000.01|Lunch", "TRANSACTION|WITHDRAWAL|99999999999|Lunch",
         "TRANSACTION|DEPOSIT|bad|", "TRANSACTION|DEPOSIT|1|!", "TRANSACTION|DEPOSIT|1|/w==",
         "TRANSACTION|DEPOSIT|1", "TRANSACTION|DEPOSIT|1||extra"})
     public void decode_badRow_keepsSurroundingRecords(String badRow) {
@@ -60,6 +62,18 @@ class LedgerCodecTest {
         assertEquals(2, result.snapshot().transactions().size());
         assertTrue(result.warnings().getFirst().startsWith("Skipped row 4:"));
         assertFalse(result.warnings().getFirst().contains(badRow));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"OPENING|1000000.01", "OPENING|99999999999"})
+    public void decode_excessiveOpeningBalance_skipsRowAndDefaultsToZero(String badOpening) {
+        String text = "FINNUS|1\n" + badOpening + "\nTRANSACTION|DEPOSIT|2|\n";
+        LedgerCodec.DecodeResult result = codec.decode(text);
+        assertEquals(Status.PARTIAL, result.status());
+        assertEquals(BigDecimal.ZERO, result.snapshot().openingBalance());
+        assertEquals(1, result.snapshot().transactions().size());
+        assertTrue(result.warnings().getFirst().startsWith("Skipped row 2:"));
+        assertTrue(result.warnings().getFirst().contains("exceed"));
     }
 
     @Test
@@ -111,5 +125,31 @@ class LedgerCodecTest {
         assertEquals(BigDecimal.ZERO, snapshot.openingBalance());
         assertEquals(snapshot, LedgerSnapshot.capture(snapshot.toTransactionList()));
         assertThrows(UnsupportedOperationException.class, () -> snapshot.rates().put("USD", BigDecimal.ONE));
+    }
+
+    @Test
+    public void storedTransaction_amountExceedsMaxAmount_throwsException() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new StoredTransaction(TransactionType.DEPOSIT, new BigDecimal("1000000.01"), ""));
+        assertThrows(IllegalArgumentException.class, () ->
+                new StoredTransaction(TransactionType.WITHDRAWAL, new BigDecimal("99999999999"), "desc"));
+    }
+
+    @Test
+    public void validateRate_rateExceedsMaxRate_throwsException() {
+        assertThrows(IllegalArgumentException.class, () ->
+                LedgerSnapshot.validateRate("JPY", new BigDecimal("1000000.01")));
+        assertThrows(IllegalArgumentException.class, () ->
+                LedgerSnapshot.validateRate("USD", new BigDecimal("99999999999")));
+    }
+
+    @Test
+    public void validateOpeningBalance_amountExceedsMaxAmount_throwsException() {
+        assertThrows(IllegalArgumentException.class, () ->
+                LedgerSnapshot.validateOpeningBalance(new BigDecimal("1000000.01")));
+        assertThrows(IllegalArgumentException.class, () ->
+                LedgerSnapshot.validateOpeningBalance(new BigDecimal("99999999999")));
+        assertThrows(IllegalArgumentException.class, () ->
+                new LedgerSnapshot(new BigDecimal("1000000.01"), List.of(), Map.of()));
     }
 }
