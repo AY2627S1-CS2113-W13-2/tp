@@ -77,6 +77,71 @@ message to the user, so invalid input never stops the app.
   * Pros: faster to type.
   * Cons: the transaction history becomes hard to understand later.
 
+### Setting the opening balance
+
+The `opening AMOUNT` command (e.g. `opening 500`) sets the money the user had before they started
+using FinNUS.
+
+#### How it works
+
+1. `Parser#parseOpening()` checks the amount with `parseNonNegativeAmount()`, which uses the same
+   rules as deposits except that 0 is allowed, so the user can reset it.
+2. `OpeningBalanceCommand#execute()` replaces the opening balance in `TransactionList` and logs
+   the old and new values, since the old value is not kept anywhere else.
+3. It shows the new balance. If transactions already exist, it also warns that their balances
+   have changed.
+
+The opening balance is a separate field in `TransactionList`, not a `Transaction`.
+`getBalance()` uses it as the starting value when adding up all transactions, so changing it
+automatically shifts the balance:
+
+```java
+return transactions.stream()
+        .map(Transaction::getSignedAmount)
+        .reduce(openingBalance, BigDecimal::add);
+```
+
+#### Design considerations
+
+**Aspect: how the opening balance is stored**
+
+* **Alternative 1 (current choice):** a separate field in `TransactionList`.
+  * Pros: running `opening` again simply replaces it, and it never appears in `recent` or gets
+    removed by `delete`.
+  * Cons: storage has to save it separately from the transactions.
+* **Alternative 2:** a special first `DEPOSIT` transaction.
+  * Pros: no extra field.
+  * Cons: it would look like real income in the history and could be deleted by accident.
+
+### Setting exchange rates
+
+The `rate` command stores exchange rates for later conversion of foreign-currency transactions
+to SGD. `rate JPY 110` sets 1 SGD = 110 JPY, and `rate` on its own lists all rates.
+
+#### How it works
+
+1. `Parser#parseRate()` expects exactly two arguments, a currency code and a rate.
+2. `parseCurrencyCode()` upper-cases the code and checks it with `java.util.Currency`, which
+   rejects typos such as `JYP` without FinNUS keeping its own list. `SGD` is rejected because
+   amounts are already in SGD.
+3. `parseRateValue()` accepts a positive number with up to 6 decimal places (e.g. `0.5425`), up to
+   `Parser.MAX_RATE`.
+4. `RateCommand#execute()` gets the `CurrencyRates` from `TransactionList#getRates()` and calls
+   `setRate()`. If the currency already had a rate, the old one is shown too.
+
+`CurrencyRates` keeps the rates in a `TreeMap`, so `rate` lists them in alphabetical order.
+
+#### Design considerations
+
+**Aspect: where exchange rates come from**
+
+* **Alternative 1 (current choice):** the user types each rate in.
+  * Pros: works offline and gives the same result every time, which makes it easy to test.
+  * Cons: rates have to be updated by hand.
+* **Alternative 2:** fetch live rates from an online API.
+  * Pros: always up to date.
+  * Cons: needs internet access, and tests would give different results from day to day.
+
 
 ## Product scope
 ### Target user profile
