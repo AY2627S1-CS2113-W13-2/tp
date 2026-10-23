@@ -2,10 +2,12 @@ package finnus.parser;
 
 import java.math.BigDecimal;
 import java.util.Currency;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 import finnus.command.BalanceCommand;
 import finnus.command.Command;
+import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
@@ -37,11 +39,6 @@ public class Parser {
      */
     public static final BigDecimal MAX_RATE = new BigDecimal("1000000");
 
-    private static final String DEPOSIT_FORMAT = "deposit AMOUNT [d/DESCRIPTION]";
-    private static final String WITHDRAW_FORMAT = "withdraw AMOUNT d/DESCRIPTION";
-    private static final String OPENING_FORMAT = "opening AMOUNT";
-    private static final String RATE_FORMAT = "rate [CURRENCY RATE]";
-
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
 
     /**
@@ -58,32 +55,26 @@ public class Parser {
         String trimmed = input.trim();
         // Split into the command word and everything after it (which may be empty).
         String[] parts = trimmed.split("\\s+", 2);
-        String commandWord = parts[0].toLowerCase();
+        String commandWord = parts[0].toLowerCase(Locale.ROOT);
         String arguments = parts.length > 1 ? parts[1].trim() : "";
         logger.fine("Parsing command word '" + commandWord + "' with arguments '" + arguments + "'");
 
-        switch (commandWord) {
-        case "deposit":
-            return parseDeposit(arguments);
-        case "withdraw":
-            return parseWithdraw(arguments);
-        case "help":
-            return new HelpCommand();
-        case "recent":
-            return parseRecent(arguments);
-        case "opening":
-            return parseOpening(arguments);
-        case "balance":
-            return parseBalance();
-        case "exit":
-            return new ExitCommand();
-        case "delete":
-            return parseDelete(arguments);
-        case "rate":
-            return parseRate(arguments);
-        default:
-            throw new FinNusException("Unknown command: '" + commandWord + "'. Type 'help' to see all commands.");
-        }
+        CommandWord command = CommandWord.fromWord(commandWord).orElseThrow(() ->
+                new FinNusException("Unknown command: '" + commandWord + "'. Type '"
+                        + CommandWord.HELP.getWord() + "' to see all commands."));
+
+        // Exhaustiveness makes a new enum entry require a corresponding parser case.
+        return switch (command) {
+        case DEPOSIT -> parseDeposit(arguments);
+        case WITHDRAW -> parseWithdraw(arguments);
+        case HELP -> new HelpCommand();
+        case RECENT -> parseRecent(arguments);
+        case OPENING -> parseOpening(arguments);
+        case BALANCE -> new BalanceCommand();
+        case EXIT -> new ExitCommand();
+        case DELETE -> parseDelete(arguments);
+        case RATE -> parseRate(arguments);
+        };
     }
 
     /**
@@ -139,7 +130,7 @@ public class Parser {
      * Parses {@code opening AMOUNT}. Unlike deposits, 0 is allowed so the user can reset it.
      */
     private static Command parseOpening(String arguments) throws FinNusException {
-        BigDecimal amount = parseNonNegativeAmount(arguments, OPENING_FORMAT);
+        BigDecimal amount = parseNonNegativeAmount(arguments, CommandWord.OPENING.getUsage());
         return new OpeningBalanceCommand(amount);
     }
 
@@ -152,7 +143,8 @@ public class Parser {
         }
         String[] parts = arguments.split("\\s+");
         if (parts.length != 2) {
-            throw new FinNusException("Give a currency and a rate, e.g. rate JPY 110.\nFormat: " + RATE_FORMAT);
+            throw new FinNusException("Give a currency and a rate, e.g. " + CommandWord.RATE.getWord()
+                    + " JPY 110.\nFormat: " + CommandWord.RATE.getUsage());
         }
         return new RateCommand(parseCurrencyCode(parts[0]), parseRateValue(parts[1]));
     }
@@ -163,7 +155,7 @@ public class Parser {
      * @throws FinNusException If the code is not a real currency, or is SGD.
      */
     static String parseCurrencyCode(String text) throws FinNusException {
-        String code = text.toUpperCase();
+        String code = text.toUpperCase(Locale.ROOT);
         try {
             // Java's built-in currency list lets us reject typos such as "JYP" without
             // maintaining our own list.
@@ -200,28 +192,19 @@ public class Parser {
         return rate;
     }
 
-    /**
-     * Returns BalanceCommand instance
-     * 
-     * @param arguments is expected to be blank
-     */
-    private static Command parseBalance() {
-        return new BalanceCommand();
-    }
-
     private static Command parseDeposit(String arguments) throws FinNusException {
-        String[] amountAndDescription = splitAmountAndDescription(arguments, DEPOSIT_FORMAT);
-        BigDecimal amount = parseAmount(amountAndDescription[0], DEPOSIT_FORMAT);
+        String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.DEPOSIT.getUsage());
+        BigDecimal amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
         return new DepositCommand(amount, amountAndDescription[1]);
     }
 
     private static Command parseWithdraw(String arguments) throws FinNusException {
-        String[] amountAndDescription = splitAmountAndDescription(arguments, WITHDRAW_FORMAT);
-        BigDecimal amount = parseAmount(amountAndDescription[0], WITHDRAW_FORMAT);
+        String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.WITHDRAW.getUsage());
+        BigDecimal amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
         String description = amountAndDescription[1];
         if (description.isEmpty()) {
             throw new FinNusException("A withdrawal needs a description so you know what you spent on.\n"
-                    + "Format: " + WITHDRAW_FORMAT);
+                    + "Format: " + CommandWord.WITHDRAW.getUsage());
         }
         return new WithdrawCommand(amount, description);
     }

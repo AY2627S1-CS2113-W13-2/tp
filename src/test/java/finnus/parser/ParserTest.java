@@ -1,24 +1,33 @@
 package finnus.parser;
 
-import java.math.BigDecimal;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.util.Locale;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.command.BalanceCommand;
 import finnus.command.Command;
+import finnus.command.CommandWord;
+import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.HelpCommand;
 import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
-import finnus.command.HelpCommand;
+import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
 
@@ -27,6 +36,85 @@ import finnus.exception.FinNusException;
  */
 class ParserTest {
     private static final String FORMAT = "test format";
+
+    /**
+     * Independent user inputs and expected types ensure every enum entry has parser coverage.
+     */
+    private static final Map<CommandWord, CommandExample> COMMAND_EXAMPLES = Map.of(
+            CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class),
+            CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class),
+            CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class),
+            CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class),
+            CommandWord.OPENING, new CommandExample("opening 100", OpeningBalanceCommand.class),
+            CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class),
+            CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class),
+            CommandWord.HELP, new CommandExample("help", HelpCommand.class),
+            CommandWord.EXIT, new CommandExample("exit", ExitCommand.class));
+
+    /**
+     * Pairs literal user input with the concrete command the parser must produce.
+     */
+    private record CommandExample(String input, Class<? extends Command> expectedClass) {
+    }
+
+    @ParameterizedTest
+    @EnumSource(CommandWord.class)
+    public void parse_registeredCommand_returnsExpectedType(CommandWord command) throws FinNusException {
+        CommandExample example = COMMAND_EXAMPLES.get(command);
+        assertNotNull(example, "Add a valid input example for " + command);
+        assertInstanceOf(example.expectedClass(), Parser.parse(example.input()));
+
+        String[] parts = example.input().split(" ", 2);
+        String arguments = parts.length > 1 ? parts[1] : "";
+        String mixedCaseWord = parts[0].substring(0, 1).toUpperCase(Locale.ROOT) + parts[0].substring(1);
+        String[] wordVariations = {parts[0], parts[0].toUpperCase(Locale.ROOT), mixedCaseWord};
+        for (String word : wordVariations) {
+            assertInstanceOf(example.expectedClass(), Parser.parse(" \t" + word + "\t" + arguments + " \t"));
+        }
+    }
+
+    @Test
+    @ResourceLock("java.util.Locale")
+    public void parse_turkishLocale_acceptsCommandsAndCurrency() throws FinNusException {
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            assertInstanceOf(ExitCommand.class, Parser.parse("EXIT extra"));
+            assertInstanceOf(WithdrawCommand.class, Parser.parse("WITHDRAW 5 d/Lunch"));
+            assertInstanceOf(DepositCommand.class, Parser.parse("DEPOSIT 5"));
+            assertInstanceOf(OpeningBalanceCommand.class, Parser.parse("OPENING 5"));
+            assertInstanceOf(RateCommand.class, Parser.parse("RATE inr 65"));
+            assertEquals("INR", Parser.parseCurrencyCode("inr"));
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "OPENING", "RATE"})
+    public void parse_invalidArguments_reportsRegisteredUsage(CommandWord command) {
+        Map<CommandWord, String> invalidInputs = Map.of(
+                CommandWord.DEPOSIT, "deposit",
+                CommandWord.WITHDRAW, "withdraw 1",
+                CommandWord.OPENING, "opening",
+                CommandWord.RATE, "rate JPY");
+        FinNusException exception = assertThrows(FinNusException.class,
+                () -> Parser.parse(invalidInputs.get(command)));
+        assertTrue(exception.getMessage().contains("Format: " + command.getUsage()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"delete", "delete 0", "delete -1", "delete abc", "delete 1 2",
+        "delete 2147483648", "recent 2147483648"})
+    public void parse_invalidIntegerArguments_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_unknownCommand_preservesErrorMessage() {
+        FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse("  NOPE 123  "));
+        assertEquals("Unknown command: 'nope'. Type 'help' to see all commands.", exception.getMessage());
+    }
 
     @Test
     public void parse_depositWithDescription_returnsDepositCommand() throws FinNusException {

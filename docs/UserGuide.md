@@ -19,6 +19,14 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 5. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
 6. Refer to the Features section below for details of each command.
 
+## Saving and recovering your data
+
+FinNUS automatically saves transactions, opening balance, and exchange rates whenever a command changes them.
+The save file is `finnus.txt`.
+
+If a data row is corrupt, FinNUS skips it and reports a warning, the recovered ledger may be incomplete.
+If the main file is unusable, FinNUS tries its backup. If neither can be recovered, it starts with an empty ledger in memory and leaves the original file untouched until data changes.
+
 ## Features 
 
 ### Adding a deposit: `deposit`
