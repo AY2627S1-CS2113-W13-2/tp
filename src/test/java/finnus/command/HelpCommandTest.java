@@ -38,7 +38,6 @@ class HelpCommandTest {
                 "| withdraw | Record spending | withdraw AMOUNT d/DESCRIPTION  |",
                 "| recent   | Recent activity | recent [NUMBER]                |",
                 "| delete   | Delete a record | delete INDEX                   |",
-                "| opening  | Opening balance | opening AMOUNT                 |",
                 "| balance  | Current balance | balance                        |",
                 "| rate     | Manage FX rates | rate [CURRENCY RATE]           |",
                 "| help     | List commands   | help                           |",
@@ -57,7 +56,9 @@ class HelpCommandTest {
                 .filter(line -> line.startsWith("|"))
                 .skip(1)
                 .toList();
-        CommandWord[] commands = CommandWord.values();
+        CommandWord[] commands = java.util.Arrays.stream(CommandWord.values())
+                .filter(command -> command != CommandWord.OPENING)
+                .toArray(CommandWord[]::new);
         assertEquals(commands.length, rows.size());
         for (int i = 0; i < commands.length; i++) {
             String[] columns = rows.get(i).split("\\|", -1);

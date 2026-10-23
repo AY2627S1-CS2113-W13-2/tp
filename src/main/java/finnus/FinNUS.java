@@ -87,7 +87,10 @@ public class FinNUS {
      */
     public void run() {
         logger.info("FinNUS started");
-        restoreSession();
+        if (!restoreSession()) {
+            logger.info("FinNUS stopped during setup");
+            return;
+        }
         boolean isExit = false;
         while (!isExit) {
             String input = ui.readCommand();
@@ -113,7 +116,7 @@ public class FinNUS {
     }
 
     /** Loads the saved ledger, initializes session flags, and shows startup diagnostics. */
-    private void restoreSession() {
+    private boolean restoreSession() {
         LoadResult loaded = storage.load();
         transactions = loaded.snapshot().toTransactionList();
         savingAllowed = loaded.savingAllowed();
@@ -121,10 +124,18 @@ public class FinNUS {
         assert transactions != null : "Restored transaction list must exist";
         logger.fine("Session restored; saving allowed: " + savingAllowed
                 + ", warnings: " + loaded.warnings().size());
-        ui.showWelcome();
         if (!loaded.warnings().isEmpty()) {
             ui.showMessage(loaded.warnings());
         }
+        if (loaded.setupRequired()) {
+            if (!new Setup().run(ui, transactions)) {
+                return false;
+            }
+            hasUnsavedChanges = true;
+            savePendingChanges();
+        }
+        ui.showWelcome();
+        return true;
     }
 
     /**

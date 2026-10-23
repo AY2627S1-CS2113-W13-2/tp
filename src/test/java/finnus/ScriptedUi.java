@@ -24,6 +24,11 @@ class ScriptedUi extends Ui {
     }
 
     @Override
+    public String readCommand(String prompt) {
+        return readCommand();
+    }
+
+    @Override
     public void showMessage(String... lines) {
         messages.addAll(List.of(lines));
     }

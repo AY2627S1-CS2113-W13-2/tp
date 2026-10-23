@@ -12,7 +12,7 @@ public enum CommandWord {
     WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION"),
     RECENT("recent", "Recent activity", "[NUMBER]"),
     DELETE("delete", "Delete a record", "INDEX"),
-    OPENING("opening", "Opening balance", "AMOUNT"),
+    OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
     HELP("help", "List commands", ""),
@@ -21,15 +21,21 @@ public enum CommandWord {
     private final String word;
     private final String description;
     private final String argumentSyntax;
+    private final boolean availableAfterSetup;
 
     CommandWord(String word, String description, String argumentSyntax) {
+        this(word, description, argumentSyntax, true);
+    }
+
+    CommandWord(String word, String description, String argumentSyntax, boolean availableAfterSetup) {
         this.word = word;
         this.description = description;
         this.argumentSyntax = argumentSyntax;
+        this.availableAfterSetup = availableAfterSetup;
     }
 
     /**
-     * Returns the command word accepted by the parser.
+     * Returns the configured text for this command word.
      */
     public String getWord() {
         return word;
@@ -49,8 +55,14 @@ public enum CommandWord {
         return argumentSyntax.isEmpty() ? word : word + " " + argumentSyntax;
     }
 
+    /** Returns whether the command is accepted after first-run setup. */
+    public boolean isAvailableAfterSetup() {
+        return availableAfterSetup;
+    }
+
     /**
-     * Looks up a command word independently of the machine's default locale.
+     * Looks up a normal command word independently of the machine's default locale.
+     * Setup-only words are treated as unknown in the regular command loop.
      *
      * @param word The command word without surrounding whitespace or arguments; must not be null.
      * @return The matching command, or an empty optional if the word is unknown.
@@ -58,7 +70,7 @@ public enum CommandWord {
     public static Optional<CommandWord> fromWord(String word) {
         String normalizedWord = word.toLowerCase(Locale.ROOT);
         for (CommandWord command : values()) {
-            if (command.word.equals(normalizedWord)) {
+            if (command.availableAfterSetup && command.word.equals(normalizedWord)) {
                 return Optional.of(command);
             }
         }
