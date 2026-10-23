@@ -31,6 +31,9 @@ public class HelpCommand extends Command {
         int descriptionWidth = DESCRIPTION_HEADER.length();
         int syntaxWidth = SYNTAX_HEADER.length();
         for (CommandWord command : CommandWord.values()) {
+            if (!command.isAvailableAfterSetup()) {
+                continue;
+            }
             commandWidth = Math.max(commandWidth, command.getWord().length());
             descriptionWidth = Math.max(descriptionWidth, command.getDescription().length());
             syntaxWidth = Math.max(syntaxWidth, command.getUsage().length());
@@ -47,6 +50,9 @@ public class HelpCommand extends Command {
         lines.add(String.format(rowFormat, COMMAND_HEADER, DESCRIPTION_HEADER, SYNTAX_HEADER));
         lines.add(border);
         for (CommandWord command : CommandWord.values()) {
+            if (!command.isAvailableAfterSetup()) {
+                continue;
+            }
             lines.add(String.format(rowFormat, command.getWord(), command.getDescription(), command.getUsage()));
         }
         lines.add(border);
@@ -55,6 +61,7 @@ public class HelpCommand extends Command {
         return lines.toArray(String[]::new);
     }
 
+    /** Displays the command reference generated from {@link CommandWord}. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
         assert ui != null : "UI must not be null";

@@ -30,8 +30,11 @@ public class FinNUS {
 
     private final Ui ui;
     private final Storage storage;
+    /** The mutable in-memory ledger restored at startup and updated by commands. */
     private TransactionList transactions;
+    /** Tracks whether the current ledger differs from its last successful save. */
     private boolean hasUnsavedChanges;
+    /** Prevents writes when loading could not establish that replacing storage is safe. */
     private boolean savingAllowed;
 
     /**
@@ -84,11 +87,15 @@ public class FinNUS {
      */
     public void run() {
         logger.info("FinNUS started");
-        restoreSession();
+        if (!restoreSession()) {
+            logger.info("FinNUS stopped during setup");
+            return;
+        }
         boolean isExit = false;
         while (!isExit) {
             String input = ui.readCommand();
             if (input == null) {
+                logger.fine("Input ended; leaving command loop");
                 break;
             }
             if (input.isBlank()) {
@@ -97,7 +104,7 @@ public class FinNUS {
             try {
                 isExit = executeCommand(input);
             } catch (FinNusException e) {
-                logger.log(Level.WARNING, "Command failed for input '" + input + "': " + e.getMessage());
+                logger.log(Level.WARNING, "Command failed: " + e.getMessage());
                 ui.showError(e.getMessage());
             }
         }
@@ -108,15 +115,27 @@ public class FinNUS {
         logger.info("FinNUS exited");
     }
 
-    private void restoreSession() {
+    /** Loads the saved ledger, initializes session flags, and shows startup diagnostics. */
+    private boolean restoreSession() {
         LoadResult loaded = storage.load();
         transactions = loaded.snapshot().toTransactionList();
         savingAllowed = loaded.savingAllowed();
         hasUnsavedChanges = false;
-        ui.showWelcome();
+        assert transactions != null : "Restored transaction list must exist";
+        logger.fine("Session restored; saving allowed: " + savingAllowed
+                + ", warnings: " + loaded.warnings().size());
         if (!loaded.warnings().isEmpty()) {
             ui.showMessage(loaded.warnings());
         }
+        if (loaded.setupRequired()) {
+            if (!new Setup().run(ui, transactions)) {
+                return false;
+            }
+            hasUnsavedChanges = true;
+            savePendingChanges();
+        }
+        ui.showWelcome();
+        return true;
     }
 
     /**
@@ -124,10 +143,15 @@ public class FinNUS {
      */
     private boolean executeCommand(String input) throws FinNusException {
         Command command = Parser.parse(input);
+        assert command != null : "Parser must return a command";
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
         logger.fine("Executing " + command.getClass().getSimpleName());
         command.execute(transactions, ui);
-        hasUnsavedChanges |= !before.equals(LedgerSnapshot.capture(transactions));
+        boolean changed = !before.equals(LedgerSnapshot.capture(transactions));
+        hasUnsavedChanges |= changed;
+        if (changed) {
+            logger.fine("Command changed ledger state");
+        }
         if (!command.isExit()) {
             savePendingChanges();
         }
@@ -146,10 +170,11 @@ public class FinNUS {
             return;
         }
         try {
+            assert transactions != null : "Transactions must be initialized before saving";
             storage.save(LedgerSnapshot.capture(transactions));
             hasUnsavedChanges = false;
         } catch (IOException e) {
-            logger.warning("Automatic save failed (" + e.getClass().getSimpleName() + ").");
+            logger.log(Level.WARNING, "Automatic save failed", e);
             ui.showError("Automatic save failed. Changes remain in memory and will be retried after a later "
                     + "successful command and before exit.");
         }

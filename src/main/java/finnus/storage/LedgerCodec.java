@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.TransactionType;
@@ -17,7 +18,9 @@ import finnus.transaction.TransactionType;
  * Encodes versioned UTF-8 records and recovers valid rows without filesystem or UI access.
  */
 public class LedgerCodec {
+    private static final Logger LOGGER = Logger.getLogger(LedgerCodec.class.getName());
     private static final String HEADER = "FINNUS|1";
+    private static final String SETUP_PENDING = "SETUP_PENDING";
     private static final String OPENING = "OPENING";
     private static final String RATE = "RATE";
     private static final String TRANSACTION = "TRANSACTION";
@@ -26,7 +29,16 @@ public class LedgerCodec {
      * Distinguishes damaged data from a newer format that must not be overwritten.
      */
     public enum Status {
-        CLEAN, PARTIAL, UNRECOVERABLE, UNSUPPORTED
+        /** The save file exists, but first-run setup has not been confirmed. */
+        SETUP_PENDING,
+        /** Every non-blank record was valid. */
+        CLEAN,
+        /** Some records were recovered, but at least one warning was produced. */
+        PARTIAL,
+        /** No usable records could be recovered. */
+        UNRECOVERABLE,
+        /** The file declares a format version this application does not support. */
+        UNSUPPORTED
     }
 
     /**
@@ -45,6 +57,7 @@ public class LedgerCodec {
      * Produces deterministic records with Base64 descriptions and a final newline.
      */
     public String encode(LedgerSnapshot snapshot) {
+        assert snapshot != null : "Cannot encode a null ledger snapshot";
         StringBuilder text = new StringBuilder(HEADER).append('\n');
         text.append(OPENING).append('|').append(snapshot.openingBalance().toPlainString()).append('\n');
         new TreeMap<>(snapshot.rates()).forEach((code, rate) -> text.append(RATE).append('|')
@@ -55,7 +68,15 @@ public class LedgerCodec {
             text.append(TRANSACTION).append('|').append(transaction.type()).append('|')
                     .append(transaction.amount().toPlainString()).append('|').append(description).append('\n');
         }
-        return text.toString();
+        String encoded = text.toString();
+        assert encoded.startsWith(HEADER + '\n') && encoded.endsWith("\n")
+                : "Encoded ledger must have a header and final newline";
+        return encoded;
+    }
+
+    /** Encodes the persistent state used while first-run setup is incomplete. */
+    public String encodeSetupPending() {
+        return HEADER + '\n' + SETUP_PENDING + '\n';
     }
 
     /**
@@ -63,11 +84,15 @@ public class LedgerCodec {
      * Blank lines are ignored and an optional UTF-8 byte-order mark is accepted.
      */
     public DecodeResult decode(String text) {
+        assert text != null : "Cannot decode null storage text";
         List<String> lines = text.replaceFirst("^\uFEFF", "").lines().toList();
         if (lines.isEmpty() || !HEADER.equals(lines.getFirst())) {
             boolean newer = !lines.isEmpty() && lines.getFirst().matches("FINNUS\\|[0-9]+");
             return new DecodeResult(LedgerSnapshot.empty(), List.of("Invalid or unsupported storage header."),
                     newer ? Status.UNSUPPORTED : Status.UNRECOVERABLE);
+        }
+        if (isSetupPending(lines)) {
+            return new DecodeResult(LedgerSnapshot.empty(), List.of(), Status.SETUP_PENDING);
         }
         Records records = new Records();
         for (int index = 1; index < lines.size(); index++) {
@@ -78,12 +103,22 @@ public class LedgerCodec {
                 parseRecord(lines.get(index), records);
                 records.validRecords++;
             } catch (IllegalArgumentException e) {
+                LOGGER.fine("Skipped invalid storage row " + (index + 1) + ": " + e.getMessage());
                 records.warnings.add("Skipped row " + (index + 1) + ": " + e.getMessage() + ".");
             }
         }
         return records.result();
     }
 
+    /** Checks whether the only non-blank record after the header marks interrupted setup. */
+    private boolean isSetupPending(List<String> lines) {
+        List<String> records = lines.subList(1, lines.size()).stream()
+                .filter(line -> !line.isBlank())
+                .toList();
+        return records.size() == 1 && SETUP_PENDING.equals(records.getFirst().trim());
+    }
+
+    /** Dispatches one delimited line to the parser for its record type. */
     private void parseRecord(String line, Records records) {
         String[] fields = line.split("\\|", -1);
         for (int index = 0; index < fields.length; index++) {
@@ -97,6 +132,7 @@ public class LedgerCodec {
         }
     }
 
+    /** Adds the first valid opening balance, rejecting duplicate records. */
     private void parseOpening(String[] fields, Records records) {
         requireFields(fields, 2);
         BigDecimal amount = parseDecimal(fields[1]);
@@ -108,6 +144,7 @@ public class LedgerCodec {
         records.hasOpening = true;
     }
 
+    /** Validates and adds a currency rate unless a record for that currency already exists. */
     private void parseRate(String[] fields, Records records) {
         requireFields(fields, 3);
         BigDecimal rate = parseDecimal(fields[2]);
@@ -118,6 +155,7 @@ public class LedgerCodec {
         records.rates.put(fields[1], rate);
     }
 
+    /** Validates and appends one transaction record. */
     private void parseTransaction(String[] fields, Records records) {
         requireFields(fields, 4);
         TransactionType type;
@@ -129,6 +167,7 @@ public class LedgerCodec {
         records.transactions.add(new StoredTransaction(type, parseDecimal(fields[2]), decodeDescription(fields[3])));
     }
 
+    /** Decodes a Base64 description and rejects malformed or invalid UTF-8 data. */
     private String decodeDescription(String text) {
         try {
             byte[] bytes = Base64.getDecoder().decode(text);
@@ -138,6 +177,7 @@ public class LedgerCodec {
         }
     }
 
+    /** Parses a plain decimal value, excluding exponent notation and other formats. */
     private BigDecimal parseDecimal(String text) {
         if (!text.matches("-?\\d+(\\.\\d+)?")) {
             throw new IllegalArgumentException("Invalid decimal value");
@@ -149,6 +189,7 @@ public class LedgerCodec {
         }
     }
 
+    /** Rejects a record whose field count differs from its format. */
     private void requireFields(String[] fields, int expected) {
         if (fields.length != expected) {
             throw new IllegalArgumentException("Incorrect field count");
@@ -172,7 +213,10 @@ public class LedgerCodec {
             }
             Status status = validRecords == 0 ? Status.UNRECOVERABLE
                     : warnings.isEmpty() ? Status.CLEAN : Status.PARTIAL;
-            return new DecodeResult(new LedgerSnapshot(opening, transactions, rates), warnings, status);
+            LedgerSnapshot snapshot = new LedgerSnapshot(opening, transactions, rates);
+            assert snapshot != null : "Decoded ledger snapshot must exist";
+            LOGGER.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
+            return new DecodeResult(snapshot, warnings, status);
         }
     }
 }
