@@ -7,7 +7,7 @@ import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
 /**
- * Represents the command to get the user's balance
+ * Displays the user's balance rounded to two decimal places.
  */
 public class BalanceCommand extends Command {
 

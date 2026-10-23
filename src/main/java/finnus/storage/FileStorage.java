@@ -24,10 +24,15 @@ public class FileStorage implements Storage {
     private final Path path;
     private final LedgerCodec codec = new LedgerCodec();
     private final AtomicReplacement replacement;
+    /** True after a clean main file was loaded or saved, so it can safely become a backup. */
     private boolean knownClean;
+    /** Tracks whether load has initialized recovery and overwrite policy. */
     private boolean initialized;
+    /** False when the source format or read failure makes overwriting unsafe. */
     private boolean savingAllowed = true;
+    /** Requests preserving damaged source bytes before the next successful replacement. */
     private boolean preserveOriginal;
+    /** Prevents the same damaged source from being copied more than once per session. */
     private final Set<Path> preservedSources = new HashSet<>();
 
     /**
@@ -38,6 +43,7 @@ public class FileStorage implements Storage {
                 StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
 
+    /** Creates storage with an injected replacement strategy for controlled failure handling. */
     FileStorage(Path path, AtomicReplacement replacement) {
         this.path = path.toAbsolutePath().normalize();
         this.replacement = replacement;
@@ -55,6 +61,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Chooses the JAR directory for packaged runs or the working directory for development runs. */
     static Path resolvePath(Path codeLocation, Path workingDirectory) {
         Path location = codeLocation.toAbsolutePath().normalize();
         Path folder = location.getFileName().toString().endsWith(".jar")
@@ -95,6 +102,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Applies the recovery policy for a decoded main file. */
     private LoadResult handleMainFile(LedgerCodec.DecodeResult decoded) {
         List<String> warnings = new ArrayList<>(decoded.warnings());
         switch (decoded.status()) {
@@ -121,6 +129,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Uses a clean backup when available and otherwise returns an empty, safely unsaved state. */
     private LoadResult recoverBackup(boolean damagedMain, List<String> warnings) {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
@@ -154,6 +163,7 @@ public class FileStorage implements Storage {
         return result(LedgerSnapshot.empty(), warnings);
     }
 
+    /** Disables saving after a source cannot be read, protecting data that may be inaccessible. */
     private LoadResult readFailure(Path source) {
         savingAllowed = false;
         LOGGER.log(java.util.logging.Level.WARNING, "Unable to read storage file " + source);
@@ -161,6 +171,7 @@ public class FileStorage implements Storage {
                 + ". Starting an unsaved session. Saving is disabled to protect data that could not be loaded."));
     }
 
+    /** Logs recovery warnings and packages the result with the current saving policy. */
     private LoadResult result(LedgerSnapshot snapshot, List<String> warnings) {
         for (String warning : warnings) {
             LOGGER.warning(warning);
@@ -168,6 +179,7 @@ public class FileStorage implements Storage {
         return new LoadResult(snapshot, warnings, savingAllowed);
     }
 
+    /** Decodes a storage file, returning {@code null} when it does not exist. */
     private LedgerCodec.DecodeResult read(Path source) throws IOException {
         try {
             return codec.decode(Files.readString(source, StandardCharsets.UTF_8));
@@ -212,6 +224,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Copies the current clean ledger into the backup using atomic replacement. */
     private void rotateBackup() throws IOException {
         protectDamagedBackup();
         Path temporary = Files.createTempFile(path.getParent(), ".finnus-", ".tmp");
@@ -223,6 +236,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Preserves a damaged backup before rotating another ledger over it. */
     private void protectDamagedBackup() throws IOException {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
@@ -259,10 +273,12 @@ public class FileStorage implements Storage {
         }
     }
 
+    /** Returns the sibling path used for the previous clean ledger. */
     private Path backupPath() {
         return path.resolveSibling(path.getFileName() + ".bak");
     }
 
+    /** Removes a temporary file and logs cleanup failures without hiding the main result. */
     private void removeTemporary(Path temporary) {
         try {
             Files.deleteIfExists(temporary);
@@ -276,6 +292,7 @@ public class FileStorage implements Storage {
      */
     @FunctionalInterface
     interface AtomicReplacement {
+        /** Atomically replaces the target with the source when supported by the filesystem. */
         void replace(Path source, Path target) throws IOException;
     }
 }

@@ -28,7 +28,14 @@ public class LedgerCodec {
      * Distinguishes damaged data from a newer format that must not be overwritten.
      */
     public enum Status {
-        CLEAN, PARTIAL, UNRECOVERABLE, UNSUPPORTED
+        /** Every non-blank record was valid. */
+        CLEAN,
+        /** Some records were recovered, but at least one warning was produced. */
+        PARTIAL,
+        /** No usable records could be recovered. */
+        UNRECOVERABLE,
+        /** The file declares a format version this application does not support. */
+        UNSUPPORTED
     }
 
     /**
@@ -92,6 +99,7 @@ public class LedgerCodec {
         return records.result();
     }
 
+    /** Dispatches one delimited line to the parser for its record type. */
     private void parseRecord(String line, Records records) {
         String[] fields = line.split("\\|", -1);
         for (int index = 0; index < fields.length; index++) {
@@ -105,6 +113,7 @@ public class LedgerCodec {
         }
     }
 
+    /** Adds the first valid opening balance, rejecting duplicate records. */
     private void parseOpening(String[] fields, Records records) {
         requireFields(fields, 2);
         BigDecimal amount = parseDecimal(fields[1]);
@@ -116,6 +125,7 @@ public class LedgerCodec {
         records.hasOpening = true;
     }
 
+    /** Validates and adds a currency rate unless a record for that currency already exists. */
     private void parseRate(String[] fields, Records records) {
         requireFields(fields, 3);
         BigDecimal rate = parseDecimal(fields[2]);
@@ -126,6 +136,7 @@ public class LedgerCodec {
         records.rates.put(fields[1], rate);
     }
 
+    /** Validates and appends one transaction record. */
     private void parseTransaction(String[] fields, Records records) {
         requireFields(fields, 4);
         TransactionType type;
@@ -137,6 +148,7 @@ public class LedgerCodec {
         records.transactions.add(new StoredTransaction(type, parseDecimal(fields[2]), decodeDescription(fields[3])));
     }
 
+    /** Decodes a Base64 description and rejects malformed or invalid UTF-8 data. */
     private String decodeDescription(String text) {
         try {
             byte[] bytes = Base64.getDecoder().decode(text);
@@ -146,6 +158,7 @@ public class LedgerCodec {
         }
     }
 
+    /** Parses a plain decimal value, excluding exponent notation and other formats. */
     private BigDecimal parseDecimal(String text) {
         if (!text.matches("-?\\d+(\\.\\d+)?")) {
             throw new IllegalArgumentException("Invalid decimal value");
@@ -157,6 +170,7 @@ public class LedgerCodec {
         }
     }
 
+    /** Rejects a record whose field count differs from its format. */
     private void requireFields(String[] fields, int expected) {
         if (fields.length != expected) {
             throw new IllegalArgumentException("Incorrect field count");

@@ -194,12 +194,14 @@ public class Parser {
         return rate;
     }
 
+    /** Parses a positive deposit amount and its optional description. */
     private static Command parseDeposit(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.DEPOSIT.getUsage());
         BigDecimal amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
         return new DepositCommand(amount, amountAndDescription[1]);
     }
 
+    /** Parses a positive withdrawal amount and requires a non-empty description. */
     private static Command parseWithdraw(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.WITHDRAW.getUsage());
         BigDecimal amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());

@@ -30,6 +30,7 @@ public class TransactionList {
      */
     private final CurrencyRates rates = new CurrencyRates();
 
+    /** Adds a transaction at the end of the ledger, preserving entry order. */
     public void add(Transaction transaction) {
         int oldSize = transactions.size();
         transactions.add(transaction);
@@ -43,10 +44,12 @@ public class TransactionList {
         return transactions.get(index);
     }
 
+    /** Returns the number of recorded transactions. */
     public int size() {
         return transactions.size();
     }
 
+    /** Returns the rate collection used to convert foreign currencies. */
     public CurrencyRates getRates() {
         return rates;
     }
@@ -78,6 +81,7 @@ public class TransactionList {
      *
      * @param length The number of transactions to show, starting from the most
      *     recent one.
+     * @return An immutable list ordered from newest to oldest.
      */
     public List<Transaction> getRecentTransactions(int length) {
         // Safeguard against empty transactions list
@@ -106,6 +110,7 @@ public class TransactionList {
         return removed;
     }
 
+    /** Returns the starting balance before any transactions are applied. */
     public BigDecimal getOpeningBalance() {
         return openingBalance;
     }

@@ -27,6 +27,7 @@ public class OpeningBalanceCommand extends Command {
         this.amount = amount;
     }
 
+    /** Replaces the opening balance and reports the resulting balance change. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
         assert transactions != null : "Transaction list must not be null";

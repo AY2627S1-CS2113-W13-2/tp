@@ -30,8 +30,11 @@ public class FinNUS {
 
     private final Ui ui;
     private final Storage storage;
+    /** The mutable in-memory ledger restored at startup and updated by commands. */
     private TransactionList transactions;
+    /** Tracks whether the current ledger differs from its last successful save. */
     private boolean hasUnsavedChanges;
+    /** Prevents writes when loading could not establish that replacing storage is safe. */
     private boolean savingAllowed;
 
     /**
@@ -109,6 +112,7 @@ public class FinNUS {
         logger.info("FinNUS exited");
     }
 
+    /** Loads the saved ledger, initializes session flags, and shows startup diagnostics. */
     private void restoreSession() {
         LoadResult loaded = storage.load();
         transactions = loaded.snapshot().toTransactionList();
