@@ -18,7 +18,7 @@ import finnus.transaction.TransactionType;
  * Encodes versioned UTF-8 records and recovers valid rows without filesystem or UI access.
  */
 public class LedgerCodec {
-    private static final Logger LOGGER = Logger.getLogger(LedgerCodec.class.getName());
+    private static final Logger logger = Logger.getLogger(LedgerCodec.class.getName());
     private static final String HEADER = "FINNUS|1";
     private static final String OPENING = "OPENING";
     private static final String RATE = "RATE";
@@ -92,7 +92,7 @@ public class LedgerCodec {
                 parseRecord(lines.get(index), records);
                 records.validRecords++;
             } catch (IllegalArgumentException e) {
-                LOGGER.fine("Skipped invalid storage row " + (index + 1) + ": " + e.getMessage());
+                logger.fine("Skipped invalid storage row " + (index + 1) + ": " + e.getMessage());
                 records.warnings.add("Skipped row " + (index + 1) + ": " + e.getMessage() + ".");
             }
         }
@@ -196,7 +196,7 @@ public class LedgerCodec {
                     : warnings.isEmpty() ? Status.CLEAN : Status.PARTIAL;
             LedgerSnapshot snapshot = new LedgerSnapshot(opening, transactions, rates);
             assert snapshot != null : "Decoded ledger snapshot must exist";
-            LOGGER.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
+            logger.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
             return new DecodeResult(snapshot, warnings, status);
         }
     }
