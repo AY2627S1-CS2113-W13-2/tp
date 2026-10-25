@@ -30,8 +30,11 @@ public class TransactionList {
      */
     private final CurrencyRates rates = new CurrencyRates();
 
+    /** Adds a transaction at the end of the ledger, preserving entry order. */
     public void add(Transaction transaction) {
+        int oldSize = transactions.size();
         transactions.add(transaction);
+        assert transactions.size() == oldSize + 1 : "Adding a transaction must increase the list size";
     }
 
     /**
@@ -41,10 +44,12 @@ public class TransactionList {
         return transactions.get(index);
     }
 
+    /** Returns the number of recorded transactions. */
     public int size() {
         return transactions.size();
     }
 
+    /** Returns the rate collection used to convert foreign currencies. */
     public CurrencyRates getRates() {
         return rates;
     }
@@ -64,7 +69,8 @@ public class TransactionList {
      * @param end The ending index of the sublist (exclusive)
      */
     public List<Transaction> getSubList(int start, int end) {
-        assert (start < end && start >= 0 && end <= transactions.size());
+        assert start >= 0 && start < end && end <= transactions.size()
+                : "Sublist bounds must be within the transaction list";
         return Collections.unmodifiableList(transactions.subList(start, end));
     }
 
@@ -75,6 +81,7 @@ public class TransactionList {
      *
      * @param length The number of transactions to show, starting from the most
      *     recent one.
+     * @return An immutable list ordered from newest to oldest.
      */
     public List<Transaction> getRecentTransactions(int length) {
         // Safeguard against empty transactions list
@@ -97,9 +104,13 @@ public class TransactionList {
      * @return The deleted transaction.
      */
     public Transaction delete(int index) {
-        return transactions.remove(index);
+        int oldSize = transactions.size();
+        Transaction removed = transactions.remove(index);
+        assert transactions.size() == oldSize - 1 : "Deleting a transaction must reduce the list size";
+        return removed;
     }
 
+    /** Returns the starting balance before any transactions are applied. */
     public BigDecimal getOpeningBalance() {
         return openingBalance;
     }

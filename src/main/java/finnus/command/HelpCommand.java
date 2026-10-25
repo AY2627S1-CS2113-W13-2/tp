@@ -55,6 +55,7 @@ public class HelpCommand extends Command {
         return lines.toArray(String[]::new);
     }
 
+    /** Displays the command reference generated from {@link CommandWord}. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
         assert ui != null : "UI must not be null";
