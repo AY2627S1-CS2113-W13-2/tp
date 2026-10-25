@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.money.Money;
 import finnus.storage.LedgerCodec.Status;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.Transaction;
@@ -34,10 +35,10 @@ class LedgerCodecTest {
     @Test
     public void encode_completeLedger_preservesValuesAndDescriptions() {
         List<StoredTransaction> transactions = List.of(
-                new StoredTransaction(TransactionType.DEPOSIT, new BigDecimal("500.00"), "Allowance"),
-                new StoredTransaction(TransactionType.WITHDRAWAL, new BigDecimal("0.005"), "|\t\n\u5348\u9910\r\n"),
-                new StoredTransaction(TransactionType.DEPOSIT, new BigDecimal("1"), ""));
-        LedgerSnapshot snapshot = new LedgerSnapshot(new BigDecimal("12.30"), transactions,
+                new StoredTransaction(TransactionType.DEPOSIT, Money.of("500.00"), "Allowance"),
+                new StoredTransaction(TransactionType.WITHDRAWAL, Money.of("0.005"), "|\t\n\u5348\u9910\r\n"),
+                new StoredTransaction(TransactionType.DEPOSIT, Money.of("1"), ""));
+        LedgerSnapshot snapshot = new LedgerSnapshot(Money.of("12.30"), transactions,
                 Map.of("JPY", new BigDecimal("110.00"), "MYR", new BigDecimal("3.450000")));
         String encoded = codec.encode(snapshot);
         assertTrue(encoded.contains("TRANSACTION|DEPOSIT|500.00|QWxsb3dhbmNl\n"));
@@ -70,7 +71,7 @@ class LedgerCodecTest {
         String text = "FINNUS|1\n" + badOpening + "\nTRANSACTION|DEPOSIT|2|\n";
         LedgerCodec.DecodeResult result = codec.decode(text);
         assertEquals(Status.PARTIAL, result.status());
-        assertEquals(BigDecimal.ZERO, result.snapshot().openingBalance());
+        assertEquals(Money.ZERO, result.snapshot().openingBalance());
         assertEquals(1, result.snapshot().transactions().size());
         assertTrue(result.warnings().getFirst().startsWith("Skipped row 2:"));
         assertTrue(result.warnings().getFirst().contains("exceed"));
@@ -87,7 +88,7 @@ class LedgerCodecTest {
                 TRANSACTION|DEPOSIT|1|
                 TRANSACTION|DEPOSIT|1|
                 """);
-        assertEquals(new BigDecimal("10"), result.snapshot().openingBalance());
+        assertEquals(Money.of("10"), result.snapshot().openingBalance());
         assertEquals(new BigDecimal("110"), result.snapshot().rates().get("JPY"));
         assertEquals(2, result.snapshot().transactions().size());
         assertEquals(2, result.warnings().size());
@@ -97,7 +98,7 @@ class LedgerCodecTest {
     public void decode_missingOpening_recoversTransactionsAndWarns() {
         LedgerCodec.DecodeResult result = codec.decode("FINNUS|1\nTRANSACTION|DEPOSIT|1|\n");
         assertEquals(Status.PARTIAL, result.status());
-        assertEquals(BigDecimal.ZERO, result.snapshot().openingBalance());
+        assertEquals(Money.ZERO, result.snapshot().openingBalance());
         assertTrue(result.warnings().getFirst().contains("Balances may be incomplete"));
     }
 
@@ -121,15 +122,15 @@ class LedgerCodecTest {
     @Test
     public void capture_mutatedLedger_doesNotAlterSnapshot() {
         TransactionList ledger = new TransactionList();
-        ledger.add(new Transaction(TransactionType.DEPOSIT, BigDecimal.ONE, ""));
+        ledger.add(new Transaction(TransactionType.DEPOSIT, Money.of(1), ""));
         ledger.getRates().setRate("JPY", BigDecimal.TEN);
         LedgerSnapshot snapshot = LedgerSnapshot.capture(ledger);
         ledger.delete(0);
         ledger.getRates().setRate("JPY", BigDecimal.ONE);
-        ledger.setOpeningBalance(BigDecimal.TEN);
+        ledger.setOpeningBalance(Money.of(10));
         assertEquals(1, snapshot.transactions().size());
         assertEquals(BigDecimal.TEN, snapshot.rates().get("JPY"));
-        assertEquals(BigDecimal.ZERO, snapshot.openingBalance());
+        assertEquals(Money.ZERO, snapshot.openingBalance());
         assertEquals(snapshot, LedgerSnapshot.capture(snapshot.toTransactionList()));
         assertThrows(UnsupportedOperationException.class, () -> snapshot.rates().put("USD", BigDecimal.ONE));
     }
@@ -137,9 +138,9 @@ class LedgerCodecTest {
     @Test
     public void storedTransaction_amountExceedsMaxAmount_throwsException() {
         assertThrows(IllegalArgumentException.class, () ->
-                new StoredTransaction(TransactionType.DEPOSIT, new BigDecimal("1000000.01"), ""));
+                new StoredTransaction(TransactionType.DEPOSIT, Money.of("1000000.01"), ""));
         assertThrows(IllegalArgumentException.class, () ->
-                new StoredTransaction(TransactionType.WITHDRAWAL, new BigDecimal("99999999999"), "desc"));
+                new StoredTransaction(TransactionType.WITHDRAWAL, Money.of("99999999999"), "desc"));
     }
 
     @Test
@@ -153,10 +154,10 @@ class LedgerCodecTest {
     @Test
     public void validateOpeningBalance_amountExceedsMaxAmount_throwsException() {
         assertThrows(IllegalArgumentException.class, () ->
-                LedgerSnapshot.validateOpeningBalance(new BigDecimal("1000000.01")));
+                LedgerSnapshot.validateOpeningBalance(Money.of("1000000.01")));
         assertThrows(IllegalArgumentException.class, () ->
-                LedgerSnapshot.validateOpeningBalance(new BigDecimal("99999999999")));
+                LedgerSnapshot.validateOpeningBalance(Money.of("99999999999")));
         assertThrows(IllegalArgumentException.class, () ->
-                new LedgerSnapshot(new BigDecimal("1000000.01"), List.of(), Map.of()));
+                new LedgerSnapshot(Money.of("1000000.01"), List.of(), Map.of()));
     }
 }

@@ -7,12 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+
+import finnus.money.Money;
 
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -86,8 +87,8 @@ class HelpCommandTest {
     @Test
     public void execute_help_preservesExistingTransactions() {
         TransactionList transactions = new TransactionList();
-        transactions.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal("100"), "Allowance"));
-        transactions.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal("4.50"), "Lunch"));
+        transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of("100"), "Allowance"));
+        transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("4.50"), "Lunch"));
         List<Transaction> expectedTransactions = transactions.getAll();
 
         new HelpCommand().execute(transactions, new Ui());

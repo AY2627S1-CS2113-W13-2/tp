@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -16,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import finnus.money.Money;
 
 /**
  * Checks recovery decisions and preservation of damaged files before later saves.
@@ -67,7 +68,7 @@ class StorageRecoveryTest {
         Files.writeString(directory.resolve("finnus.txt.bak"), backup);
         FileStorage storage = new FileStorage(path);
         LoadResult loaded = storage.load();
-        assertEquals(new BigDecimal("12.30"), loaded.snapshot().openingBalance());
+        assertEquals(Money.of("12.30"), loaded.snapshot().openingBalance());
         assertEquals("damaged", Files.readString(path));
         storage.save(loaded.snapshot());
         assertEquals(backup, Files.readString(directory.resolve("finnus.txt.bak")));
@@ -78,7 +79,7 @@ class StorageRecoveryTest {
     public void load_missingMain_usesValidBackup() throws IOException {
         Files.writeString(directory.resolve("finnus.txt.bak"), "FINNUS|1\nOPENING|4\n");
         Path path = directory.resolve("finnus.txt");
-        assertEquals(new BigDecimal("4"), new FileStorage(path).load().snapshot().openingBalance());
+        assertEquals(Money.of("4"), new FileStorage(path).load().snapshot().openingBalance());
         assertFalse(Files.exists(path));
     }
 

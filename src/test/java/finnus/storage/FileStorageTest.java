@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +15,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import finnus.money.Money;
 
 /**
  * Exercises real filesystem writes and deterministic failures in an isolated directory.
@@ -106,7 +107,7 @@ class FileStorageTest {
     }
 
     private LedgerSnapshot withOpening(String amount) {
-        return new LedgerSnapshot(new BigDecimal(amount), List.of(), Map.of());
+        return new LedgerSnapshot(Money.of(amount), List.of(), Map.of());
     }
 
     private void assertNoTemporaryFiles(Path folder) throws IOException {

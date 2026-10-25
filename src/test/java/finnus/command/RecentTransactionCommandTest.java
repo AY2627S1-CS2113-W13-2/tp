@@ -6,11 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+
+import finnus.money.Money;
 
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -111,7 +112,7 @@ class RecentTransactionCommandTest {
     public void execute_doesNotModifyTransactionList() {
         TransactionList transactions = createTransactionList();
         List<Transaction> originalTransactions = transactions.getAll();
-        BigDecimal originalBalance = transactions.getBalance();
+        Money originalBalance = transactions.getBalance();
 
         runAndCaptureOutput(new RecentTransactionCommand(3), transactions);
 
@@ -127,32 +128,32 @@ class RecentTransactionCommandTest {
 
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("100.00"),
+                Money.of("100.00"),
                 "Allowance"));
 
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("2.50"),
+                Money.of("2.50"),
                 "Transport"));
 
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("4.50"),
+                Money.of("4.50"),
                 "Lunch"));
 
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("12.30"),
+                Money.of("12.30"),
                 "Groceries"));
 
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("3.20"),
+                Money.of("3.20"),
                 "Coffee"));
 
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("25.00"),
+                Money.of("25.00"),
                 "Books"));
 
         return transactions;
@@ -166,12 +167,12 @@ class RecentTransactionCommandTest {
 
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("100.00"),
+                Money.of("100.00"),
                 "Allowance"));
 
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("4.50"),
+                Money.of("4.50"),
                 "Lunch"));
 
         return transactions;
