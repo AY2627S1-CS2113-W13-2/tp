@@ -40,8 +40,11 @@ public class RateCommand extends Command {
         this.rate = rate;
     }
 
+    /** Lists the configured rates or updates the selected currency rate. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
         CurrencyRates rates = transactions.getRates();
         if (currencyCode == null) {
             listRates(rates, ui);
@@ -50,6 +53,7 @@ public class RateCommand extends Command {
         }
     }
 
+    /** Stores the requested rate and reports its previous value when one existed. */
     private void setRate(CurrencyRates rates, Ui ui) {
         String message = "Exchange rate set: " + formatRate(currencyCode, rate);
         if (rates.hasRate(currencyCode)) {
@@ -59,6 +63,7 @@ public class RateCommand extends Command {
         ui.showMessage(message);
     }
 
+    /** Displays all configured rates in the order supplied by the rate collection. */
     private static void listRates(CurrencyRates rates, Ui ui) {
         Map<String, BigDecimal> allRates = rates.getAll();
         if (allRates.isEmpty()) {

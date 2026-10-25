@@ -17,14 +17,20 @@ public class WithdrawCommand extends Command {
     private final BigDecimal amount;
     private final String description;
 
+    /** Creates a withdrawal command with a required description. */
     public WithdrawCommand(BigDecimal amount, String description) {
+        assert amount != null && amount.signum() > 0 : "Withdrawal amount must be positive";
+        assert description != null : "Withdrawal description must not be null";
         assert !description.isBlank() : "A withdrawal must have a description";
         this.amount = amount;
         this.description = description;
     }
 
+    /** Adds the withdrawal to the ledger and confirms the updated transaction count. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
         Transaction withdrawal = new Transaction(TransactionType.WITHDRAWAL, amount, description);
         transactions.add(withdrawal);
         logger.info("Added " + withdrawal + ", total transactions: " + transactions.size());

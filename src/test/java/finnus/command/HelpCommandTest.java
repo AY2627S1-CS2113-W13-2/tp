@@ -1,12 +1,15 @@
 package finnus.command;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -22,16 +25,7 @@ import finnus.ui.Ui;
 class HelpCommandTest {
     @Test
     public void execute_help_printsCompleteUsageMessage() {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        PrintStream originalOutput = System.out;
-
-        try (PrintStream capturedOutput = new PrintStream(output, true, StandardCharsets.UTF_8)) {
-            System.setOut(capturedOutput);
-            new HelpCommand().execute(new TransactionList(), new Ui());
-        } finally {
-            // Restore console output even if execution fails so other tests are unaffected.
-            System.setOut(originalOutput);
-        }
+        String actualOutput = captureHelpOutput();
 
         // Keep expected text independent of HelpCommand so output changes are detected.
         String expectedOutput = String.join(System.lineSeparator(),
@@ -54,7 +48,39 @@ class HelpCommandTest {
                 "[] means optional.",
                 "____________________________________________________________",
                 "");
-        assertEquals(expectedOutput, output.toString(StandardCharsets.UTF_8));
+        assertEquals(expectedOutput, actualOutput);
+    }
+
+    @Test
+    public void execute_help_containsEveryRegisteredCommandOnce() {
+        List<String> rows = captureHelpOutput().lines()
+                .filter(line -> line.startsWith("|"))
+                .skip(1)
+                .toList();
+        CommandWord[] commands = CommandWord.values();
+        assertEquals(commands.length, rows.size());
+        for (int i = 0; i < commands.length; i++) {
+            String[] columns = rows.get(i).split("\\|", -1);
+            assertEquals(5, columns.length, "Each row must contain three columns and outer borders");
+            String[] expectedColumns = {commands[i].getWord(), commands[i].getDescription(), commands[i].getUsage()};
+            assertArrayEquals(expectedColumns,
+                    new String[] {columns[1].trim(), columns[2].trim(), columns[3].trim()});
+        }
+    }
+
+    @Test
+    public void execute_help_alignsColumnsWithOuterBorders() {
+        List<String> tableLines = captureHelpOutput().lines()
+                .filter(line -> line.startsWith("|") || line.startsWith("+"))
+                .toList();
+        String border = tableLines.getFirst();
+        List<Integer> expectedBoundaries = findColumnBoundaries(border, '+');
+        assertEquals(4, expectedBoundaries.size());
+        for (String line : tableLines) {
+            assertEquals(border.length(), line.length(), "Table rows must fit within the border");
+            char delimiter = line.startsWith("+") ? '+' : '|';
+            assertEquals(expectedBoundaries, findColumnBoundaries(line, delimiter));
+        }
     }
 
     @Test
@@ -73,5 +99,39 @@ class HelpCommandTest {
     @Test
     public void isExit_help_returnsFalse() {
         assertFalse(new HelpCommand().isExit());
+    }
+
+    @Test
+    public void execute_nullUi_throwsAssertionError() {
+        assertThrows(AssertionError.class, () ->
+                new HelpCommand().execute(new TransactionList(), null));
+    }
+
+    /**
+     * Captures help output and restores the original stream even when execution fails.
+     */
+    private String captureHelpOutput() {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream originalOutput = System.out;
+        try (PrintStream capturedOutput = new PrintStream(output, true, StandardCharsets.UTF_8)) {
+            System.setOut(capturedOutput);
+            new HelpCommand().execute(new TransactionList(), new Ui());
+        } finally {
+            System.setOut(originalOutput);
+        }
+        return output.toString(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Finds delimiter positions so alignment is checked independently of the table formatter.
+     */
+    private List<Integer> findColumnBoundaries(String line, char delimiter) {
+        List<Integer> boundaries = new ArrayList<>();
+        for (int i = 0; i < line.length(); i++) {
+            if (line.charAt(i) == delimiter) {
+                boundaries.add(i);
+            }
+        }
+        return boundaries;
     }
 }

@@ -8,7 +8,7 @@ import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
 /**
- * Represents the command to get the user's balance
+ * Displays the user's balance rounded to two decimal places.
  */
 public class BalanceCommand extends Command {
     private static final Logger logger = Logger.getLogger(BalanceCommand.class.getName());
@@ -24,6 +24,8 @@ public class BalanceCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         logger.fine("Getting balance");
 
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
         BigDecimal balance = transactions.getBalance();
         ui.showMessage("Your current balance is: $" + balance.setScale(2, RoundingMode.HALF_UP));
     }
