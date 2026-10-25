@@ -34,22 +34,25 @@ public final class Money implements Comparable<Money> {
      * @return An immutable monetary amount.
      */
     public static Money of(BigDecimal value) {
+        Objects.requireNonNull(value, "Value should not be null");
         return value.signum() == 0 ? ZERO : new Money(value);
     }
 
     /** Creates an exact amount from its plain decimal representation. */
     public static Money of(String value) {
+        Objects.requireNonNull(value, "Value should not be null");
         return Money.of(new BigDecimal(value));
     }
 
     /** Creates an exact whole-number amount. */
     public static Money of(long value) {
+        Objects.requireNonNull(value, "Value should not be null");
         return Money.of(BigDecimal.valueOf(value));
     }
 
     /** Returns the sum of this amount and {@code other}. */
     public Money add(Money other) {
-        Objects.requireNonNull(other, "Amount to add must not be null");
+        Objects.requireNonNull(value, "Value should not be null");
         return Money.of(value.add(other.value));
     }
 
