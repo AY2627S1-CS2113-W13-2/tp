@@ -1,8 +1,8 @@
 package finnus.command;
 
-import java.math.BigDecimal;
 import java.util.logging.Logger;
 
+import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -14,12 +14,12 @@ import finnus.ui.Ui;
 public class DepositCommand extends Command {
     private static final Logger logger = Logger.getLogger(DepositCommand.class.getName());
 
-    private final BigDecimal amount;
+    private final Money amount;
     private final String description;
 
     /** Creates a deposit command with the supplied amount and description. */
-    public DepositCommand(BigDecimal amount, String description) {
-        assert amount != null && amount.signum() > 0 : "Deposit amount must be positive";
+    public DepositCommand(Money amount, String description) {
+        assert amount != null && amount.isPositive() : "Deposit amount must be positive";
         assert description != null : "Deposit description must not be null";
         this.amount = amount;
         this.description = description;
@@ -28,7 +28,7 @@ public class DepositCommand extends Command {
     /**
      * Creates a deposit without a description, e.g. {@code deposit 500}.
      */
-    public DepositCommand(BigDecimal amount) {
+    public DepositCommand(Money amount) {
         this(amount, "");
     }
 

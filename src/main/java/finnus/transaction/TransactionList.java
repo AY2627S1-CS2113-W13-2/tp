@@ -1,11 +1,11 @@
 package finnus.transaction;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import finnus.currency.CurrencyRates;
+import finnus.money.Money;
 
 /**
  * Holds all recorded transactions in the order they were added (oldest first),
@@ -23,7 +23,7 @@ public class TransactionList {
      * and does not shift the indices used by {@code recent} and {@code delete}.
      * Defaults to 0 for users who never set it.
      */
-    private BigDecimal openingBalance = BigDecimal.ZERO;
+    private Money openingBalance = Money.ZERO;
 
     /**
      * Exchange rates the user has set, used to convert foreign amounts to SGD.
@@ -111,7 +111,7 @@ public class TransactionList {
     }
 
     /** Returns the starting balance before any transactions are applied. */
-    public BigDecimal getOpeningBalance() {
+    public Money getOpeningBalance() {
         return openingBalance;
     }
 
@@ -121,8 +121,8 @@ public class TransactionList {
      *
      * @param openingBalance The new opening balance; must not be negative.
      */
-    public void setOpeningBalance(BigDecimal openingBalance) {
-        assert openingBalance != null && openingBalance.signum() >= 0 : "Opening balance must not be negative";
+    public void setOpeningBalance(Money openingBalance) {
+        assert openingBalance != null && !openingBalance.isNegative() : "Opening balance must not be negative";
         this.openingBalance = openingBalance;
     }
 
@@ -130,9 +130,9 @@ public class TransactionList {
      * Returns the current balance: the opening balance plus all deposits minus all withdrawals.
      * This is the single place the balance is calculated, so every feature reports the same figure.
      */
-    public BigDecimal getBalance() {
+    public Money getBalance() {
         return transactions.stream()
                 .map(Transaction::getSignedAmount)
-                .reduce(openingBalance, BigDecimal::add);
+                .reduce(openingBalance, Money::add);
     }
 }

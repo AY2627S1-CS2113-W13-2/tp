@@ -1,8 +1,5 @@
 package finnus.command;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -22,7 +19,6 @@ public class BalanceCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         assert transactions != null : "Transaction list must not be null";
         assert ui != null : "UI must not be null";
-        BigDecimal balance = transactions.getBalance();
-        ui.showMessage("Your current balance is: $" + balance.setScale(2, RoundingMode.HALF_UP));
+        ui.showMessage("Your current balance is: " + transactions.getBalance().format());
     }
 }

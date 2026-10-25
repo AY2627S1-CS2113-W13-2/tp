@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import finnus.money.Money;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.TransactionType;
 
@@ -116,7 +117,7 @@ public class LedgerCodec {
     /** Adds the first valid opening balance, rejecting duplicate records. */
     private void parseOpening(String[] fields, Records records) {
         requireFields(fields, 2);
-        BigDecimal amount = parseDecimal(fields[1]);
+        Money amount = parseMoney(fields[1]);
         if (records.hasOpening) {
             throw new IllegalArgumentException("Duplicate opening balance");
         }
@@ -145,7 +146,7 @@ public class LedgerCodec {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid transaction type");
         }
-        records.transactions.add(new StoredTransaction(type, parseDecimal(fields[2]), decodeDescription(fields[3])));
+        records.transactions.add(new StoredTransaction(type, parseMoney(fields[2]), decodeDescription(fields[3])));
     }
 
     /** Decodes a Base64 description and rejects malformed or invalid UTF-8 data. */
@@ -170,6 +171,11 @@ public class LedgerCodec {
         }
     }
 
+    /** Parses an exact monetary value without applying display rounding. */
+    private Money parseMoney(String text) {
+        return Money.of(parseDecimal(text));
+    }
+
     /** Rejects a record whose field count differs from its format. */
     private void requireFields(String[] fields, int expected) {
         if (fields.length != expected) {
@@ -181,7 +187,7 @@ public class LedgerCodec {
      * Accumulates valid records before constructing an immutable, validated snapshot.
      */
     private static class Records {
-        private BigDecimal opening = BigDecimal.ZERO;
+        private Money opening = Money.ZERO;
         private boolean hasOpening;
         private int validRecords;
         private final List<StoredTransaction> transactions = new ArrayList<>();

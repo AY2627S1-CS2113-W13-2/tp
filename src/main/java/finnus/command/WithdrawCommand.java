@@ -1,8 +1,8 @@
 package finnus.command;
 
-import java.math.BigDecimal;
 import java.util.logging.Logger;
 
+import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -14,12 +14,12 @@ import finnus.ui.Ui;
 public class WithdrawCommand extends Command {
     private static final Logger logger = Logger.getLogger(WithdrawCommand.class.getName());
 
-    private final BigDecimal amount;
+    private final Money amount;
     private final String description;
 
     /** Creates a withdrawal command with a required description. */
-    public WithdrawCommand(BigDecimal amount, String description) {
-        assert amount != null && amount.signum() > 0 : "Withdrawal amount must be positive";
+    public WithdrawCommand(Money amount, String description) {
+        assert amount != null && amount.isPositive() : "Withdrawal amount must be positive";
         assert description != null : "Withdrawal description must not be null";
         assert !description.isBlank() : "A withdrawal must have a description";
         this.amount = amount;

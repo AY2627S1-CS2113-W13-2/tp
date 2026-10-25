@@ -1,10 +1,10 @@
 package finnus.command;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import finnus.money.Money;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -15,15 +15,15 @@ import finnus.ui.Ui;
 public class OpeningBalanceCommand extends Command {
     private static final Logger logger = Logger.getLogger(OpeningBalanceCommand.class.getName());
 
-    private final BigDecimal amount;
+    private final Money amount;
 
     /**
      * Creates the command.
      *
      * @param amount The new opening balance in SGD; must not be negative.
      */
-    public OpeningBalanceCommand(BigDecimal amount) {
-        assert amount != null && amount.signum() >= 0 : "Opening balance must not be negative";
+    public OpeningBalanceCommand(Money amount) {
+        assert amount != null && !amount.isNegative() : "Opening balance must not be negative";
         this.amount = amount;
     }
 
@@ -32,15 +32,15 @@ public class OpeningBalanceCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         assert transactions != null : "Transaction list must not be null";
         assert ui != null : "UI must not be null";
-        BigDecimal oldAmount = transactions.getOpeningBalance();
+        Money oldAmount = transactions.getOpeningBalance();
         transactions.setOpeningBalance(amount);
         // The old value is replaced, so record it here in case a balance later looks wrong.
         logger.info("Opening balance changed from " + oldAmount + " to " + amount
                 + " with " + transactions.size() + " existing transaction(s)");
 
         List<String> lines = new ArrayList<>();
-        lines.add("Opening balance updated: " + formatMoney(oldAmount) + " -> " + formatMoney(amount));
-        lines.add("Your balance is now " + formatMoney(transactions.getBalance()) + ".");
+        lines.add("Opening balance updated: " + oldAmount.format() + " -> " + amount.format());
+        lines.add("Your balance is now " + transactions.getBalance().format() + ".");
         // Changing the starting point shifts the balance for every existing transaction,
         // so make that visible instead of letting it happen silently.
         if (transactions.size() > 0) {
@@ -50,11 +50,4 @@ public class OpeningBalanceCommand extends Command {
         ui.showMessage(lines);
     }
 
-    /**
-     * Formats an amount as {@code $12.30}, or {@code -$12.30} when negative.
-     */
-    private static String formatMoney(BigDecimal amount) {
-        String sign = amount.signum() < 0 ? "-" : "";
-        return String.format("%s$%.2f", sign, amount.abs());
-    }
 }

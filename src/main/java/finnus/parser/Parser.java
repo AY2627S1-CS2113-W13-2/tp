@@ -18,6 +18,7 @@ import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
 import finnus.currency.CurrencyRates;
 import finnus.exception.FinNusException;
+import finnus.money.Money;
 
 /**
  * Turns a line typed by the user into a {@link Command} object.
@@ -29,14 +30,7 @@ public class Parser {
      */
     public static final String DESCRIPTION_PREFIX = "d/";
 
-    /**
-     * Amounts above this are almost certainly typos for a student budget.
-     */
-    public static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000");
-
-    /**
-     * No real currency is anywhere near 1,000,000 units per SGD, so larger rates are typos.
-     */
+    /** No real currency is anywhere near 1,000,000 units per SGD, so larger rates are typos. */
     public static final BigDecimal MAX_RATE = new BigDecimal("1000000");
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
@@ -132,7 +126,7 @@ public class Parser {
      * Parses {@code opening AMOUNT}. Unlike deposits, 0 is allowed so the user can reset it.
      */
     private static Command parseOpening(String arguments) throws FinNusException {
-        BigDecimal amount = parseNonNegativeAmount(arguments, CommandWord.OPENING.getUsage());
+        Money amount = parseNonNegativeAmount(arguments, CommandWord.OPENING.getUsage());
         return new OpeningBalanceCommand(amount);
     }
 
@@ -197,14 +191,14 @@ public class Parser {
     /** Parses a positive deposit amount and its optional description. */
     private static Command parseDeposit(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.DEPOSIT.getUsage());
-        BigDecimal amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
+        Money amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
         return new DepositCommand(amount, amountAndDescription[1]);
     }
 
     /** Parses a positive withdrawal amount and requires a non-empty description. */
     private static Command parseWithdraw(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.WITHDRAW.getUsage());
-        BigDecimal amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
+        Money amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
         String description = amountAndDescription[1];
         if (description.isEmpty()) {
             throw new FinNusException("A withdrawal needs a description so you know what you spent on.\n"
@@ -261,9 +255,9 @@ public class Parser {
      * @throws FinNusException If the text is missing, not a number, not
      *     positive, has more than 2 decimal places, or is unreasonably large.
      */
-    static BigDecimal parseAmount(String text, String format) throws FinNusException {
-        BigDecimal amount = parseNonNegativeAmount(text, format);
-        if (amount.signum() == 0) {
+    static Money parseAmount(String text, String format) throws FinNusException {
+        Money amount = parseNonNegativeAmount(text, format);
+        if (amount.isZero()) {
             throw new FinNusException("Amount must be greater than 0.");
         }
         return amount;
@@ -277,7 +271,7 @@ public class Parser {
      * @throws FinNusException If the text is missing, not a number, negative,
      *     has more than 2 decimal places, or is unreasonably large.
      */
-    static BigDecimal parseNonNegativeAmount(String text, String format) throws FinNusException {
+    static Money parseNonNegativeAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
@@ -288,10 +282,10 @@ public class Parser {
                     + "Use a number with at most 2 decimal places, e.g. 4.50");
         }
         // The String constructor keeps the exact value typed, e.g. "4.50" stays 4.50.
-        BigDecimal amount = new BigDecimal(text);
-        // BigDecimal is compared with compareTo, not with < or >.
-        if (amount.compareTo(MAX_AMOUNT) > 0) {
-            throw new FinNusException(String.format("Amount must not exceed %,.0f.", MAX_AMOUNT));
+        Money amount = Money.of(new BigDecimal(text));
+        if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
+            throw new FinNusException(String.format("Amount must not exceed %,.0f.",
+                    Money.MAX_AMOUNT.toBigDecimal()));
         }
         return amount;
     }

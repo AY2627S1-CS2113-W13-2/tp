@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import finnus.currency.CurrencyRates;
+import finnus.money.Money;
 import finnus.parser.Parser;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -16,7 +17,7 @@ import finnus.transaction.TransactionType;
  * An immutable value copy of all financial state, used for saving and change detection.
  * Decimal scales are retained so persistence never silently rounds a value.
  */
-public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> transactions,
+public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
                              Map<String, BigDecimal> rates) {
     /**
      * Copies mutable collections and rejects values that cannot represent a valid ledger.
@@ -34,7 +35,7 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
     /**
      * A transaction value independent of the mutable ledger and console formatting.
      */
-    public record StoredTransaction(TransactionType type, BigDecimal amount, String description) {
+    public record StoredTransaction(TransactionType type, Money amount, String description) {
         /**
          * Validates external values before they reach assertion-based domain constructors.
          */
@@ -42,11 +43,11 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
             Objects.requireNonNull(type, "Transaction type must not be null");
             Objects.requireNonNull(amount, "Transaction amount must not be null");
             Objects.requireNonNull(description, "Description must not be null");
-            if (amount.signum() <= 0) {
+            if (!amount.isPositive()) {
                 throw new IllegalArgumentException("Transaction amount must be positive");
             }
-            if (amount.compareTo(Parser.MAX_AMOUNT) > 0) {
-                throw new IllegalArgumentException("Transaction amount must not exceed " + Parser.MAX_AMOUNT);
+            if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
+                throw new IllegalArgumentException("Transaction amount must not exceed " + Money.MAX_AMOUNT);
             }
         }
     }
@@ -55,7 +56,7 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
      * Returns an empty ledger with no exchange rates and a zero opening balance.
      */
     public static LedgerSnapshot empty() {
-        return new LedgerSnapshot(BigDecimal.ZERO, List.of(), Map.of());
+        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of());
     }
 
     /**
@@ -85,12 +86,12 @@ public record LedgerSnapshot(BigDecimal openingBalance, List<StoredTransaction> 
     /**
      * Checks the domain rules for a stored opening balance.
      */
-    static void validateOpeningBalance(BigDecimal amount) {
-        if (amount == null || amount.signum() < 0) {
+    static void validateOpeningBalance(Money amount) {
+        if (amount == null || amount.isNegative()) {
             throw new IllegalArgumentException("Opening balance must not be negative");
         }
-        if (amount.compareTo(Parser.MAX_AMOUNT) > 0) {
-            throw new IllegalArgumentException("Opening balance must not exceed " + Parser.MAX_AMOUNT);
+        if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
+            throw new IllegalArgumentException("Opening balance must not exceed " + Money.MAX_AMOUNT);
         }
     }
 
