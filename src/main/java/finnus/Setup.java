@@ -65,8 +65,8 @@ public class Setup {
     /** Repeats the confirmation prompt until the user answers yes or no. */
     private Optional<Confirmation> confirmBalance(Ui ui, Money amount) {
         while (true) {
-            String answer = ui.readCommand("Confirm opening balance $"
-                    + amount.toPlainString() + " SGD? [yes/no]: ");
+            String answer = ui.readCommand("Confirm opening balance "
+                    + amount.format() + " SGD? [yes/no]: ");
             if (answer == null) {
                 logger.fine("First-run setup ended before the opening balance was confirmed");
                 return Optional.empty();

@@ -47,7 +47,8 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
                 throw new IllegalArgumentException("Transaction amount must be positive");
             }
             if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
-                throw new IllegalArgumentException("Transaction amount must not exceed " + Money.MAX_AMOUNT);
+                throw new IllegalArgumentException("Transaction amount must not exceed "
+                        + Money.MAX_AMOUNT.format());
             }
         }
     }
@@ -91,7 +92,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             throw new IllegalArgumentException("Opening balance must not be negative");
         }
         if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
-            throw new IllegalArgumentException("Opening balance must not exceed " + Money.MAX_AMOUNT);
+            throw new IllegalArgumentException("Opening balance must not exceed " + Money.MAX_AMOUNT.format());
         }
     }
 

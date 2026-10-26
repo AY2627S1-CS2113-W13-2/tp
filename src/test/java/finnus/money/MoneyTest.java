@@ -40,9 +40,24 @@ class MoneyTest {
     }
 
     @Test
+    public void format_negativeAmountBelowHalfCent_doesNotShowNegativeZero() {
+        Money amount = Money.of("-0.004");
+
+        assertEquals("$0.00", amount.format());
+        assertEquals("-0.004", amount.toPlainString());
+    }
+
+    @Test
     public void formatWithSign_positiveAndNegative_haveExplicitSigns() {
         assertEquals("+$4.50", Money.of("4.50").formatWithSign());
         assertEquals("-$4.50", Money.of("-4.50").formatWithSign());
+    }
+
+    @Test
+    public void formatWithSign_nonzeroSubCentAmount_keepsDirectionAndExactValue() {
+        assertEquals("+$0.004", Money.of("0.004").formatWithSign());
+        assertEquals("-$0.004", Money.of("-0.004").formatWithSign());
+        assertEquals("-$0.01", Money.of("-0.005").formatWithSign());
     }
 
     @Test

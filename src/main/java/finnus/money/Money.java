@@ -90,15 +90,20 @@ public final class Money implements Comparable<Money> {
 
     /** Formats this amount as {@code $12.30}, or {@code -$12.30} when negative. */
     public String format() {
-        String sign = isNegative() ? "-" : "";
-        String magnitude = value.abs().setScale(DISPLAY_SCALE, DISPLAY_ROUNDING).toPlainString();
-        return sign + "$" + magnitude;
+        BigDecimal rounded = value.setScale(DISPLAY_SCALE, DISPLAY_ROUNDING);
+        String sign = rounded.signum() < 0 ? "-" : "";
+        return sign + "$" + rounded.abs().toPlainString();
     }
 
-    /** Formats this amount with an explicit sign, such as {@code +$12.30} or {@code -$12.30}. */
+    /**
+     * Formats this amount with an explicit sign, such as {@code +$12.30} or {@code -$12.30}.
+     * A nonzero sub-cent amount retains its exact digits if rounding would otherwise display zero.
+     */
     public String formatWithSign() {
+        BigDecimal rounded = value.setScale(DISPLAY_SCALE, DISPLAY_ROUNDING);
         String sign = isNegative() ? "-" : "+";
-        String magnitude = value.abs().setScale(DISPLAY_SCALE, DISPLAY_ROUNDING).toPlainString();
+        String magnitude = rounded.signum() == 0 && !isZero()
+                ? value.abs().toPlainString() : rounded.abs().toPlainString();
         return sign + "$" + magnitude;
     }
 
