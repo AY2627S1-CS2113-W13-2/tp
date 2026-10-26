@@ -1,14 +1,13 @@
 package finnus;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import finnus.money.Money;
@@ -23,12 +22,12 @@ class FinNUSTest {
     @Test
     public void run_mutatingCommands_savesEachChangedSnapshot() {
         RecordingStorage storage = new RecordingStorage();
-        ScriptedUi ui = new ScriptedUi("opening 100", "deposit 50", "withdraw 5 d/Lunch",
+        ScriptedUi ui = new ScriptedUi("deposit 50", "withdraw 5 d/Lunch",
                 "rate JPY 110", "delete 1", "exit");
         new FinNUS(ui, storage).run();
-        assertEquals(5, storage.saved.size());
+        assertEquals(4, storage.saved.size());
         LedgerSnapshot last = storage.saved.getLast();
-        assertEquals(Money.of("150"), last.toTransactionList().getBalance());
+        assertEquals(Money.of("50"), last.toTransactionList().getBalance());
         assertEquals(new BigDecimal("110"), last.rates().get("JPY"));
         assertEquals(1, last.transactions().size());
     }
@@ -42,11 +41,11 @@ class FinNUSTest {
     }
 
     @Test
-    public void run_unchangedOpeningAndRate_doesNotWriteAgain() {
+    public void run_repeatedRate_doesNotWriteAgain() {
         RecordingStorage storage = new RecordingStorage();
-        new FinNUS(new ScriptedUi("opening 10", "opening 10", "rate JPY 110", "rate JPY 110", "exit"),
+        new FinNUS(new ScriptedUi("rate JPY 110", "rate JPY 110", "exit"),
                 storage).run();
-        assertEquals(2, storage.attempts);
+        assertEquals(1, storage.attempts);
     }
 
     @Test

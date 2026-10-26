@@ -12,7 +12,6 @@ import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.HelpCommand;
-import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -57,17 +56,18 @@ public class Parser {
                 new FinNusException("Unknown command: '" + commandWord + "'. Type '"
                         + CommandWord.HELP.getWord() + "' to see all commands."));
 
-        // Exhaustiveness makes a new enum entry require a corresponding parser case.
+        // Setup-only command words are filtered out by CommandWord.fromWord.
         Command parsed = switch (command) {
         case DEPOSIT -> parseDeposit(arguments);
         case WITHDRAW -> parseWithdraw(arguments);
         case HELP -> new HelpCommand();
         case RECENT -> parseRecent(arguments);
-        case OPENING -> parseOpening(arguments);
         case BALANCE -> new BalanceCommand();
         case EXIT -> new ExitCommand();
         case DELETE -> parseDelete(arguments);
         case RATE -> parseRate(arguments);
+        default -> throw new FinNusException("Unknown command: '" + commandWord + "'. Type '"
+                + CommandWord.HELP.getWord() + "' to see all commands.");
         };
         logger.fine("Parsed command " + parsed.getClass().getSimpleName());
         return parsed;
@@ -120,14 +120,6 @@ public class Parser {
         }
 
         return new RecentTransactionCommand(length);
-    }
-
-    /**
-     * Parses {@code opening AMOUNT}. Unlike deposits, 0 is allowed so the user can reset it.
-     */
-    private static Command parseOpening(String arguments) throws FinNusException {
-        Money amount = parseNonNegativeAmount(arguments, CommandWord.OPENING.getUsage());
-        return new OpeningBalanceCommand(amount);
     }
 
     /**
@@ -271,7 +263,7 @@ public class Parser {
      * @throws FinNusException If the text is missing, not a number, negative,
      *     has more than 2 decimal places, or is unreasonably large.
      */
-    static Money parseNonNegativeAmount(String text, String format) throws FinNusException {
+    public static Money parseNonNegativeAmount(String text, String format) throws FinNusException {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }

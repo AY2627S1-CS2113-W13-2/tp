@@ -25,7 +25,6 @@ import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
 import finnus.command.HelpCommand;
-import finnus.command.OpeningBalanceCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -46,7 +45,6 @@ class ParserTest {
             CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class),
             CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class),
             CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class),
-            CommandWord.OPENING, new CommandExample("opening 100", OpeningBalanceCommand.class),
             CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class),
             CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class),
             CommandWord.HELP, new CommandExample("help", HelpCommand.class),
@@ -59,7 +57,7 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(CommandWord.class)
+    @EnumSource(value = CommandWord.class, names = "OPENING", mode = EnumSource.Mode.EXCLUDE)
     public void parse_registeredCommand_returnsExpectedType(CommandWord command) throws FinNusException {
         CommandExample example = COMMAND_EXAMPLES.get(command);
         assertNotNull(example, "Add a valid input example for " + command);
@@ -83,7 +81,6 @@ class ParserTest {
             assertInstanceOf(ExitCommand.class, Parser.parse("EXIT extra"));
             assertInstanceOf(WithdrawCommand.class, Parser.parse("WITHDRAW 5 d/Lunch"));
             assertInstanceOf(DepositCommand.class, Parser.parse("DEPOSIT 5"));
-            assertInstanceOf(OpeningBalanceCommand.class, Parser.parse("OPENING 5"));
             assertInstanceOf(RateCommand.class, Parser.parse("RATE inr 65"));
             assertEquals("INR", Parser.parseCurrencyCode("inr"));
         } finally {
@@ -92,12 +89,11 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "OPENING", "RATE"})
+    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE"})
     public void parse_invalidArguments_reportsRegisteredUsage(CommandWord command) {
         Map<CommandWord, String> invalidInputs = Map.of(
                 CommandWord.DEPOSIT, "deposit",
                 CommandWord.WITHDRAW, "withdraw 1",
-                CommandWord.OPENING, "opening",
                 CommandWord.RATE, "rate JPY");
         FinNusException exception = assertThrows(FinNusException.class,
                 () -> Parser.parse(invalidInputs.get(command)));
@@ -240,22 +236,10 @@ class ParserTest {
         assertEquals("The length must be positive.", e.getMessage());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"opening 1200.50", "opening 0", "  OPENING 100  "})
-    public void parse_validOpening_returnsOpeningBalanceCommand(String input) throws FinNusException {
-        assertInstanceOf(OpeningBalanceCommand.class, Parser.parse(input));
-    }
-
     @Test
-    public void parse_openingWithoutAmount_throwsException() {
-        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("opening"));
-        assertEquals("Missing amount.\nFormat: opening AMOUNT", e.getMessage());
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"-5", "abc", "4.555", "100 d/Savings", "1000000.01"})
-    public void parse_openingWithInvalidAmount_throwsException(String amount) {
-        assertThrows(FinNusException.class, () -> Parser.parse("opening " + amount));
+    public void parse_openingOutsideSetup_isUnknownCommand() {
+        FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse("opening 100"));
+        assertTrue(exception.getMessage().contains("Unknown command"));
     }
 
     @Test
