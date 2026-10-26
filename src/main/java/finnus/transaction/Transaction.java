@@ -62,7 +62,7 @@ public class Transaction {
     public String toString() {
         String label = type == TransactionType.DEPOSIT ? "Deposit" : "Withdrawal";
         String note = description.isEmpty() ? "" : " (" + description + ")";
-        Money signedAmount = type == TransactionType.DEPOSIT ? amount : amount.negate();
+        Money signedAmount = getSignedAmount();
         return "[" + label + "] " + signedAmount.formatWithSign() + note;
     }
 }

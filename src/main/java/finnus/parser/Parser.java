@@ -29,15 +29,17 @@ public class Parser {
      */
     public static final String DESCRIPTION_PREFIX = "d/";
 
-    /** No real currency is anywhere near 1,000,000 units per SGD, so larger rates are typos. */
+    /**
+     * No real currency is anywhere near 1,000,000 units per SGD, so larger
+     * rates are typos.
+     */
     public static final BigDecimal MAX_RATE = new BigDecimal("1000000");
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
 
     /**
-     * Parses a full line of user input.
-     * Extra arguments for commands that take no parameters, such as help and
-     * exit, are ignored.
+     * Parses a full line of user input. Extra arguments for commands that take
+     * no parameters, such as help and exit, are ignored.
      *
      * @param input The raw text typed by the user.
      * @return The command to execute.
@@ -52,22 +54,31 @@ public class Parser {
         String arguments = parts.length > 1 ? parts[1].trim() : "";
         logger.fine("Parsing command word '" + commandWord + "'");
 
-        CommandWord command = CommandWord.fromWord(commandWord).orElseThrow(() ->
-                new FinNusException("Unknown command: '" + commandWord + "'. Type '"
+        CommandWord command = CommandWord.fromWord(commandWord).orElseThrow(()
+                -> new FinNusException("Unknown command: '" + commandWord + "'. Type '"
                         + CommandWord.HELP.getWord() + "' to see all commands."));
 
         // Setup-only command words are filtered out by CommandWord.fromWord.
         Command parsed = switch (command) {
-        case DEPOSIT -> parseDeposit(arguments);
-        case WITHDRAW -> parseWithdraw(arguments);
-        case HELP -> new HelpCommand();
-        case RECENT -> parseRecent(arguments);
-        case BALANCE -> new BalanceCommand();
-        case EXIT -> new ExitCommand();
-        case DELETE -> parseDelete(arguments);
-        case RATE -> parseRate(arguments);
-        default -> throw new FinNusException("Unknown command: '" + commandWord + "'. Type '"
-                + CommandWord.HELP.getWord() + "' to see all commands.");
+        case DEPOSIT ->
+            parseDeposit(arguments);
+        case WITHDRAW ->
+            parseWithdraw(arguments);
+        case HELP ->
+            new HelpCommand();
+        case RECENT ->
+            parseRecent(arguments);
+        case BALANCE ->
+            new BalanceCommand();
+        case EXIT ->
+            new ExitCommand();
+        case DELETE ->
+            parseDelete(arguments);
+        case RATE ->
+            parseRate(arguments);
+        default ->
+            throw new FinNusException("Unknown command: '" + commandWord + "'. Type '"
+                    + CommandWord.HELP.getWord() + "' to see all commands.");
         };
         logger.fine("Parsed command " + parsed.getClass().getSimpleName());
         return parsed;
@@ -98,8 +109,9 @@ public class Parser {
 
     /**
      * Returns RecentTransactionCommand instance
-     * 
-     * @param arguments Either a blank String, or a positive number parsed as a String
+     *
+     * @param arguments Either a blank String, or a positive number parsed as a
+     *     String
      */
     private static Command parseRecent(String arguments) throws FinNusException {
         // Create the RecentTransactionCommand with no length provided
@@ -123,7 +135,8 @@ public class Parser {
     }
 
     /**
-     * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set one rate).
+     * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set
+     * one rate).
      */
     private static Command parseRate(String arguments) throws FinNusException {
         if (arguments.isEmpty()) {
@@ -138,7 +151,8 @@ public class Parser {
     }
 
     /**
-     * Converts text such as {@code "jpy"} into an upper-case ISO 4217 code such as {@code "JPY"}.
+     * Converts text such as {@code "jpy"} into an upper-case ISO 4217 code such
+     * as {@code "JPY"}.
      *
      * @throws FinNusException If the code is not a real currency, or is SGD.
      */
@@ -158,11 +172,11 @@ public class Parser {
     }
 
     /**
-     * Converts text such as {@code "110"} or {@code "0.5425"} into a positive rate
-     * with at most 6 decimal places.
+     * Converts text such as {@code "110"} or {@code "0.5425"} into a positive
+     * rate with at most 6 decimal places.
      *
-     * @throws FinNusException If the text is not a number, not positive, has more
-     *     than 6 decimal places, or is unreasonably large.
+     * @throws FinNusException If the text is not a number, not positive, has
+     *     more than 6 decimal places, or is unreasonably large.
      */
     static BigDecimal parseRateValue(String text) throws FinNusException {
         // Rates need more precision than money, e.g. 1 SGD = 0.5425 GBP.
@@ -180,14 +194,18 @@ public class Parser {
         return rate;
     }
 
-    /** Parses a positive deposit amount and its optional description. */
+    /**
+     * Parses a positive deposit amount and its optional description.
+     */
     private static Command parseDeposit(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.DEPOSIT.getUsage());
         Money amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
         return new DepositCommand(amount, amountAndDescription[1]);
     }
 
-    /** Parses a positive withdrawal amount and requires a non-empty description. */
+    /**
+     * Parses a positive withdrawal amount and requires a non-empty description.
+     */
     private static Command parseWithdraw(String arguments) throws FinNusException {
         String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.WITHDRAW.getUsage());
         Money amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
@@ -229,8 +247,8 @@ public class Parser {
 
     /**
      * Returns the index of the first {@code d/} that starts a word, or -1 if
-     *     there is none. This avoids treating text like "and/or" inside a
-     *     description as a prefix.
+     * there is none. This avoids treating text like "and/or" inside a
+     * description as a prefix.
      */
     private static int findDescriptionPrefix(String arguments) {
         int index = arguments.indexOf(DESCRIPTION_PREFIX);
@@ -256,9 +274,9 @@ public class Parser {
     }
 
     /**
-     * Converts text such as {@code "4.50"} into an exact amount with at most
-     * 2 decimal places, allowing 0. Used directly where 0 is meaningful, such
-     * as an opening balance.
+     * Converts text such as {@code "4.50"} into an exact amount with at most 2
+     * decimal places, allowing 0. Used directly where 0 is meaningful, such as
+     * an opening balance.
      *
      * @throws FinNusException If the text is missing, not a number, negative,
      *     has more than 2 decimal places, or is unreasonably large.
@@ -276,8 +294,7 @@ public class Parser {
         // The String constructor keeps the exact value typed, e.g. "4.50" stays 4.50.
         Money amount = Money.of(new BigDecimal(text));
         if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
-            throw new FinNusException(String.format("Amount must not exceed %,.0f.",
-                    Money.MAX_AMOUNT.toBigDecimal()));
+            throw new FinNusException("Amount must not exceed " + Money.MAX_AMOUNT.format());
         }
         return amount;
     }

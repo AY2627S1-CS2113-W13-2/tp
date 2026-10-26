@@ -3,11 +3,9 @@ package finnus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.math.BigDecimal;
-
 import org.junit.jupiter.api.Test;
 
+import finnus.money.Money;
 import finnus.transaction.TransactionList;
 
 /** Checks first-run opening balance entry and confirmation without creating transactions. */
@@ -19,7 +17,7 @@ class SetupTest {
         boolean completed = new Setup().run(new ScriptedUi("1250.50", "yes"), transactions);
 
         assertTrue(completed);
-        assertEquals(new BigDecimal("1250.50"), transactions.getOpeningBalance());
+        assertEquals(Money.of("1250.50"), transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 
@@ -30,7 +28,7 @@ class SetupTest {
         boolean completed = new Setup().run(new ScriptedUi("1250", "no", "125.00", "yes"), transactions);
 
         assertTrue(completed);
-        assertEquals(new BigDecimal("125.00"), transactions.getOpeningBalance());
+        assertEquals(Money.of("125.00"), transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 
@@ -41,7 +39,7 @@ class SetupTest {
         boolean completed = new Setup().run(new ScriptedUi("1250", "perhaps", "yes"), transactions);
 
         assertTrue(completed);
-        assertEquals(new BigDecimal("1250"), transactions.getOpeningBalance());
+        assertEquals(Money.of("1250"), transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 
@@ -52,7 +50,7 @@ class SetupTest {
         boolean completed = new Setup().run(new ScriptedUi("1250"), transactions);
 
         assertFalse(completed);
-        assertEquals(BigDecimal.ZERO, transactions.getOpeningBalance());
+        assertEquals(Money.ZERO, transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 
@@ -63,7 +61,7 @@ class SetupTest {
         boolean completed = new Setup().run(new ScriptedUi("1250", "no"), transactions);
 
         assertFalse(completed);
-        assertEquals(BigDecimal.ZERO, transactions.getOpeningBalance());
+        assertEquals(Money.ZERO, transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 
@@ -74,7 +72,7 @@ class SetupTest {
         boolean completed = new Setup().run(new ScriptedUi("-1", "abc", "20", "yes"), transactions);
 
         assertTrue(completed);
-        assertEquals(new BigDecimal("20"), transactions.getOpeningBalance());
+        assertEquals(Money.of("20"), transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 }

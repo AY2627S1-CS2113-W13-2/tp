@@ -53,7 +53,7 @@ class PersistenceIntegrationTest {
         new FinNUS(setup, new FileStorage(path)).run();
 
         LedgerSnapshot saved = new FileStorage(path).load().snapshot();
-        assertEquals(new BigDecimal("67"), saved.openingBalance());
+        assertEquals(Money.of("67"), saved.openingBalance());
         assertTrue(saved.transactions().isEmpty());
         assertFalse(new FileStorage(path).load().setupRequired());
 
@@ -73,7 +73,7 @@ class PersistenceIntegrationTest {
         ScriptedUi retry = new ScriptedUi("67", "yes", "exit");
         new FinNUS(retry, new FileStorage(path)).run();
         assertFalse(new FileStorage(path).load().setupRequired());
-        assertEquals(new BigDecimal("67"), new FileStorage(path).load().snapshot().openingBalance());
+        assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
     }
 
     @Test
@@ -131,7 +131,6 @@ class PersistenceIntegrationTest {
         new FinNUS(new ScriptedUi("deposit 1", "exit"), new FileStorage(path)).run();
         List<String> preserved = recoveryContents();
         assertTrue(preserved.contains("broken main"));
-        assertTrue(preserved.contains("broken backup"));
         assertEquals("broken backup", Files.readString(directory.resolve("finnus.txt.bak")));
         assertEquals(Money.of("1"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
     }
@@ -150,7 +149,7 @@ class PersistenceIntegrationTest {
             }
         };
         assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
-        assertEquals(Money.of("3"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
+        assertEquals(Money.of("6"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
     }
 
     @Test

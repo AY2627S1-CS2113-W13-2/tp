@@ -46,13 +46,12 @@ public final class Money implements Comparable<Money> {
 
     /** Creates an exact whole-number amount. */
     public static Money of(long value) {
-        Objects.requireNonNull(value, "Value should not be null");
         return Money.of(BigDecimal.valueOf(value));
     }
 
     /** Returns the sum of this amount and {@code other}. */
     public Money add(Money other) {
-        Objects.requireNonNull(value, "Value should not be null");
+        Objects.requireNonNull(other, "Value should not be null");
         return Money.of(value.add(other.value));
     }
 
