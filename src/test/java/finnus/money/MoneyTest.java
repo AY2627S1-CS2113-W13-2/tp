@@ -94,4 +94,24 @@ class MoneyTest {
         assertEquals(Money.of("10"), Money.of("10.00"));
         assertEquals(Money.of("10").hashCode(), Money.of("10.00").hashCode());
     }
+
+    @Test
+    public void equals_sameReference_returnsTrue() {
+        Money amount = Money.of("10");
+
+        assertTrue(amount.equals(amount));
+    }
+
+    @Test
+    public void equals_nullOrOtherType_returnsFalse() {
+        Money amount = Money.of("10");
+
+        assertFalse(amount.equals(null));
+        assertFalse(amount.equals("10"));
+    }
+
+    @Test
+    public void equals_differentAmount_returnsFalse() {
+        assertFalse(Money.of("10").equals(Money.of("11")));
+    }
 }
