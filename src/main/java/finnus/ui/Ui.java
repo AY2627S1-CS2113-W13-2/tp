@@ -27,6 +27,16 @@ public class Ui {
         return in.nextLine();
     }
 
+    /** Prints an inline prompt and reads a response without surrounding it with dividers. */
+    public String readCommand(String prompt) {
+        System.out.print(prompt);
+        System.out.flush();
+        if (!in.hasNextLine()) {
+            return null;
+        }
+        return in.nextLine();
+    }
+
     /**
      * Prints one or more lines between two dividers.
      *

@@ -20,6 +20,7 @@ import finnus.transaction.TransactionType;
 public class LedgerCodec {
     private static final Logger logger = Logger.getLogger(LedgerCodec.class.getName());
     private static final String HEADER = "FINNUS|1";
+    private static final String SETUP_PENDING = "SETUP_PENDING";
     private static final String OPENING = "OPENING";
     private static final String RATE = "RATE";
     private static final String TRANSACTION = "TRANSACTION";
@@ -28,6 +29,8 @@ public class LedgerCodec {
      * Distinguishes damaged data from a newer format that must not be overwritten.
      */
     public enum Status {
+        /** The save file exists, but first-run setup has not been confirmed. */
+        SETUP_PENDING,
         /** Every non-blank record was valid. */
         CLEAN,
         /** Some records were recovered, but at least one warning was produced. */
@@ -71,6 +74,11 @@ public class LedgerCodec {
         return encoded;
     }
 
+    /** Encodes the persistent state used while first-run setup is incomplete. */
+    public String encodeSetupPending() {
+        return HEADER + '\n' + SETUP_PENDING + '\n';
+    }
+
     /**
      * Recovers valid records; the first valid opening balance or currency record wins.
      * Blank lines are ignored and an optional UTF-8 byte-order mark is accepted.
@@ -82,6 +90,9 @@ public class LedgerCodec {
             boolean newer = !lines.isEmpty() && lines.getFirst().matches("FINNUS\\|[0-9]+");
             return new DecodeResult(LedgerSnapshot.empty(), List.of("Invalid or unsupported storage header."),
                     newer ? Status.UNSUPPORTED : Status.UNRECOVERABLE);
+        }
+        if (isSetupPending(lines)) {
+            return new DecodeResult(LedgerSnapshot.empty(), List.of(), Status.SETUP_PENDING);
         }
         Records records = new Records();
         for (int index = 1; index < lines.size(); index++) {
@@ -97,6 +108,14 @@ public class LedgerCodec {
             }
         }
         return records.result();
+    }
+
+    /** Checks whether the only non-blank record after the header marks interrupted setup. */
+    private boolean isSetupPending(List<String> lines) {
+        List<String> records = lines.subList(1, lines.size()).stream()
+                .filter(line -> !line.isBlank())
+                .toList();
+        return records.size() == 1 && SETUP_PENDING.equals(records.getFirst().trim());
     }
 
     /** Dispatches one delimited line to the parser for its record type. */
