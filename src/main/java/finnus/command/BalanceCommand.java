@@ -2,6 +2,7 @@ package finnus.command;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.logging.Logger;
 
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -10,6 +11,7 @@ import finnus.ui.Ui;
  * Displays the user's balance rounded to two decimal places.
  */
 public class BalanceCommand extends Command {
+    private static final Logger logger = Logger.getLogger(BalanceCommand.class.getName());
 
     /**
      * Prints the user's balance to 2 decimal places
@@ -20,6 +22,8 @@ public class BalanceCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
+        logger.fine("Getting balance");
+
         assert transactions != null : "Transaction list must not be null";
         assert ui != null : "UI must not be null";
         BigDecimal balance = transactions.getBalance();
