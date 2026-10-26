@@ -12,7 +12,7 @@ import finnus.ui.Ui;
  * Displays the available commands and their syntax without changing transactions.
  */
 public class HelpCommand extends Command {
-    private static final Logger LOGGER = Logger.getLogger(HelpCommand.class.getName());
+    private static final Logger logger = Logger.getLogger(HelpCommand.class.getName());
     private static final String COMMAND_HEADER = "Command";
     private static final String DESCRIPTION_HEADER = "Description";
     private static final String SYNTAX_HEADER = "Syntax";
@@ -64,6 +64,6 @@ public class HelpCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         assert ui != null : "UI must not be null";
         ui.showMessage(HELP_LINES);
-        LOGGER.fine("Displayed help message");
+        logger.fine("Displayed help message");
     }
 }
