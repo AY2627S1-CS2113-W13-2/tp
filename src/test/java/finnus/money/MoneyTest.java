@@ -3,6 +3,9 @@ package finnus.money;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 class MoneyTest {
@@ -22,6 +25,18 @@ class MoneyTest {
 
         assertEquals(Money.of("-12.30"), original.negate());
         assertEquals(Money.of("12.30"), original);
+    }
+
+    @Test
+    public void toBigDecimal_amountWithTrailingZerosAndSubCentDigits_preservesExactValue() {
+        assertEquals(new BigDecimal("12.300"), Money.of("12.300").toBigDecimal());
+        assertEquals(new BigDecimal("10.005"), Money.of("10.005").toBigDecimal());
+    }
+
+    @Test
+    public void toString_scientificAndNegativeAmounts_usesPlainExactDecimal() {
+        assertEquals("1000", Money.of("1E+3").toString());
+        assertEquals("-12.345", Money.of("-12.345").toString());
     }
 
     @Test
