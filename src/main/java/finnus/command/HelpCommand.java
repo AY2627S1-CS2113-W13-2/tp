@@ -1,6 +1,7 @@
 package finnus.command;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -27,18 +28,17 @@ public class HelpCommand extends Command {
      * Builds an ASCII table whose columns grow to fit the headers and command metadata.
      */
     private static String[] createHelpLines() {
+        List<CommandWord> availableCommands = Arrays.stream(CommandWord.values())
+                .filter(CommandWord::isAvailableAfterSetup)
+                .toList();
         int commandWidth = COMMAND_HEADER.length();
         int descriptionWidth = DESCRIPTION_HEADER.length();
         int syntaxWidth = SYNTAX_HEADER.length();
-        for (CommandWord command : CommandWord.values()) {
-            if (!command.isAvailableAfterSetup()) {
-                continue;
-            }
+        for (CommandWord command : availableCommands) {
             commandWidth = Math.max(commandWidth, command.getWord().length());
             descriptionWidth = Math.max(descriptionWidth, command.getDescription().length());
             syntaxWidth = Math.max(syntaxWidth, command.getUsage().length());
         }
-
         String border = "+" + "-".repeat(commandWidth + COLUMN_PADDING)
                 + "+" + "-".repeat(descriptionWidth + COLUMN_PADDING)
                 + "+" + "-".repeat(syntaxWidth + COLUMN_PADDING) + "+";
@@ -49,11 +49,9 @@ public class HelpCommand extends Command {
         lines.add(border);
         lines.add(String.format(rowFormat, COMMAND_HEADER, DESCRIPTION_HEADER, SYNTAX_HEADER));
         lines.add(border);
-        for (CommandWord command : CommandWord.values()) {
-            if (!command.isAvailableAfterSetup()) {
-                continue;
-            }
-            lines.add(String.format(rowFormat, command.getWord(), command.getDescription(), command.getUsage()));
+        for (CommandWord command : availableCommands) {
+            lines.add(String.format(rowFormat, command.getWord(),
+                    command.getDescription(), command.getUsage()));
         }
         lines.add(border);
         lines.add("");

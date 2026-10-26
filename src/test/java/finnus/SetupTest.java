@@ -24,7 +24,7 @@ class SetupTest {
     }
 
     @Test
-    public void run_rejectedAmountRequiresReentryBeforeCompletion() {
+    public void run_unconfirmedAmountContinuesUntilAnotherAmountIsConfirmed() {
         TransactionList transactions = new TransactionList();
 
         boolean completed = new Setup().run(new ScriptedUi("1250", "no", "125.00", "yes"), transactions);
@@ -35,13 +35,35 @@ class SetupTest {
     }
 
     @Test
+    public void run_unrecognizedConfirmation_keepsAskingUntilConfirmed() {
+        TransactionList transactions = new TransactionList();
+
+        boolean completed = new Setup().run(new ScriptedUi("1250", "perhaps", "yes"), transactions);
+
+        assertTrue(completed);
+        assertEquals(new BigDecimal("1250"), transactions.getOpeningBalance());
+        assertEquals(0, transactions.size());
+    }
+
+    @Test
     public void run_inputEndsBeforeConfirmation_doesNotComplete() {
         TransactionList transactions = new TransactionList();
 
         boolean completed = new Setup().run(new ScriptedUi("1250"), transactions);
 
         assertFalse(completed);
-        assertEquals(new BigDecimal("1250"), transactions.getOpeningBalance());
+        assertEquals(BigDecimal.ZERO, transactions.getOpeningBalance());
+        assertEquals(0, transactions.size());
+    }
+
+    @Test
+    public void run_rejectedAmountThenInputEnds_leavesOpeningBalanceUnchanged() {
+        TransactionList transactions = new TransactionList();
+
+        boolean completed = new Setup().run(new ScriptedUi("1250", "no"), transactions);
+
+        assertFalse(completed);
+        assertEquals(BigDecimal.ZERO, transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
 

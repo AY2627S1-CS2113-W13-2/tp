@@ -2,6 +2,7 @@ package finnus;
 
 import java.math.BigDecimal;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 import finnus.command.OpeningBalanceCommand;
@@ -15,7 +16,7 @@ public class Setup {
     private static final Logger LOGGER = Logger.getLogger(Setup.class.getName());
 
     private enum Confirmation {
-        CONFIRMED, REENTER, INPUT_ENDED
+        CONFIRMED, NOT_CONFIRMED
     }
 
     /**
@@ -45,37 +46,38 @@ public class Setup {
                 ui.showError(e.getMessage());
                 continue;
             }
+            Optional<Confirmation> confirmation = confirmBalance(ui, amount);
+            if (confirmation.isEmpty()) {
+                return false;
+            }
+            if (confirmation.get() == Confirmation.NOT_CONFIRMED) {
+                continue;
+            }
+
             new OpeningBalanceCommand(amount).execute(transactions, ui);
             assert transactions.getOpeningBalance().compareTo(amount) == 0
                     : "Setup must store the entered opening balance";
-
-            Confirmation confirmation = confirmBalance(ui, amount);
-            if (confirmation == Confirmation.INPUT_ENDED) {
-                return false;
-            }
-            if (confirmation == Confirmation.CONFIRMED) {
-                LOGGER.info("First-run opening balance confirmed");
-                return true;
-            }
+            LOGGER.info("First-run opening balance confirmed");
+            return true;
         }
     }
 
     /** Repeats the confirmation prompt until the user answers yes or no. */
-    private Confirmation confirmBalance(Ui ui, BigDecimal amount) {
+    private Optional<Confirmation> confirmBalance(Ui ui, BigDecimal amount) {
         while (true) {
             String answer = ui.readCommand("Confirm opening balance $"
                     + amount.toPlainString() + " SGD? [yes/no]: ");
             if (answer == null) {
                 LOGGER.fine("First-run setup ended before the opening balance was confirmed");
-                return Confirmation.INPUT_ENDED;
+                return Optional.empty();
             }
             switch (answer.trim().toLowerCase(Locale.ROOT)) {
             case "yes", "y" -> {
-                return Confirmation.CONFIRMED;
+                return Optional.of(Confirmation.CONFIRMED);
             }
             case "no", "n" -> {
                 LOGGER.fine("User requested another opening balance entry");
-                return Confirmation.REENTER;
+                return Optional.of(Confirmation.NOT_CONFIRMED);
             }
             default -> ui.showError("Please answer yes or no.");
             }
