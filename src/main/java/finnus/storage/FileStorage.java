@@ -115,7 +115,7 @@ public class FileStorage implements Storage {
         switch (decoded.status()) {
         case SETUP_PENDING:
             setupRequired = true;
-            LOGGER.info("First-run setup is incomplete; prompting for an opening balance");
+            logger.info("First-run setup is incomplete; prompting for an opening balance");
             return result(LedgerSnapshot.empty(), warnings);
         case CLEAN:
             knownClean = true;
@@ -151,7 +151,7 @@ public class FileStorage implements Storage {
                 return result(backup.snapshot(), warnings);
             }
             if (backup != null && backup.status() == LedgerCodec.Status.SETUP_PENDING) {
-                LOGGER.info("Resuming setup from pending backup state");
+                logger.info("Resuming setup from pending backup state");
                 warnings.add("First-run setup was not completed. Enter and confirm an opening balance to continue.");
                 return createSetupPendingFile(warnings);
             }
@@ -170,7 +170,7 @@ public class FileStorage implements Storage {
             return readFailure(backupPath());
         }
         if (!damagedMain) {
-            LOGGER.warning("No usable main ledger exists; creating a pending setup file");
+            logger.warning("No usable main ledger exists; creating a pending setup file");
             return createSetupPendingFile(warnings);
         }
         warnings.add("The save file is corrupted and no saved state could be recovered. "
@@ -210,11 +210,11 @@ public class FileStorage implements Storage {
             replacement.replace(temporary, path);
             assert Files.exists(path) : "Pending setup replacement must create the ledger file";
             preserveOriginal = false;
-            LOGGER.info("Created pending setup file at " + path);
+            logger.info("Created pending setup file at " + path);
             return result(LedgerSnapshot.empty(), warnings);
         } catch (IOException e) {
             savingAllowed = false;
-            LOGGER.log(java.util.logging.Level.SEVERE, "Could not create pending setup file at " + path, e);
+            logger.log(java.util.logging.Level.SEVERE, "Could not create pending setup file at " + path, e);
             warnings.add("Unable to initialize " + path + ". Setup can continue, but the opening balance "
                     + "cannot be saved.");
             return result(LedgerSnapshot.empty(), warnings);
