@@ -76,6 +76,11 @@ class MoneyTest {
     }
 
     @Test
+    public void formatWithSign_zeroAmount_displaysPositiveZero() {
+        assertEquals("+$0.00", Money.ZERO.formatWithSign());
+    }
+
+    @Test
     public void signQueries_positiveNegativeAndZero_returnExpectedResults() {
         assertTrue(Money.of("1").isPositive());
         assertTrue(Money.of("-1").isNegative());
