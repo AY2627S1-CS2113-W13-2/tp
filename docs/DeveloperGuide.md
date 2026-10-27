@@ -179,7 +179,8 @@ match its amount and rate is skipped, since the file must have been edited by ha
 * **Alternative 1 (current choice):** once, when the transaction is added, and the rate used is
   saved with it.
   * Pros: changing a rate later never changes past transactions or the balance.
-  * Cons: each foreign transaction stores two extra values.
+  * Cons: each foreign transaction saves three extra values in the save file: the currency code,
+    the original amount and the rate.
 * **Alternative 2:** every time the balance is calculated, using the current rate.
   * Pros: nothing extra to store.
   * Cons: setting a new rate would silently change past spending and the balance.

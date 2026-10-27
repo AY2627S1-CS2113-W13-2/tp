@@ -38,7 +38,7 @@ Format: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
 * `AMOUNT` must not be more than `1000000`. Do not include `$` or commas.
 * `DESCRIPTION` is optional. Everything after `d/` is taken as the description.
 * `AMOUNT` and `d/DESCRIPTION` can be given in either order.
-* <!-- @@author chancheese -->To record an amount in another currency, add `c/CURRENCY`. See [Recording an amount in another currency](#recording-an-amount-in-another-currency-c).<!-- @@author -->
+* To record an amount in another currency, add `c/CURRENCY`. See [Recording an amount in another currency](#recording-an-amount-in-another-currency-c).
 
 Examples:
 
