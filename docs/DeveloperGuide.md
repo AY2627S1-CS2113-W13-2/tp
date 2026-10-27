@@ -48,6 +48,7 @@ Sum --> First: sum
 First --> Caller: sum
 Caller -> Sum: format()
 Sum --> Caller: "$10.11"
+destroy Sum
 Caller -> First: toPlainString()
 First --> Caller: "10.005" (unchanged)
 @enduml
@@ -268,6 +269,8 @@ activate Recent
 Recent --> Parser: constructed command
 deactivate Recent
 Parser --> FinNUS: command
+FinNUS -> FinNUS: executeCommand()
+activate FinNUS
 FinNUS -> Recent: execute(transactions, ui)
 Recent -> Ledger: getRecentTransactions(2)
 Ledger --> Recent: up to 2 transactions, newest first
@@ -279,6 +282,7 @@ Recent -> Ui: showMessage(heading and numbered lines)
 Ui --> User: recent transactions
 Ui --> Recent: return
 Recent --> FinNUS: return
+deactivate FinNUS
 note over FinNUS: executeCommand() returns after its ledger state check
 destroy Recent
 @enduml
@@ -353,6 +357,8 @@ activate Balance
 Balance --> Parser: constructed command
 deactivate Balance
 Parser --> FinNUS: command
+FinNUS -> FinNUS: executeCommand()
+activate FinNUS
 FinNUS -> Balance: execute(transactions, ui)
 Balance -> Ledger: getBalance()
 loop each stored transaction
@@ -368,6 +374,7 @@ Balance -> Ui: showMessage("Your current balance is: ...")
 Ui --> User: formatted balance
 Ui --> Balance: return
 Balance --> FinNUS: return
+deactivate FinNUS
 note over FinNUS: executeCommand() returns after its ledger state check
 destroy Balance
 @enduml
