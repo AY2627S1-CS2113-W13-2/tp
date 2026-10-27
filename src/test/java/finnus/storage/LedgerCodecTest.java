@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 import finnus.storage.LedgerCodec.Status;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
@@ -159,5 +160,38 @@ class LedgerCodecTest {
                 LedgerSnapshot.validateOpeningBalance(Money.of("99999999999")));
         assertThrows(IllegalArgumentException.class, () ->
                 new LedgerSnapshot(Money.of("1000000.01"), List.of(), Map.of()));
+    }
+
+    //@@author chancheese
+    @Test
+    public void encode_foreignTransaction_roundTripsOriginalAmountAndRate() {
+        ForeignAmount yen = new ForeignAmount("JPY", new BigDecimal("1100"), new BigDecimal("110.00"));
+        LedgerSnapshot snapshot = new LedgerSnapshot(Money.ZERO, List.of(new StoredTransaction(
+                TransactionType.WITHDRAWAL, yen.toSgd(), "Ramen", yen)), Map.of());
+
+        String encoded = codec.encode(snapshot);
+
+        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110.00\n"));
+        assertEquals(snapshot, codec.decode(encoded).snapshot());
+        assertEquals(Status.CLEAN, codec.decode(encoded).status());
+    }
+
+    @Test
+    public void toTransactionList_foreignTransaction_keepsForeignAmount() {
+        String text = "FINNUS|1\nOPENING|0\nTRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110\n";
+        Transaction loaded = codec.decode(text).snapshot().toTransactionList().get(0);
+        assertEquals("[Withdrawal] -$10.00 (Ramen) [JPY 1100]", loaded.toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"TRANSACTION|WITHDRAWAL|9.00||JPY|1100|110", "TRANSACTION|WITHDRAWAL|10.00||JYP|1100|110",
+        "TRANSACTION|WITHDRAWAL|10.00||SGD|1100|110", "TRANSACTION|WITHDRAWAL|10.00||JPY|0|110",
+        "TRANSACTION|WITHDRAWAL|10.00||JPY|1100|0", "TRANSACTION|WITHDRAWAL|10.00||JPY|1100",
+        "TRANSACTION|WITHDRAWAL|10.00||JPY|abc|110"})
+    public void decode_badForeignTransactionRow_isSkipped(String badRow) {
+        String text = "FINNUS|1\nOPENING|0\nTRANSACTION|DEPOSIT|2|\n" + badRow + "\n";
+        LedgerCodec.DecodeResult result = codec.decode(text);
+        assertEquals(Status.PARTIAL, result.status());
+        assertEquals(1, result.snapshot().transactions().size());
     }
 }

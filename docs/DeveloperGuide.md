@@ -98,7 +98,7 @@ automatically shifts the balance:
 ```java
 return transactions.stream()
         .map(Transaction::getSignedAmount)
-        .reduce(openingBalance, BigDecimal::add);
+        .reduce(openingBalance, Money::add);
 ```
 
 #### Design considerations
@@ -115,7 +115,7 @@ return transactions.stream()
 
 ### Setting exchange rates
 
-The `rate` command stores exchange rates for later conversion of foreign-currency transactions
+The `rate` command stores exchange rates used to convert foreign-currency transactions
 to SGD. `rate JPY 110` sets 1 SGD = 110 JPY, and `rate` on its own lists all rates.
 
 #### How it works
@@ -141,6 +141,57 @@ to SGD. `rate JPY 110` sets 1 SGD = 110 JPY, and `rate` on its own lists all rat
 * **Alternative 2:** fetch live rates from an online API.
   * Pros: always up to date.
   * Cons: needs internet access, and tests would give different results from day to day.
+
+<!-- @@author chancheese -->
+### Recording transactions in foreign currencies
+
+Adding `c/CURRENCY` to `deposit` or `withdraw` (e.g. `withdraw 1100 d/Ramen c/JPY`) records an
+amount typed in another currency. It is converted to SGD with the rate set by `rate`, and the
+original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ramen) [JPY 1100]`.
+
+#### How it works
+
+1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
+   split into amount and description exactly as before. `c/SGD` counts as no currency.
+2. If a currency was given, `parseForeignAmount()` checks the amount and the parser returns a
+   `ForeignTransactionCommand` instead of a `DepositCommand` or `WithdrawCommand`.
+3. `ForeignTransactionCommand#execute()` calls `CurrencyRates#convert()`, which throws a
+   `FinNusException` if no rate is set, or if the SGD value is below $0.01 or above
+   `Money.MAX_AMOUNT`.
+4. `convert()` returns a `ForeignAmount`, a record of the currency code, the amount as typed and
+   the rate used. `toSgd()` divides the amount by the rate and rounds it to the nearest cent.
+5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
+   the balance, `recent` and `delete` work without any changes.
+
+In the save file, a foreign transaction has three extra fields: the currency code, the amount as
+typed and the rate, e.g. `TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110`. SGD-only rows keep
+the old format, so existing save files still load. When loading, a row whose SGD amount does not
+match its amount and rate is skipped, since the file must have been edited by hand.
+
+#### Design considerations
+
+**Aspect: when the amount is converted**
+
+* **Alternative 1 (current choice):** once, when the transaction is added, and the rate used is
+  saved with it.
+  * Pros: changing a rate later never changes past transactions or the balance.
+  * Cons: each foreign transaction stores two extra values.
+* **Alternative 2:** every time the balance is calculated, using the current rate.
+  * Pros: nothing extra to store.
+  * Cons: setting a new rate would silently change past spending and the balance.
+
+**Aspect: which command handles foreign amounts**
+
+* **Alternative 1 (current choice):** a separate `ForeignTransactionCommand`.
+  * Pros: the rates are in `TransactionList`, which only a command can reach when it runs, so
+    conversion and its errors stay in one place. `DepositCommand` and `WithdrawCommand` are
+    unchanged.
+  * Cons: one more class, and the confirmation message is built in two places.
+* **Alternative 2:** add an optional currency to `DepositCommand` and `WithdrawCommand`.
+  * Pros: fewer classes.
+  * Cons: both commands would need the same conversion code, and their `execute()` would start
+    throwing an exception that every existing caller has to handle.
+<!-- @@author -->
 
 
 ## Product scope

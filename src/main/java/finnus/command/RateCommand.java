@@ -81,7 +81,7 @@ public class RateCommand extends Command {
     /**
      * Formats a rate as {@code 1 SGD = 110 JPY}, dropping trailing zeros such as in 110.00.
      */
-    private static String formatRate(String currencyCode, BigDecimal rate) {
+    static String formatRate(String currencyCode, BigDecimal rate) {
         return "1 " + CurrencyRates.BASE_CURRENCY + " = " + rate.stripTrailingZeros().toPlainString()
                 + " " + currencyCode;
     }
