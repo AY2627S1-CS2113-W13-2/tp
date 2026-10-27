@@ -156,7 +156,7 @@ original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ra
 #### How it works
 
 The sequence diagram below shows what happens when the user enters `withdraw 1100 d/Ramen c/JPY`.
-Logging, console output and input validation are left out.
+Logging, console output, input validation and saving the ledger afterwards are left out.
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 

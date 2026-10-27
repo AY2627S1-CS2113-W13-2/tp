@@ -1,6 +1,6 @@
 @startuml
 ' Sequence diagram for "withdraw 1100 d/Ramen c/JPY".
-' Logging, console input/output and argument validation are left out to focus on the objects involved.
+' Logging, console output, input validation and saving are left out to focus on the objects involved.
 hide footbox
 skinparam shadowing false
 skinparam sequenceMessageAlign center
@@ -15,10 +15,13 @@ participant ":Transaction" as Transaction
 
 FinNUS -> Parser : parse("withdraw 1100 d/Ramen c/JPY")
 activate Parser
+Parser -> Parser : parseWithdraw("1100 d/Ramen c/JPY")
+activate Parser
 Parser -> Parser : extractCurrency("1100 d/Ramen c/JPY")
 note right of Parser : returns "JPY" and\n"1100 d/Ramen"
 create Command
 Parser -> Command : new(WITHDRAWAL, 1100, "JPY", "Ramen")
+deactivate Parser
 Parser --> FinNUS : command
 deactivate Parser
 
@@ -32,33 +35,44 @@ deactivate TransactionList
 Command -> CurrencyRates : convert(1100, "JPY")
 activate CurrencyRates
 
-alt conversion fails, e.g. no rate set for JPY
+break no rate set for JPY
     CurrencyRates --> Command : FinNusException
-    deactivate CurrencyRates
     Command --> FinNUS : FinNusException
-    note right of FinNUS : error is shown and\nnothing is recorded
-else conversion succeeds (1 SGD = 110 JPY)
-    activate CurrencyRates
-    create ForeignAmount
-    CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
-    CurrencyRates --> Command : foreignAmount
-    deactivate CurrencyRates
-
-    create Transaction
-    Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
-    activate Transaction
-    Transaction -> ForeignAmount : toSgd()
-    activate ForeignAmount
-    ForeignAmount --> Transaction : $10.00
-    deactivate ForeignAmount
-    Transaction --> Command
-    deactivate Transaction
-
-    Command -> TransactionList : add(transaction)
-    activate TransactionList
-    TransactionList --> Command
-    deactivate TransactionList
-    Command --> FinNUS
 end
+
+create ForeignAmount
+CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
+activate ForeignAmount
+ForeignAmount --> CurrencyRates : foreignAmount
+deactivate ForeignAmount
+CurrencyRates -> ForeignAmount : toSgd()
+activate ForeignAmount
+ForeignAmount --> CurrencyRates : $10.00
+deactivate ForeignAmount
+
+break SGD value is $0.00 or above $1,000,000
+    CurrencyRates --> Command : FinNusException
+    Command --> FinNUS : FinNusException
+end
+
+CurrencyRates --> Command : foreignAmount
+deactivate CurrencyRates
+
+create Transaction
+Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
+activate Transaction
+Transaction -> ForeignAmount : toSgd()
+activate ForeignAmount
+ForeignAmount --> Transaction : $10.00
+deactivate ForeignAmount
+Transaction --> Command : transaction
+deactivate Transaction
+
+Command -> TransactionList : add(transaction)
+activate TransactionList
+TransactionList --> Command
+deactivate TransactionList
+
+Command --> FinNUS
 deactivate Command
 @enduml
