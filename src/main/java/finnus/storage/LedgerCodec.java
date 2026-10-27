@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.TransactionType;
@@ -25,6 +26,10 @@ public class LedgerCodec {
     private static final String OPENING = "OPENING";
     private static final String RATE = "RATE";
     private static final String TRANSACTION = "TRANSACTION";
+    //@@author chancheese
+    private static final int SGD_TRANSACTION_FIELDS = 4;
+    private static final int FOREIGN_TRANSACTION_FIELDS = 7;
+    //@@author
 
     /**
      * Distinguishes damaged data from a newer format that must not be overwritten.
@@ -67,7 +72,15 @@ public class LedgerCodec {
             String description = Base64.getEncoder().encodeToString(
                     transaction.description().getBytes(StandardCharsets.UTF_8));
             text.append(TRANSACTION).append('|').append(transaction.type()).append('|')
-                    .append(transaction.amount().toPlainString()).append('|').append(description).append('\n');
+                    .append(transaction.amount().toPlainString()).append('|').append(description);
+            //@@author chancheese
+            ForeignAmount foreign = transaction.foreignAmount();
+            if (foreign != null) {
+                text.append('|').append(foreign.currencyCode()).append('|')
+                        .append(foreign.amount().toPlainString()).append('|').append(foreign.rate().toPlainString());
+            }
+            //@@author
+            text.append('\n');
         }
         String encoded = text.toString();
         assert encoded.startsWith(HEADER + '\n') && encoded.endsWith("\n")
@@ -156,17 +169,43 @@ public class LedgerCodec {
         records.rates.put(fields[1], rate);
     }
 
-    /** Validates and appends one transaction record. */
+    /**
+     * Validates and appends one transaction record. A transaction typed in another currency
+     * has three extra fields: the currency code, the amount as typed, and the rate used.
+     */
     private void parseTransaction(String[] fields, Records records) {
-        requireFields(fields, 4);
+        if (fields.length != SGD_TRANSACTION_FIELDS && fields.length != FOREIGN_TRANSACTION_FIELDS) {
+            throw new IllegalArgumentException("Incorrect field count");
+        }
         TransactionType type;
         try {
             type = TransactionType.valueOf(fields[1]);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid transaction type");
         }
-        records.transactions.add(new StoredTransaction(type, parseMoney(fields[2]), decodeDescription(fields[3])));
+        //@@author chancheese
+        ForeignAmount foreign = fields.length == FOREIGN_TRANSACTION_FIELDS
+                ? parseForeignAmount(fields[4], fields[5], fields[6]) : null;
+        //@@author
+        records.transactions.add(new StoredTransaction(type, parseMoney(fields[2]), decodeDescription(fields[3]),
+                foreign));
     }
+
+    //@@author chancheese
+    /**
+     * Validates the foreign-currency fields of a transaction before building the
+     * assertion-checked {@link ForeignAmount}.
+     */
+    private ForeignAmount parseForeignAmount(String code, String amountText, String rateText) {
+        BigDecimal amount = parseDecimal(amountText);
+        BigDecimal rate = parseDecimal(rateText);
+        LedgerSnapshot.validateRate(code, rate);
+        if (amount.signum() <= 0) {
+            throw new IllegalArgumentException("Foreign amount must be positive");
+        }
+        return new ForeignAmount(code, amount, rate);
+    }
+    //@@author
 
     /** Decodes a Base64 description and rejects malformed or invalid UTF-8 data. */
     private String decodeDescription(String text) {

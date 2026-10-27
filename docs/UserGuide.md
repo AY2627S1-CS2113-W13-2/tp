@@ -32,12 +32,13 @@ If the main file is unusable, FinNUS tries its backup. If neither can be recover
 ### Adding a deposit: `deposit`
 Records money you receive, such as your monthly allowance, and adds it to your balance.
 
-Format: `deposit AMOUNT [d/DESCRIPTION]`
+Format: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
 
-* `AMOUNT` is in SGD and must be a positive number with at most 2 decimal places, e.g. `500`, `12.5` or `4.50`.
+* `AMOUNT` is in SGD (unless `c/CURRENCY` is given) and must be a positive number with at most 2 decimal places, e.g. `500`, `12.5` or `4.50`.
 * `AMOUNT` must not be more than `1000000`. Do not include `$` or commas.
 * `DESCRIPTION` is optional. Everything after `d/` is taken as the description.
 * `AMOUNT` and `d/DESCRIPTION` can be given in either order.
+* To record an amount in another currency, add `c/CURRENCY`. See [Recording an amount in another currency](#recording-an-amount-in-another-currency-c).
 
 Examples:
 
@@ -57,7 +58,7 @@ ____________________________________________________________
 ### Adding a withdrawal: `withdraw`
 Records money you spend and removes it from your balance.
 
-Format: `withdraw AMOUNT d/DESCRIPTION`
+Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]`
 
 * `AMOUNT` follows the same rules as for `deposit`.
 * `DESCRIPTION` is required, so you always know what the money was spent on.
@@ -141,6 +142,42 @@ Exchange rates:
 ____________________________________________________________
 ```
 
+<!-- @@author chancheese -->
+### Recording an amount in another currency: `c/`
+Add `c/CURRENCY` to a `deposit` or `withdraw` to record an amount in another currency, e.g. while on exchange.
+FinNUS converts it to SGD using the rate you set with `rate`, and keeps the original amount so you can see it later.
+
+Format: `deposit AMOUNT [d/DESCRIPTION] c/CURRENCY` or `withdraw AMOUNT d/DESCRIPTION c/CURRENCY`
+
+* `CURRENCY` is a 3-letter currency code, in upper or lower case. You must set a rate for it first with `rate`.
+* `AMOUNT` is in `CURRENCY` and must be a positive number with at most 2 decimal places. After converting, it is rounded to the nearest cent, and must be at least `$0.01` and at most `$1000000`.
+* `c/CURRENCY` can be given anywhere after the command word, but only once. `c/SGD` is the same as leaving it out.
+* The rate is saved with the transaction, so changing a rate later does not change transactions you have already recorded.
+* Because `c/` marks the currency, a word starting with `c/` cannot be used inside a description.
+
+Examples:
+
+* `withdraw 1100 d/Ramen c/JPY`
+* `deposit c/usd 50`
+
+Expected output for `withdraw 1100 d/Ramen c/JPY` after `rate JPY 110`:
+```
+____________________________________________________________
+Withdrawal added:
+  [Withdrawal] -$10.00 (Ramen) [JPY 1100]
+Converted at 1 SGD = 110 JPY.
+You now have 1 transaction(s).
+____________________________________________________________
+```
+
+Example of an invalid command, `deposit 50 c/USD` when no USD rate is set:
+```
+____________________________________________________________
+Error: No exchange rate set for USD. Set one first with: rate USD RATE
+____________________________________________________________
+```
+<!-- @@author -->
+
 ### Viewing balance: `balance`
 Shows the remaining balance of the user's account. 
 
@@ -214,18 +251,18 @@ Expected output:
 ```text
 ____________________________________________________________
 Available commands:
-+----------+-----------------+--------------------------------+
-| Command  | Description     | Syntax                         |
-+----------+-----------------+--------------------------------+
-| deposit  | Record income   | deposit AMOUNT [d/DESCRIPTION] |
-| withdraw | Record spending | withdraw AMOUNT d/DESCRIPTION  |
-| recent   | Recent activity | recent [NUMBER]                |
-| delete   | Delete a record | delete INDEX                   |
-| opening  | Opening balance | opening AMOUNT                 |
-| rate     | Manage FX rates | rate [CURRENCY RATE]           |
-| help     | List commands   | help                           |
-| exit     | Close FinNUS    | exit                           |
-+----------+-----------------+--------------------------------+
++----------+-----------------+---------------------------------------------+
+| Command  | Description     | Syntax                                      |
++----------+-----------------+---------------------------------------------+
+| deposit  | Record income   | deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY] |
+| withdraw | Record spending | withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]  |
+| recent   | Recent activity | recent [NUMBER]                             |
+| delete   | Delete a record | delete INDEX                                |
+| balance  | Current balance | balance                                     |
+| rate     | Manage FX rates | rate [CURRENCY RATE]                        |
+| help     | List commands   | help                                        |
+| exit     | Close FinNUS    | exit                                        |
++----------+-----------------+---------------------------------------------+
 
 [] means optional.
 ____________________________________________________________
@@ -241,8 +278,8 @@ ____________________________________________________________
 
 {Give a 'cheat sheet' of commands here}
 
-* Add a deposit: `deposit AMOUNT [d/DESCRIPTION]`
-* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION`
+* Add a deposit: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
+* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]`
 * View recent transactions: `recent [NUMBER]`
 * Delete a transaction: `delete INDEX`
 * Set opening balance: `opening AMOUNT`
