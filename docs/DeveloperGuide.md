@@ -79,21 +79,25 @@ message to the user, so invalid input never stops the app.
 
 ### Setting the opening balance
 
-The `opening AMOUNT` command (e.g. `opening 500`) sets the money the user had before they started
-using FinNUS.
+The opening balance is the money the user had before they started using FinNUS. It is set once,
+during first-run setup, when no save file exists yet.
 
 #### How it works
 
-1. `Parser#parseOpening()` checks the amount with `parseNonNegativeAmount()`, which uses the same
-   rules as deposits except that 0 is allowed, so the user can reset it.
-2. `OpeningBalanceCommand#execute()` replaces the opening balance in `TransactionList` and logs
-   the old and new values, since the old value is not kept anywhere else.
-3. It shows the new balance. If transactions already exist, it also warns that their balances
-   have changed.
+1. `FinNUS` sees that setup has not been completed and runs `Setup#run()`, which asks for the
+   opening balance in SGD.
+2. `Setup` checks the input with `Parser#parseNonNegativeAmount()`, which uses the same rules as
+   deposits except that 0 is allowed. Invalid input shows an error and asks again.
+3. `Setup` asks the user to confirm the amount with `yes` or `no`. Answering `no` asks for the
+   amount again.
+4. Once confirmed, `OpeningBalanceCommand#execute()` stores the amount with
+   `TransactionList#setOpeningBalance()`, and the ledger is saved.
+
+`opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
+treated as an unknown command.
 
 The opening balance is a separate field in `TransactionList`, not a `Transaction`.
-`getBalance()` uses it as the starting value when adding up all transactions, so changing it
-automatically shifts the balance:
+`getBalance()` uses it as the starting value when adding up all transactions:
 
 ```java
 return transactions.stream()
@@ -106,8 +110,8 @@ return transactions.stream()
 **Aspect: how the opening balance is stored**
 
 * **Alternative 1 (current choice):** a separate field in `TransactionList`.
-  * Pros: running `opening` again simply replaces it, and it never appears in `recent` or gets
-    removed by `delete`.
+  * Pros: it never appears in `recent`, cannot be removed by `delete`, and is not counted as
+    income.
   * Cons: storage has to save it separately from the transactions.
 * **Alternative 2:** a special first `DEPOSIT` transaction.
   * Pros: no extra field.
