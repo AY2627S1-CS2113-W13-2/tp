@@ -5,11 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
+import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -33,11 +33,11 @@ class BalanceCommandTest {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("100.00"),
+                Money.of("100.00"),
                 "Allowance"));
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("25.50"),
+                Money.of("25.50"),
                 "Lunch"));
 
         String output = runAndCaptureOutput(
@@ -49,14 +49,14 @@ class BalanceCommandTest {
     @Test
     public void execute_openingBalanceAndTransactions_includesOpeningBalance() {
         TransactionList transactions = new TransactionList();
-        transactions.setOpeningBalance(new BigDecimal("1000.00"));
+        transactions.setOpeningBalance(Money.of("1000.00"));
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("100.25"),
+                Money.of("100.25"),
                 "Allowance"));
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("25.50"),
+                Money.of("25.50"),
                 "Groceries"));
 
         String output = runAndCaptureOutput(
@@ -70,7 +70,7 @@ class BalanceCommandTest {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("10.005"),
+                Money.of("10.005"),
                 "Test deposit"));
 
         String output = runAndCaptureOutput(
@@ -84,7 +84,7 @@ class BalanceCommandTest {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("10.004"),
+                Money.of("10.004"),
                 "Test deposit"));
 
         String output = runAndCaptureOutput(
@@ -96,18 +96,18 @@ class BalanceCommandTest {
     @Test
     public void execute_doesNotModifyTransactionsOrBalance() {
         TransactionList transactions = new TransactionList();
-        transactions.setOpeningBalance(new BigDecimal("500.00"));
+        transactions.setOpeningBalance(Money.of("500.00"));
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("100.00"),
+                Money.of("100.00"),
                 "Allowance"));
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("20.00"),
+                Money.of("20.00"),
                 "Lunch"));
 
         int originalSize = transactions.size();
-        BigDecimal originalBalance = transactions.getBalance();
+        Money originalBalance = transactions.getBalance();
 
         runAndCaptureOutput(new BalanceCommand(), transactions);
 

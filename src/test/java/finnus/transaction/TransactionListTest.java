@@ -1,6 +1,5 @@
 package finnus.transaction;
 
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.money.Money;
+
 public class TransactionListTest {
 
     private static TransactionList transactions;
@@ -20,11 +21,11 @@ public class TransactionListTest {
     @BeforeEach
     public void initEach() {
         transactions = new TransactionList();
-        transactions.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal(100), ""));
-        transactions.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(30), "Food"));
-        transactions.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal(30), "January"));
+        transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of(100), ""));
+        transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of(30), "Food"));
+        transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of(30), "January"));
 
-        newWithdrawal = new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(5), "Taxi");
+        newWithdrawal = new Transaction(TransactionType.WITHDRAWAL, Money.of(5), "Taxi");
         transactions.add(newWithdrawal);
     }
 
@@ -34,7 +35,7 @@ public class TransactionListTest {
         assertEquals(4, subList.size());
         assertThrows(
                 UnsupportedOperationException.class,
-                () -> subList.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(30), "Taxi"))
+                () -> subList.add(new Transaction(TransactionType.WITHDRAWAL, Money.of(30), "Taxi"))
         );
     }
 
@@ -71,48 +72,48 @@ public class TransactionListTest {
 
     @Test
     public void getBalance_newList_isZero() {
-        assertEquals(0, new TransactionList().getBalance().signum());
+        assertEquals(Money.ZERO, new TransactionList().getBalance());
     }
 
     @Test
     public void getBalance_openingPlusTransactions_addsUpCorrectly() {
         TransactionList list = new TransactionList();
-        list.setOpeningBalance(new BigDecimal("10.10"));
-        list.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal("0.20"), ""));
-        list.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal("5.05"), "Snack"));
+        list.setOpeningBalance(Money.of("10.10"));
+        list.add(new Transaction(TransactionType.DEPOSIT, Money.of("0.20"), ""));
+        list.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("5.05"), "Snack"));
 
-        assertEquals(new BigDecimal("5.25"), list.getBalance());
+        assertEquals(Money.of("5.25"), list.getBalance());
     }
 
     @Test
     public void getBalance_spendingMoreThanOpening_canBeNegative() {
         TransactionList list = new TransactionList();
-        list.setOpeningBalance(new BigDecimal("5"));
-        list.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal("8"), "Taxi"));
+        list.setOpeningBalance(Money.of("5"));
+        list.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("8"), "Taxi"));
 
-        assertEquals(new BigDecimal("-3"), list.getBalance());
+        assertEquals(Money.of("-3"), list.getBalance());
     }
 
     @Test
     public void setOpeningBalance_existingTransactions_doesNotAddTransaction() {
         TransactionList list = new TransactionList();
-        list.add(new Transaction(TransactionType.DEPOSIT, new BigDecimal("50"), ""));
-        list.setOpeningBalance(new BigDecimal("100"));
+        list.add(new Transaction(TransactionType.DEPOSIT, Money.of("50"), ""));
+        list.setOpeningBalance(Money.of("100"));
 
         assertEquals(1, list.size());
-        assertEquals(new BigDecimal("100"), list.getOpeningBalance());
+        assertEquals(Money.of("100"), list.getOpeningBalance());
     }
 
     @Test
     public void getBalance_balance_returnsPositiveBalance() {
-        BigDecimal balance = transactions.getBalance();
-        assertEquals(new BigDecimal(95), balance);
+        Money balance = transactions.getBalance();
+        assertEquals(Money.of(95), balance);
     }
 
     @Test
     public void getBalance_balance_returnsNegativeBalance() {
-        transactions.add(new Transaction(TransactionType.WITHDRAWAL, new BigDecimal(205), ""));
-        BigDecimal balance = transactions.getBalance();
-        assertEquals(new BigDecimal(-110), balance);
+        transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of(205), ""));
+        Money balance = transactions.getBalance();
+        assertEquals(Money.of(-110), balance);
     }
 }

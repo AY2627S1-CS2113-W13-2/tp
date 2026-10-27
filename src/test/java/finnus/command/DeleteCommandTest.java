@@ -6,10 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
+
+import finnus.money.Money;
 
 import finnus.exception.FinNusException;
 import finnus.transaction.Transaction;
@@ -103,7 +104,7 @@ class DeleteCommandTest {
 
         Transaction expectedTransaction = new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("4.50"),
+                Money.of("4.50"),
                 "Lunch");
 
         assertTrue(output.contains("Transaction deleted: " + expectedTransaction));
@@ -116,15 +117,15 @@ class DeleteCommandTest {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(
                 TransactionType.DEPOSIT,
-                new BigDecimal("100.00"),
+                Money.of("100.00"),
                 "Allowance"));
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("2.50"),
+                Money.of("2.50"),
                 "Transport"));
         transactions.add(new Transaction(
                 TransactionType.WITHDRAWAL,
-                new BigDecimal("4.50"),
+                Money.of("4.50"),
                 "Lunch"));
         return transactions;
     }

@@ -1,12 +1,12 @@
 package finnus;
 
-import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.logging.Logger;
 
 import finnus.command.OpeningBalanceCommand;
 import finnus.exception.FinNusException;
+import finnus.money.Money;
 import finnus.parser.Parser;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -38,7 +38,7 @@ public class Setup {
                 logger.fine("First-run setup ended before an opening balance was entered");
                 return false;
             }
-            BigDecimal amount;
+            Money amount;
             try {
                 amount = Parser.parseNonNegativeAmount(input.trim(), "AMOUNT");
             } catch (FinNusException e) {
@@ -63,10 +63,10 @@ public class Setup {
     }
 
     /** Repeats the confirmation prompt until the user answers yes or no. */
-    private Optional<Confirmation> confirmBalance(Ui ui, BigDecimal amount) {
+    private Optional<Confirmation> confirmBalance(Ui ui, Money amount) {
         while (true) {
-            String answer = ui.readCommand("Confirm opening balance $"
-                    + amount.toPlainString() + " SGD? [yes/no]: ");
+            String answer = ui.readCommand("Confirm opening balance "
+                    + amount.format() + " SGD? [yes/no]: ");
             if (answer == null) {
                 logger.fine("First-run setup ended before the opening balance was confirmed");
                 return Optional.empty();

@@ -29,6 +29,7 @@ import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
+import finnus.money.Money;
 
 /**
  * Checks command recognition and argument validation in the parser.
@@ -205,10 +206,10 @@ class ParserTest {
 
     @Test
     public void parseAmount_validAmounts_parsedCorrectly() throws FinNusException {
-        assertEquals(new BigDecimal("4.50"), Parser.parseAmount("4.50", FORMAT));
-        assertEquals(new BigDecimal("500"), Parser.parseAmount("500", FORMAT));
-        assertEquals(new BigDecimal("0.01"), Parser.parseAmount("0.01", FORMAT));
-        assertEquals(new BigDecimal("1000000"), Parser.parseAmount("1000000", FORMAT));
+        assertEquals(Money.of("4.50"), Parser.parseAmount("4.50", FORMAT));
+        assertEquals(Money.of("500"), Parser.parseAmount("500", FORMAT));
+        assertEquals(Money.of("0.01"), Parser.parseAmount("0.01", FORMAT));
+        assertEquals(Money.of("1000000"), Parser.parseAmount("1000000", FORMAT));
     }
 
     @Test
@@ -243,8 +244,8 @@ class ParserTest {
 
     @Test
     public void parseNonNegativeAmount_zero_isAccepted() throws FinNusException {
-        assertEquals(new BigDecimal("0"), Parser.parseNonNegativeAmount("0", FORMAT));
-        assertEquals(new BigDecimal("0.00"), Parser.parseNonNegativeAmount("0.00", FORMAT));
+        assertEquals(Money.ZERO, Parser.parseNonNegativeAmount("0", FORMAT));
+        assertEquals(Money.ZERO, Parser.parseNonNegativeAmount("0.00", FORMAT));
     }
 
     @Test

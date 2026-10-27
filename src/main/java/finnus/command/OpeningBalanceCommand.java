@@ -1,8 +1,8 @@
 package finnus.command;
 
-import java.math.BigDecimal;
 import java.util.logging.Logger;
 
+import finnus.money.Money;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -12,15 +12,15 @@ import finnus.ui.Ui;
 public class OpeningBalanceCommand extends Command {
     private static final Logger logger = Logger.getLogger(OpeningBalanceCommand.class.getName());
 
-    private final BigDecimal amount;
+    private final Money amount;
 
     /**
      * Creates the command.
      *
      * @param amount The new opening balance in SGD; must not be negative.
      */
-    public OpeningBalanceCommand(BigDecimal amount) {
-        assert amount != null && amount.signum() >= 0 : "Opening balance must not be negative";
+    public OpeningBalanceCommand(Money amount) {
+        assert amount != null && !amount.isNegative() : "Opening balance must not be negative";
         this.amount = amount;
     }
 

@@ -1,16 +1,16 @@
 package finnus;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
+import finnus.money.Money;
 import finnus.storage.LedgerSnapshot;
 import finnus.storage.LoadResult;
 import finnus.storage.Storage;
@@ -27,7 +27,7 @@ class FinNUSTest {
         new FinNUS(ui, storage).run();
         assertEquals(4, storage.saved.size());
         LedgerSnapshot last = storage.saved.getLast();
-        assertEquals(new BigDecimal("50"), last.toTransactionList().getBalance());
+        assertEquals(Money.of("50"), last.toTransactionList().getBalance());
         assertEquals(new BigDecimal("110"), last.rates().get("JPY"));
         assertEquals(1, last.transactions().size());
     }
@@ -55,7 +55,7 @@ class FinNUSTest {
         ScriptedUi ui = new ScriptedUi("deposit 10", "balance", "exit");
         new FinNUS(ui, storage).run();
         assertEquals(2, storage.attempts);
-        assertEquals(new BigDecimal("10"), storage.saved.getFirst().toTransactionList().getBalance());
+        assertEquals(Money.of("10"), storage.saved.getFirst().toTransactionList().getBalance());
         assertTrue(ui.output().contains("Automatic save failed"));
         assertTrue(ui.output().contains("Your current balance is: $10.00"));
     }
@@ -104,7 +104,7 @@ class FinNUSTest {
     @Test
     public void run_loadedState_isAvailableBeforeCommands() {
         RecordingStorage storage = new RecordingStorage();
-        storage.loaded = new LoadResult(new LedgerSnapshot(new BigDecimal("12.30"), List.of(),
+        storage.loaded = new LoadResult(new LedgerSnapshot(Money.of("12.30"), List.of(),
                 Map.of("JPY", new BigDecimal("110"))), List.of(), true);
         ScriptedUi ui = new ScriptedUi("balance", "rate", "exit");
         new FinNUS(ui, storage).run();
