@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.Locale;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import finnus.command.BalanceCommand;
 import finnus.command.Command;
@@ -11,6 +13,7 @@ import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
@@ -18,6 +21,7 @@ import finnus.command.WithdrawCommand;
 import finnus.currency.CurrencyRates;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
+import finnus.transaction.TransactionType;
 
 /**
  * Turns a line typed by the user into a {@link Command} object.
@@ -34,6 +38,18 @@ public class Parser {
      * rates are typos.
      */
     public static final BigDecimal MAX_RATE = new BigDecimal("1000000");
+
+    //@@author chancheese
+    /**
+     * Prefix that marks the currency of an amount, e.g. {@code c/JPY}.
+     */
+    public static final String CURRENCY_PREFIX = "c/";
+
+    /**
+     * Matches {@code c/CODE} at the start of a word, capturing the code (which may be empty).
+     */
+    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX + "(\\S*)");
+    //@@author
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
 
@@ -198,7 +214,17 @@ public class Parser {
      * Parses a positive deposit amount and its optional description.
      */
     private static Command parseDeposit(String arguments) throws FinNusException {
-        String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.DEPOSIT.getUsage());
+        //@@author chancheese
+        String[] currencyAndRest = extractCurrency(arguments);
+        String currencyCode = currencyAndRest[0];
+        String[] amountAndDescription = splitAmountAndDescription(currencyAndRest[1],
+                CommandWord.DEPOSIT.getUsage());
+        if (currencyCode != null) {
+            BigDecimal amount = parseForeignAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
+            return new ForeignTransactionCommand(TransactionType.DEPOSIT, amount, currencyCode,
+                    amountAndDescription[1]);
+        }
+        //@@author
         Money amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
         return new DepositCommand(amount, amountAndDescription[1]);
     }
@@ -207,15 +233,81 @@ public class Parser {
      * Parses a positive withdrawal amount and requires a non-empty description.
      */
     private static Command parseWithdraw(String arguments) throws FinNusException {
-        String[] amountAndDescription = splitAmountAndDescription(arguments, CommandWord.WITHDRAW.getUsage());
-        Money amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
+        //@@author chancheese
+        String[] currencyAndRest = extractCurrency(arguments);
+        String currencyCode = currencyAndRest[0];
+        String[] amountAndDescription = splitAmountAndDescription(currencyAndRest[1],
+                CommandWord.WITHDRAW.getUsage());
+        //@@author
         String description = amountAndDescription[1];
         if (description.isEmpty()) {
             throw new FinNusException("A withdrawal needs a description so you know what you spent on.\n"
                     + "Format: " + CommandWord.WITHDRAW.getUsage());
         }
+        //@@author chancheese
+        if (currencyCode != null) {
+            BigDecimal amount = parseForeignAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
+            return new ForeignTransactionCommand(TransactionType.WITHDRAWAL, amount, currencyCode, description);
+        }
+        //@@author
+        Money amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
         return new WithdrawCommand(amount, description);
     }
+
+    //@@author chancheese
+    /**
+     * Removes an optional {@code c/CURRENCY} part from deposit or withdraw arguments,
+     * e.g. {@code "1100 c/JPY d/Ramen"} becomes {@code [JPY, "1100 d/Ramen"]}.
+     * Like {@code d/}, the {@code c/} prefix only counts when it starts a word, and it
+     * may appear anywhere. {@code c/SGD} is treated the same as giving no currency.
+     *
+     * @return The upper-case currency code (or null for SGD), and the remaining arguments.
+     * @throws FinNusException If {@code c/} is given more than once, has no code, or the
+     *     code is not a valid currency.
+     */
+    static String[] extractCurrency(String arguments) throws FinNusException {
+        Matcher matcher = CURRENCY_PATTERN.matcher(arguments);
+        if (!matcher.find()) {
+            return new String[]{null, arguments};
+        }
+        String codeText = matcher.group(1);
+        String rest = (arguments.substring(0, matcher.start()).trim() + " "
+                + arguments.substring(matcher.end()).trim()).trim();
+        if (CURRENCY_PATTERN.matcher(rest).find()) {
+            throw new FinNusException("Give only one currency, e.g. c/JPY.");
+        }
+        if (codeText.isEmpty()) {
+            throw new FinNusException("Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        }
+        if (codeText.equalsIgnoreCase(CurrencyRates.BASE_CURRENCY)) {
+            return new String[]{null, rest};
+        }
+        return new String[]{parseCurrencyCode(codeText), rest};
+    }
+
+    /**
+     * Converts text such as {@code "1100"} into a positive amount in a foreign currency.
+     * It uses the same format as SGD amounts, but has no upper limit of its own: the
+     * limit is checked on the SGD value once the amount is converted.
+     *
+     * @throws FinNusException If the text is missing, not a number, not positive, or
+     *     has more than 2 decimal places.
+     */
+    static BigDecimal parseForeignAmount(String text, String format) throws FinNusException {
+        if (text.isEmpty()) {
+            throw new FinNusException("Missing amount.\nFormat: " + format);
+        }
+        if (!text.matches("\\d+(\\.\\d{1,2})?")) {
+            throw new FinNusException("'" + text + "' is not a valid amount. "
+                    + "Use a number with at most 2 decimal places, e.g. 1100");
+        }
+        BigDecimal amount = new BigDecimal(text);
+        if (amount.signum() == 0) {
+            throw new FinNusException("Amount must be greater than 0.");
+        }
+        return amount;
+    }
+    //@@author
 
     /**
      * Splits arguments such as {@code "4.50 d/Lunch"} into

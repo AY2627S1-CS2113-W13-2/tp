@@ -24,6 +24,7 @@ import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
@@ -309,5 +310,51 @@ class ParserTest {
     public void parse_balanceCommandWithLeadingWhitespace_returnsBalanceCommand() {
         Command cmd = assertDoesNotThrow(() -> Parser.parse("  balance"));
         assertInstanceOf(BalanceCommand.class, cmd);
+    }
+
+    //@@author chancheese
+    @ParameterizedTest
+    @ValueSource(strings = {"withdraw 1100 d/Ramen c/JPY", "withdraw 1100 c/JPY d/Ramen",
+        "withdraw c/jpy d/Ramen 1100", "withdraw d/Ramen 1100 c/JPY"})
+    public void parse_withdrawWithCurrency_returnsForeignTransactionCommand(String input) throws FinNusException {
+        assertInstanceOf(ForeignTransactionCommand.class, Parser.parse(input));
+    }
+
+    @Test
+    public void parse_depositWithCurrencyAndNoDescription_returnsForeignTransactionCommand()
+            throws FinNusException {
+        assertInstanceOf(ForeignTransactionCommand.class, Parser.parse("deposit 50 c/USD"));
+    }
+
+    @Test
+    public void parse_currencySgd_returnsNormalCommand() throws FinNusException {
+        assertInstanceOf(DepositCommand.class, Parser.parse("deposit 50 c/sgd"));
+        assertInstanceOf(WithdrawCommand.class, Parser.parse("withdraw 4.50 d/Lunch c/SGD"));
+    }
+
+    @Test
+    public void extractCurrency_currencyAnywhere_removesItFromArguments() throws FinNusException {
+        assertArrayEquals(new String[]{"JPY", "1100 d/Ramen"}, Parser.extractCurrency("1100 c/JPY d/Ramen"));
+        assertArrayEquals(new String[]{"JPY", "1100 d/Ramen"}, Parser.extractCurrency("1100 d/Ramen c/jpy"));
+        assertArrayEquals(new String[]{null, "4.50 d/Lunch"}, Parser.extractCurrency("4.50 d/Lunch"));
+    }
+
+    @Test
+    public void extractCurrency_prefixInsideWord_isNotCurrency() throws FinNusException {
+        assertArrayEquals(new String[]{null, "5 d/abc/def"}, Parser.extractCurrency("5 d/abc/def"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"withdraw 1100 d/Ramen c/", "withdraw 1100 d/Ramen c/JYP",
+        "withdraw 1100 d/Ramen c/JPY c/USD", "withdraw 1100 c/JPY", "deposit c/JPY",
+        "deposit 0 c/JPY", "deposit -5 c/JPY", "deposit 1.234 c/JPY", "deposit 1e3 c/JPY"})
+    public void parse_invalidForeignTransaction_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parseForeignAmount_aboveSgdMaximum_isAllowedBeforeConversion() throws FinNusException {
+        // 2,000,000 JPY is only about 18,000 SGD, so the SGD limit is checked after conversion.
+        assertEquals(new BigDecimal("2000000"), Parser.parseForeignAmount("2000000", FORMAT));
     }
 }

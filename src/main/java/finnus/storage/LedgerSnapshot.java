@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import finnus.currency.CurrencyRates;
+import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 import finnus.parser.Parser;
 import finnus.transaction.Transaction;
@@ -35,7 +36,8 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     /**
      * A transaction value independent of the mutable ledger and console formatting.
      */
-    public record StoredTransaction(TransactionType type, Money amount, String description) {
+    public record StoredTransaction(TransactionType type, Money amount, String description,
+                                    ForeignAmount foreignAmount) {
         /**
          * Validates external values before they reach assertion-based domain constructors.
          */
@@ -50,7 +52,23 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
                 throw new IllegalArgumentException("Transaction amount must not exceed "
                         + Money.MAX_AMOUNT.format());
             }
+            //@@author chancheese
+            // The SGD amount is saved as well as the original amount and rate, so a file
+            // edited by hand could disagree with itself; reject it rather than guess.
+            if (foreignAmount != null && !foreignAmount.toSgd().equals(amount)) {
+                throw new IllegalArgumentException("Transaction amount does not match its foreign amount");
+            }
+            //@@author
         }
+
+        //@@author chancheese
+        /**
+         * Creates a stored transaction that was typed in SGD.
+         */
+        public StoredTransaction(TransactionType type, Money amount, String description) {
+            this(type, amount, description, null);
+        }
+        //@@author
     }
 
     /**
@@ -66,7 +84,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     public static LedgerSnapshot capture(TransactionList ledger) {
         List<StoredTransaction> records = ledger.getAll().stream()
                 .map(transaction -> new StoredTransaction(transaction.getType(), transaction.getAmount(),
-                        transaction.getDescription()))
+                        transaction.getDescription(), transaction.getForeignAmount().orElse(null)))
                 .toList();
         return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll());
     }
@@ -78,6 +96,12 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         TransactionList ledger = new TransactionList();
         ledger.setOpeningBalance(openingBalance);
         for (StoredTransaction record : transactions) {
+            //@@author chancheese
+            if (record.foreignAmount() != null) {
+                ledger.add(new Transaction(record.type(), record.foreignAmount(), record.description()));
+                continue;
+            }
+            //@@author
             ledger.add(new Transaction(record.type(), record.amount(), record.description()));
         }
         rates.forEach(ledger.getRates()::setRate);

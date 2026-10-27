@@ -1,8 +1,13 @@
 package finnus.transaction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
+import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 
 class TransactionTest {
@@ -32,5 +37,20 @@ class TransactionTest {
             total = total.add(new Transaction(TransactionType.DEPOSIT, Money.of("0.10"), "").getSignedAmount());
         }
         assertEquals(0, total.compareTo(Money.of(1)));
+    }
+
+    //@@author chancheese
+    @Test
+    public void toString_foreignWithdrawal_showsSgdValueAndOriginalAmount() {
+        ForeignAmount yen = new ForeignAmount("JPY", new BigDecimal("1100"), new BigDecimal("110"));
+        Transaction t = new Transaction(TransactionType.WITHDRAWAL, yen, "Ramen");
+        assertEquals("[Withdrawal] -$10.00 (Ramen) [JPY 1100]", t.toString());
+        assertEquals(Money.of("10"), t.getAmount());
+    }
+
+    @Test
+    public void getForeignAmount_sgdTransaction_isEmpty() {
+        Transaction t = new Transaction(TransactionType.DEPOSIT, Money.of("5"), "");
+        assertTrue(t.getForeignAmount().isEmpty());
     }
 }
