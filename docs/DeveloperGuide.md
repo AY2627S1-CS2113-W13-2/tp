@@ -155,6 +155,11 @@ original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ra
 
 #### How it works
 
+The sequence diagram below shows what happens when the user enters `withdraw 1100 d/Ramen c/JPY`.
+Logging, console output and input validation are left out.
+
+![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
+
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
    split into amount and description exactly as before. `c/SGD` counts as no currency.
 2. If a currency was given, `parseForeignAmount()` checks the amount and the parser returns a

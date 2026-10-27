@@ -1,0 +1,64 @@
+@startuml
+' Sequence diagram for "withdraw 1100 d/Ramen c/JPY".
+' Logging, console input/output and argument validation are left out to focus on the objects involved.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+participant ":FinNUS" as FinNUS
+participant "<<class>>\nParser" as Parser
+participant ":ForeignTransactionCommand" as Command
+participant ":TransactionList" as TransactionList
+participant ":CurrencyRates" as CurrencyRates
+participant ":ForeignAmount" as ForeignAmount
+participant ":Transaction" as Transaction
+
+FinNUS -> Parser : parse("withdraw 1100 d/Ramen c/JPY")
+activate Parser
+Parser -> Parser : extractCurrency("1100 d/Ramen c/JPY")
+note right of Parser : returns "JPY" and\n"1100 d/Ramen"
+create Command
+Parser -> Command : new(WITHDRAWAL, 1100, "JPY", "Ramen")
+Parser --> FinNUS : command
+deactivate Parser
+
+FinNUS -> Command : execute(transactions, ui)
+activate Command
+Command -> TransactionList : getRates()
+activate TransactionList
+TransactionList --> Command : rates
+deactivate TransactionList
+
+Command -> CurrencyRates : convert(1100, "JPY")
+activate CurrencyRates
+
+alt no rate set for JPY
+    CurrencyRates --> Command : FinNusException
+    deactivate CurrencyRates
+    Command --> FinNUS : FinNusException
+    note right of FinNUS : error is shown and\nnothing is recorded
+else rate is set (1 SGD = 110 JPY)
+    activate CurrencyRates
+    create ForeignAmount
+    CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
+    CurrencyRates --> Command : foreignAmount
+    deactivate CurrencyRates
+
+    create Transaction
+    Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
+    activate Transaction
+    Transaction -> ForeignAmount : toSgd()
+    activate ForeignAmount
+    ForeignAmount --> Transaction : $10.00
+    deactivate ForeignAmount
+    Transaction --> Command
+    deactivate Transaction
+
+    Command -> TransactionList : add(transaction)
+    activate TransactionList
+    TransactionList --> Command
+    deactivate TransactionList
+    Command --> FinNUS
+end
+deactivate Command
+@enduml
