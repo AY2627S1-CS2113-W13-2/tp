@@ -34,28 +34,7 @@ transaction's stored amount. A deposit's `Transaction#getSignedAmount()` returns
 The following sequence shows an example usage of `Money`. It uses object names rather than one generic `Money` lifeline. The two
 inputs and the nonzero sum are distinct objects:
 
-```plantuml
-@startuml
-actor Caller
-participant "first:Money" as First
-participant "second:Money" as Second
-participant "<<class>>\nMoney" as MoneyClass
-
-note over First, Second: first = 10.005; second = 0.10
-Caller -> First: add(second)
-First -> MoneyClass: of(10.105)
-create "sum:Money" as Sum
-MoneyClass -> Sum: new Money(10.105)
-Sum --> MoneyClass: sum
-MoneyClass --> First: sum
-First --> Caller: sum
-Caller -> Sum: format()
-Sum --> Caller: "$10.11"
-destroy Sum
-Caller -> First: toPlainString()
-First --> Caller: "10.005" (unchanged)
-@enduml
-```
+![Sequence diagram for invoking Money methods](images\MoneySequenceDiagram.png)
 
 `Money` does not require every value to be positive or below `Money.MAX_AMOUNT`.
 `Parser#parseAmount()` enforces those rules for user-entered transaction amounts, while
@@ -254,42 +233,7 @@ For an empty ledger, the command instead displays `Your list of transactions is 
 
 This sequence shows the normal path for `recent 2`:
 
-```plantuml
-@startuml
-actor User
-participant ":FinNUS" as FinNUS
-participant "<<class>>\nParser" as Parser
-participant "transactions:TransactionList" as Ledger
-participant ":Transaction" as Transaction
-participant "ui:Ui" as Ui
-
-User -> FinNUS: recent 2
-FinNUS -> Parser: parse("recent 2")
-Parser -> Parser: parseRecent("2")
-create "command:RecentTransactionCommand" as Recent
-Parser -> Recent: new RecentTransactionCommand(2)
-activate Recent
-Recent --> Parser: constructed command
-deactivate Recent
-Parser --> FinNUS: command
-FinNUS -> FinNUS: executeCommand()
-activate FinNUS
-FinNUS -> Recent: execute(transactions, ui)
-Recent -> Ledger: getRecentTransactions(2)
-Ledger --> Recent: up to 2 transactions, newest first
-loop each returned transaction
-    Recent -> Transaction: toString()
-    Transaction --> Recent: formatted details
-end
-Recent -> Ui: showMessage(heading and numbered lines)
-Ui --> User: recent transactions
-Ui --> Recent: return
-Recent --> FinNUS: return
-deactivate FinNUS
-note over FinNUS: executeCommand() returns after its ledger state check
-destroy Recent
-@enduml
-```
+![Sequence diagram of recent command](images\RecentCommandSequenceDiagram.png)
 
 The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
 Java decides when its memory is actually reclaimed.
@@ -342,46 +286,7 @@ nonzero.
 
 The sequence below follows the calculation and display of one `balance` request:
 
-```plantuml
-@startuml
-actor User
-participant ":FinNUS" as FinNUS
-participant "<<class>>\nParser" as Parser
-participant "transactions:TransactionList" as Ledger
-participant ":Transaction" as Transaction
-participant ":Money" as Money
-participant "ui:Ui" as Ui
-
-User -> FinNUS: balance
-FinNUS -> Parser: parse("balance")
-create "command:BalanceCommand" as Balance
-Parser -> Balance: new BalanceCommand()
-activate Balance
-Balance --> Parser: constructed command
-deactivate Balance
-Parser --> FinNUS: command
-FinNUS -> FinNUS: executeCommand()
-activate FinNUS
-FinNUS -> Balance: execute(transactions, ui)
-Balance -> Ledger: getBalance()
-loop each stored transaction
-    Ledger -> Transaction: getSignedAmount()
-    Transaction --> Ledger: positive or negative Money
-    Ledger -> Money: add(signed amount)
-    Money --> Ledger: updated running total
-end
-Ledger --> Balance: final Money
-Balance -> Money: format()
-Money --> Balance: amount to 2 decimal places
-Balance -> Ui: showMessage("Your current balance is: ...")
-Ui --> User: formatted balance
-Ui --> Balance: return
-Balance --> FinNUS: return
-deactivate FinNUS
-note over FinNUS: executeCommand() returns after its ledger state check
-destroy Balance
-@enduml
-```
+![Sequence diagram of a balance command](images\BalanceSequenceDiagram.png)
 
 The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
 Java decides when its memory is actually reclaimed.
