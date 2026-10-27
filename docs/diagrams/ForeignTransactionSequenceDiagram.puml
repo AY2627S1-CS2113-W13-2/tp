@@ -32,12 +32,12 @@ deactivate TransactionList
 Command -> CurrencyRates : convert(1100, "JPY")
 activate CurrencyRates
 
-alt no rate set for JPY
+alt conversion fails, e.g. no rate set for JPY
     CurrencyRates --> Command : FinNusException
     deactivate CurrencyRates
     Command --> FinNUS : FinNusException
     note right of FinNUS : error is shown and\nnothing is recorded
-else rate is set (1 SGD = 110 JPY)
+else conversion succeeds (1 SGD = 110 JPY)
     activate CurrencyRates
     create ForeignAmount
     CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
