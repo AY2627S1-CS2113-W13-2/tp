@@ -39,12 +39,15 @@ inputs and the nonzero sum are distinct objects:
 actor Caller
 participant "first:Money" as First
 participant "second:Money" as Second
+participant "<<class>>\nMoney" as MoneyClass
 
 note over First, Second: first = 10.005; second = 0.10
 Caller -> First: add(second)
+First -> MoneyClass: of(10.105)
 create "sum:Money" as Sum
-First -> Sum: Money.of(10.105)
-Sum --> First: sum
+MoneyClass -> Sum: new Money(10.105)
+Sum --> MoneyClass: sum
+MoneyClass --> First: sum
 First --> Caller: sum
 Caller -> Sum: format()
 Sum --> Caller: "$10.11"
@@ -255,7 +258,7 @@ This sequence shows the normal path for `recent 2`:
 @startuml
 actor User
 participant ":FinNUS" as FinNUS
-participant ":Parser" as Parser
+participant "<<class>>\nParser" as Parser
 participant "transactions:TransactionList" as Ledger
 participant ":Transaction" as Transaction
 participant "ui:Ui" as Ui
@@ -343,7 +346,7 @@ The sequence below follows the calculation and display of one `balance` request:
 @startuml
 actor User
 participant ":FinNUS" as FinNUS
-participant ":Parser" as Parser
+participant "<<class>>\nParser" as Parser
 participant "transactions:TransactionList" as Ledger
 participant ":Transaction" as Transaction
 participant ":Money" as Money
