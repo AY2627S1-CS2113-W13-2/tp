@@ -277,16 +277,26 @@ ____________________________________________________________
 
 ## FAQ
 
-**Q**: How do I transfer my data to another computer? 
+**Q**: How do I transfer my data to another computer?
 
-**A**: {your answer here}
+**A**: Copy `finnus.txt` (and `finnus.txt.bak`, if it exists) from the folder containing `finnus.jar` into the folder
+where you put `finnus.jar` on the other computer. FinNUS loads it automatically the next time it starts.
+
+**Q**: What is the `finnus.log` file that appears next to `finnus.jar`?
+
+**A**: It is a log file that records what FinNUS did, to help developers investigate problems. It is not needed to use
+FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`, not in the log.
+
+**Q**: Why does `opening` say it is not a command?
+
+**A**: The opening balance can only be set during the first-run setup. After that, record changes to your money with
+`deposit` and `withdraw` instead.
 
 ## Command Summary
 
-{Give a 'cheat sheet' of commands here}
-
 * Add a deposit: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]`
+* View balance: `balance`
 * View recent transactions: `recent [NUMBER]`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
