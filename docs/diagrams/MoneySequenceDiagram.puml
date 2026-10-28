@@ -1,0 +1,20 @@
+@startuml MoneySequenceDiagram
+actor Caller
+participant "first:Money" as First
+participant "second:Money" as Second
+participant "<<class>>\nMoney" as MoneyClass
+
+note over First, Second: first = 10.005; second = 0.10
+Caller -> First: add(second)
+First -> MoneyClass: of(10.105)
+create "sum:Money" as Sum
+MoneyClass -> Sum: new Money(10.105)
+Sum --> MoneyClass: sum
+MoneyClass --> First: sum
+First --> Caller: sum
+Caller -> Sum: format()
+Sum --> Caller: "$10.11"
+destroy Sum
+Caller -> First: toPlainString()
+First --> Caller: "10.005" (unchanged)
+@enduml

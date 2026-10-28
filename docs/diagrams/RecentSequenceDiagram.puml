@@ -1,0 +1,34 @@
+@startuml RecentCommandSequenceDiagram
+actor User
+participant ":FinNUS" as FinNUS
+participant "<<class>>\nParser" as Parser
+participant "transactions:TransactionList" as Ledger
+participant ":Transaction" as Transaction
+participant "ui:Ui" as Ui
+
+User -> FinNUS: recent 2
+FinNUS -> Parser: parse("recent 2")
+Parser -> Parser: parseRecent("2")
+create "command:RecentTransactionCommand" as Recent
+Parser -> Recent: new RecentTransactionCommand(2)
+activate Recent
+Recent --> Parser: constructed command
+deactivate Recent
+Parser --> FinNUS: command
+FinNUS -> FinNUS: executeCommand()
+activate FinNUS
+FinNUS -> Recent: execute(transactions, ui)
+Recent -> Ledger: getRecentTransactions(2)
+Ledger --> Recent: up to 2 transactions, newest first
+loop each returned transaction
+    Recent -> Transaction: toString()
+    Transaction --> Recent: formatted details
+end
+Recent -> Ui: showMessage(heading and numbered lines)
+Ui --> User: recent transactions
+Ui --> Recent: return
+Recent --> FinNUS: return
+deactivate FinNUS
+note over FinNUS: executeCommand() returns after its ledger state check
+destroy Recent
+@enduml
