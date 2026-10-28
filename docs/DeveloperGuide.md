@@ -441,19 +441,25 @@ may still retry a save that failed after an earlier command.
 
 Adding `c/CURRENCY` to `deposit` or `withdraw` (e.g. `withdraw 1100 d/Ramen c/JPY`) records an
 amount typed in another currency. It is converted to SGD with the rate set by `rate`, and the
-original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ramen) [JPY 1100]`.
+original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others`.
 
 #### How it works
+
+The sequence diagram below shows what happens when the user enters `withdraw 1100 d/Ramen c/JPY`.
+Logging, console output, input validation and saving the ledger afterwards are left out.
+
+![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
    split into amount and description exactly as before. `c/SGD` counts as no currency.
 2. If a currency was given, `parseForeignAmount()` checks the amount and the parser returns a
    `ForeignTransactionCommand` instead of a `DepositCommand` or `WithdrawCommand`.
 3. `ForeignTransactionCommand#execute()` calls `CurrencyRates#convert()`, which throws a
-   `FinNusException` if no rate is set, or if the SGD value is below $0.01 or above
-   `Money.MAX_AMOUNT`.
-4. `convert()` returns a `ForeignAmount`, a record of the currency code, the amount as typed and
-   the rate used. `toSgd()` divides the amount by the rate and rounds it to the nearest cent.
+   `FinNusException` if no rate is set for the currency.
+4. Otherwise, `convert()` creates a `ForeignAmount`, a record of the currency code, the amount as
+   typed and the rate used, and calls its `toSgd()`, which divides the amount by the rate and
+   rounds it to the nearest cent. If the result is $0.00 or above `Money.MAX_AMOUNT`
+   ($1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 
@@ -556,6 +562,72 @@ Tests are in `src/test/java/finnus`, including parser, command, model, storage, 
 Run `check` using the setup table above. GitHub Actions runs checks with Java 25 on Windows, macOS, and Linux.
 
 [Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
+
+<!-- @@author nabijonzzz -->
+### Categorising spending
+
+Every withdrawal belongs to exactly one category, given with `t/CATEGORY` (e.g. `withdraw 4.50 d/Lunch t/food`).
+Users can also add their own categories with `category add NAME` and see them with `category list`.
+
+#### Classes involved
+
+* `CategoryList` stores the predefined categories (`Food`, `Transport`, ..., `Others`) and the custom ones. It finds
+  a category ignoring case, and returns it in the spelling it was created with.
+* `TransactionList` owns the `CategoryList`, in the same way it owns `CurrencyRates`.
+* `Transaction` has a `category` field: the category name for a withdrawal, and `null` for a deposit.
+* `CategoryCommand` handles both `category add NAME` and `category list`.
+
+#### How a categorised withdrawal is processed
+
+Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
+
+1. `Parser#parseWithdraw()` calls `extractCategory()`, which removes `t/FOOD` from the arguments and checks that
+   `FOOD` has a valid format (one word of letters, digits and `-`, at most 20 characters).
+2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns
+   `WithdrawCommand(4.50, "Lunch", "FOOD")`.
+3. `WithdrawCommand#execute()` calls `CategoryList#resolve("FOOD")`, which returns `Food`. If the category did not
+   exist, `resolve()` would throw a `FinNusException` listing the valid categories.
+4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
+   `[Withdrawal] -$4.50 (Lunch) #Food`.
+
+`c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
+the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
+given twice or has no value.
+
+#### Saving categories
+
+Custom categories are saved as `CATEGORY|NAME` records. The category of a transaction is saved as one extra, last
+field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food`.
+
+* Rows saved before categories existed have no category field. Their withdrawals are loaded under `Others`, so old
+  save files keep working.
+* A withdrawal whose category does not exist is loaded under `Others` with a warning, instead of being skipped,
+  so the spending itself is never lost.
+* Categories are resolved only after the whole file has been read, because a hand-edited file may list a
+  `CATEGORY` record after the transactions that use it.
+
+#### Design considerations
+
+**Aspect: when to check that a category exists**
+
+* **Alternative 1 (current choice):** the parser only checks the format of the name, and the command checks that
+  the category exists when it runs.
+  * Pros: custom categories live in the `TransactionList`, which the parser cannot see. This is the same approach
+    used for currency rates in `ForeignTransactionCommand`.
+  * Cons: a command with an unknown category is created and only fails when it runs.
+* **Alternative 2:** pass the `CategoryList` to the parser.
+  * Pros: all input errors are found in one place.
+  * Cons: the parser would depend on the application's data, so it could no longer be a simple, stateless class.
+
+**Aspect: how to handle unknown categories**
+
+* **Alternative 1 (current choice):** reject them, and require `category add NAME` to create a new one.
+  * Pros: a typo such as `t/fod` cannot silently create a new category and split the user's spending.
+  * Cons: using a new category takes one extra command.
+* **Alternative 2:** create a new category automatically.
+  * Pros: faster for the user.
+  * Cons: typos create unwanted categories that the user cannot remove.
+<!-- @@author -->
 
 ## Product scope
 

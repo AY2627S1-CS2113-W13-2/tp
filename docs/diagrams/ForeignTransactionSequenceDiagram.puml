@@ -1,0 +1,83 @@
+@startuml
+' Sequence diagram for "withdraw 1100 d/Ramen c/JPY".
+' Logging, console output, input validation and saving are left out to focus on the objects involved.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+participant ":FinNUS" as FinNUS
+participant "<<class>>\nParser" as Parser
+participant ":ForeignTransactionCommand" as Command
+participant ":TransactionList" as TransactionList
+participant ":CurrencyRates" as CurrencyRates
+participant ":ForeignAmount" as ForeignAmount
+participant ":Transaction" as Transaction
+
+FinNUS -> Parser : parse("withdraw 1100 d/Ramen c/JPY")
+activate Parser
+Parser -> Parser : parseWithdraw("1100 d/Ramen c/JPY")
+activate Parser
+Parser -> Parser : extractCurrency("1100 d/Ramen c/JPY")
+activate Parser
+note right of Parser : returns "JPY" and\n"1100 d/Ramen"
+deactivate Parser
+create Command
+Parser -> Command : new(WITHDRAWAL, 1100, "JPY", "Ramen")
+activate Command
+Command --> Parser : command
+deactivate Command
+deactivate Parser
+Parser --> FinNUS : command
+deactivate Parser
+
+FinNUS -> Command : execute(transactions, ui)
+activate Command
+Command -> TransactionList : getRates()
+activate TransactionList
+TransactionList --> Command : rates
+deactivate TransactionList
+
+Command -> CurrencyRates : convert(1100, "JPY")
+activate CurrencyRates
+
+break no rate set for JPY
+    CurrencyRates --> Command : FinNusException
+    Command --> FinNUS : FinNusException
+end
+
+create ForeignAmount
+CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
+activate ForeignAmount
+ForeignAmount --> CurrencyRates : foreignAmount
+deactivate ForeignAmount
+CurrencyRates -> ForeignAmount : toSgd()
+activate ForeignAmount
+ForeignAmount --> CurrencyRates : sgd
+deactivate ForeignAmount
+
+break sgd is $0.00 or above $1,000,000
+    CurrencyRates --> Command : FinNusException
+    Command --> FinNUS : FinNusException
+end
+
+CurrencyRates --> Command : foreignAmount
+deactivate CurrencyRates
+
+create Transaction
+Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
+activate Transaction
+Transaction -> ForeignAmount : toSgd()
+activate ForeignAmount
+ForeignAmount --> Transaction : sgd
+deactivate ForeignAmount
+Transaction --> Command : transaction
+deactivate Transaction
+
+Command -> TransactionList : add(transaction)
+activate TransactionList
+TransactionList --> Command
+deactivate TransactionList
+
+Command --> FinNUS
+deactivate Command
+@enduml

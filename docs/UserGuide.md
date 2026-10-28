@@ -59,22 +59,24 @@ ____________________________________________________________
 ### Adding a withdrawal: `withdraw`
 Records money you spend and removes it from your balance.
 
-Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]`
+Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]`
 
 * `AMOUNT` follows the same rules as for `deposit`.
 * `DESCRIPTION` is required, so you always know what the money was spent on.
 * `AMOUNT` and `d/DESCRIPTION` can be given in either order.
+* `CATEGORY` is optional. If you leave it out, the spending is recorded under `Others`.
+  See [Categorising your spending](#categorising-your-spending-t-and-category).
 
 Examples:
 
 * `withdraw 4.50 d/Lunch`
-* `withdraw d/Chicken rice 4.50`
+* `withdraw d/Chicken rice 4.50 t/food`
 
 Expected output for `withdraw 4.50 d/Lunch`:
 ```
 ____________________________________________________________
 Withdrawal added:
-  [Withdrawal] -$4.50 (Lunch)
+  [Withdrawal] -$4.50 (Lunch) #Others
 You now have 2 transaction(s).
 ____________________________________________________________
 ```
@@ -83,7 +85,7 @@ Example of an invalid command, `withdraw 4.50` (no description):
 ```
 ____________________________________________________________
 Error: A withdrawal needs a description so you know what you spent on.
-Format: withdraw AMOUNT d/DESCRIPTION
+Format: withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]
 ____________________________________________________________
 ```
 
@@ -171,7 +173,7 @@ Expected output for `withdraw 1100 d/Ramen c/JPY` after `rate JPY 110`:
 ```
 ____________________________________________________________
 Withdrawal added:
-  [Withdrawal] -$10.00 (Ramen) [JPY 1100]
+  [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others
 Converted at 1 SGD = 110 JPY.
 You now have 1 transaction(s).
 ____________________________________________________________
@@ -181,6 +183,65 @@ Example of an invalid command, `deposit 50 c/USD` when no USD rate is set:
 ```
 ____________________________________________________________
 Error: No exchange rate set for USD. Set one first with: rate USD RATE
+____________________________________________________________
+```
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
+### Categorising your spending: `t/` and `category`
+Add `t/CATEGORY` to a `withdraw` to record what kind of spending it was, so you can later see where your money went.
+Every withdrawal has exactly one category. Deposits do not have categories.
+
+Format: `withdraw AMOUNT d/DESCRIPTION t/CATEGORY`
+
+* These categories are always available: `Food`, `Transport`, `Housing`, `Bills`, `Shopping`, `Entertainment`,
+  `Education`, `Health` and `Others`.
+* If you leave out `t/CATEGORY`, the withdrawal is recorded under `Others`.
+* `CATEGORY` is not case-sensitive. It is shown in the spelling it was created with, so `t/FOOD` is shown as `#Food`.
+* `t/CATEGORY` can be given anywhere after the command word, but only once. It also works together with `c/CURRENCY`.
+* A category that does not exist is rejected, so a typo such as `t/fod` never creates a new category by accident.
+* Because `t/` marks the category, a word starting with `t/` cannot be used inside a description.
+
+Examples:
+
+* `withdraw 4.50 d/Chicken rice t/food`
+* `withdraw t/transport d/Bus 1.20`
+* `withdraw 1100 c/JPY d/Ramen t/food`
+
+Expected output for `withdraw 4.50 d/Chicken rice t/food`:
+```
+____________________________________________________________
+Withdrawal added:
+  [Withdrawal] -$4.50 (Chicken rice) #Food
+You now have 1 transaction(s).
+____________________________________________________________
+```
+
+#### Adding your own category: `category add`
+Creates a custom category that you can then use with `t/`.
+
+Format: `category add NAME`
+
+* `NAME` is one word made of letters, digits and `-`, at most 20 characters, e.g. `Gym` or `bubble-tea`.
+* `NAME` must not already exist, ignoring case. For example, `category add FOOD` is rejected because `Food` exists.
+
+Example: `category add Gym`, then `withdraw 30 d/Membership t/gym`
+```
+____________________________________________________________
+Category added: #Gym
+Use it with, e.g.: withdraw 4.50 d/Lunch t/Gym
+____________________________________________________________
+```
+
+#### Listing all categories: `category list`
+Shows the predefined categories and any custom categories you have added.
+
+Format: `category list`
+```
+____________________________________________________________
+Categories:
+  Predefined: Food, Transport, Housing, Bills, Shopping, Entertainment, Education, Health, Others
+  Custom: Gym
 ____________________________________________________________
 ```
 <!-- @@author -->
@@ -221,7 +282,7 @@ Example output for `recent 2`:
 ```text
 Here is a list of the recent 2 transaction(s):
 1. [Deposit] +$30.50
-2. [Withdraw] -$30.00 (Food)
+2. [Withdrawal] -$30.00 (Lunch) #Food
 
 ```
 
@@ -239,7 +300,7 @@ Example:
 
 Example output for `delete 3`:
 ```text
-Transaction deleted: [Withdrawal] -$30.00 (BBQ)
+Transaction deleted: [Withdrawal] -$30.00 (BBQ) #Food
 
 ```
 
@@ -295,10 +356,12 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 ## Command Summary
 
 * Add a deposit: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
-* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]`
+* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]`
 * View balance: `balance`
 * View recent transactions: `recent [NUMBER]`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
+* Add a custom category: `category add NAME`
+* List all categories: `category list`
 * View command usage: `help`
 * Exit the application: `exit`

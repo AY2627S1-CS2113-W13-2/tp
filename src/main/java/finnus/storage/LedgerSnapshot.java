@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
 import finnus.currency.ForeignAmount;
 import finnus.money.Money;
@@ -19,7 +20,7 @@ import finnus.transaction.TransactionType;
  * Decimal scales are retained so persistence never silently rounds a value.
  */
 public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
-                             Map<String, BigDecimal> rates) {
+                             Map<String, BigDecimal> rates, List<String> customCategories) {
     /**
      * Copies mutable collections and rejects values that cannot represent a valid ledger.
      */
@@ -31,13 +32,59 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         transactions = List.copyOf(transactions);
         rates = Map.copyOf(rates);
         rates.forEach(LedgerSnapshot::validateRate);
+        //@@author nabijonzzz
+        Objects.requireNonNull(customCategories, "Custom categories must not be null");
+        customCategories = List.copyOf(customCategories);
+        CategoryList categories = buildCategories(customCategories);
+        for (StoredTransaction transaction : transactions) {
+            String category = transaction.category();
+            // Compare exact spelling, so a snapshot always stores each category the way it was created.
+            if (category != null && !categories.find(category).orElse("").equals(category)) {
+                throw new IllegalArgumentException("Unknown category " + category);
+            }
+        }
+        //@@author
     }
+
+    //@@author nabijonzzz
+    /**
+     * Creates a snapshot without custom categories.
+     */
+    public LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
+            Map<String, BigDecimal> rates) {
+        this(openingBalance, transactions, rates, List.of());
+    }
+
+    /**
+     * Builds a category list from custom names, rejecting invalid or duplicate names.
+     */
+    static CategoryList buildCategories(List<String> customCategories) {
+        CategoryList categories = new CategoryList();
+        for (String name : customCategories) {
+            validateNewCategory(categories, name);
+            categories.add(name);
+        }
+        return categories;
+    }
+
+    /**
+     * Checks that a custom category has a valid format and does not exist yet, ignoring case.
+     */
+    static void validateNewCategory(CategoryList categories, String name) {
+        if (!CategoryList.isValidName(name)) {
+            throw new IllegalArgumentException("Invalid category name");
+        }
+        if (categories.contains(name)) {
+            throw new IllegalArgumentException("Duplicate category");
+        }
+    }
+    //@@author
 
     /**
      * A transaction value independent of the mutable ledger and console formatting.
      */
     public record StoredTransaction(TransactionType type, Money amount, String description,
-                                    ForeignAmount foreignAmount) {
+                                    ForeignAmount foreignAmount, String category) {
         /**
          * Validates external values before they reach assertion-based domain constructors.
          */
@@ -59,7 +106,27 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
                 throw new IllegalArgumentException("Transaction amount does not match its foreign amount");
             }
             //@@author
+            //@@author nabijonzzz
+            if (type == TransactionType.DEPOSIT && category != null) {
+                throw new IllegalArgumentException("A deposit cannot have a category");
+            }
+            if (type == TransactionType.WITHDRAWAL && !CategoryList.isValidName(category)) {
+                throw new IllegalArgumentException("A withdrawal must have a valid category");
+            }
+            //@@author
         }
+
+        //@@author nabijonzzz
+        /**
+         * Creates a stored transaction with the default category: Others for a withdrawal,
+         * none for a deposit.
+         */
+        public StoredTransaction(TransactionType type, Money amount, String description,
+                ForeignAmount foreignAmount) {
+            this(type, amount, description, foreignAmount,
+                    type == TransactionType.WITHDRAWAL ? CategoryList.DEFAULT_CATEGORY : null);
+        }
+        //@@author
 
         //@@author chancheese
         /**
@@ -75,7 +142,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
      * Returns an empty ledger with no exchange rates and a zero opening balance.
      */
     public static LedgerSnapshot empty() {
-        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of());
+        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of());
     }
 
     /**
@@ -84,9 +151,11 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     public static LedgerSnapshot capture(TransactionList ledger) {
         List<StoredTransaction> records = ledger.getAll().stream()
                 .map(transaction -> new StoredTransaction(transaction.getType(), transaction.getAmount(),
-                        transaction.getDescription(), transaction.getForeignAmount().orElse(null)))
+                        transaction.getDescription(), transaction.getForeignAmount().orElse(null),
+                        transaction.getCategory().orElse(null)))
                 .toList();
-        return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll());
+        return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll(),
+                ledger.getCategories().getCustom());
     }
 
     /**
@@ -95,14 +164,18 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     public TransactionList toTransactionList() {
         TransactionList ledger = new TransactionList();
         ledger.setOpeningBalance(openingBalance);
+        //@@author nabijonzzz
+        customCategories.forEach(ledger.getCategories()::add);
+        //@@author
         for (StoredTransaction record : transactions) {
             //@@author chancheese
             if (record.foreignAmount() != null) {
-                ledger.add(new Transaction(record.type(), record.foreignAmount(), record.description()));
+                ledger.add(new Transaction(record.type(), record.foreignAmount(), record.description(),
+                        record.category()));
                 continue;
             }
             //@@author
-            ledger.add(new Transaction(record.type(), record.amount(), record.description()));
+            ledger.add(new Transaction(record.type(), record.amount(), record.description(), record.category()));
         }
         rates.forEach(ledger.getRates()::setRate);
         return ledger;

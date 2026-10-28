@@ -9,12 +9,13 @@ import java.util.Optional;
  */
 public enum CommandWord {
     DEPOSIT("deposit", "Record income", "AMOUNT [d/DESCRIPTION] [c/CURRENCY]"),
-    WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION [c/CURRENCY]"),
+    WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]"),
     RECENT("recent", "Recent activity", "[NUMBER]"),
     DELETE("delete", "Delete a record", "INDEX"),
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
+    CATEGORY("category", "Manage categories", "add NAME or list"),
     HELP("help", "List commands", ""),
     EXIT("exit", "Close FinNUS", "");
 
