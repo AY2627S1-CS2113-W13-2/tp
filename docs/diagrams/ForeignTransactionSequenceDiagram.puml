@@ -47,10 +47,10 @@ ForeignAmount --> CurrencyRates : foreignAmount
 deactivate ForeignAmount
 CurrencyRates -> ForeignAmount : toSgd()
 activate ForeignAmount
-ForeignAmount --> CurrencyRates : $10.00
+ForeignAmount --> CurrencyRates : sgd
 deactivate ForeignAmount
 
-break SGD value is $0.00 or above $1,000,000
+break sgd is $0.00 or above $1,000,000
     CurrencyRates --> Command : FinNusException
     Command --> FinNUS : FinNusException
 end
@@ -63,7 +63,7 @@ Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
 activate Transaction
 Transaction -> ForeignAmount : toSgd()
 activate ForeignAmount
-ForeignAmount --> Transaction : $10.00
+ForeignAmount --> Transaction : sgd
 deactivate ForeignAmount
 Transaction --> Command : transaction
 deactivate Transaction
