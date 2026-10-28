@@ -42,7 +42,7 @@ class LedgerCodecTest {
         LedgerSnapshot snapshot = new LedgerSnapshot(Money.of("12.30"), transactions,
                 Map.of("JPY", new BigDecimal("110.00"), "MYR", new BigDecimal("3.450000")));
         String encoded = codec.encode(snapshot);
-        assertTrue(encoded.contains("TRANSACTION|DEPOSIT|500.00|QWxsb3dhbmNl\n"));
+        assertTrue(encoded.contains("TRANSACTION|DEPOSIT|500.00|QWxsb3dhbmNl|\n"));
         assertTrue(encoded.indexOf("RATE|JPY") < encoded.indexOf("RATE|MYR"));
         assertEquals(snapshot, codec.decode(encoded).snapshot());
         assertEquals(Status.CLEAN, codec.decode(encoded).status());
@@ -171,7 +171,7 @@ class LedgerCodecTest {
 
         String encoded = codec.encode(snapshot);
 
-        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110.00\n"));
+        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110.00|Others\n"));
         assertEquals(snapshot, codec.decode(encoded).snapshot());
         assertEquals(Status.CLEAN, codec.decode(encoded).status());
     }
@@ -180,7 +180,7 @@ class LedgerCodecTest {
     public void toTransactionList_foreignTransaction_keepsForeignAmount() {
         String text = "FINNUS|1\nOPENING|0\nTRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110\n";
         Transaction loaded = codec.decode(text).snapshot().toTransactionList().get(0);
-        assertEquals("[Withdrawal] -$10.00 (Ramen) [JPY 1100]", loaded.toString());
+        assertEquals("[Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others", loaded.toString());
     }
 
     @ParameterizedTest
@@ -194,4 +194,86 @@ class LedgerCodecTest {
         assertEquals(Status.PARTIAL, result.status());
         assertEquals(1, result.snapshot().transactions().size());
     }
+
+    //@@author nabijonzzz
+    @Test
+    public void encode_categories_roundTripsCustomCategoriesAndWithdrawalCategories() {
+        List<StoredTransaction> transactions = List.of(
+                new StoredTransaction(TransactionType.WITHDRAWAL, Money.of("4.50"), "Lunch", null, "Food"),
+                new StoredTransaction(TransactionType.WITHDRAWAL, Money.of("30"), "Membership", null, "Gym"),
+                new StoredTransaction(TransactionType.DEPOSIT, Money.of("500"), "Allowance"));
+        LedgerSnapshot snapshot = new LedgerSnapshot(Money.ZERO, transactions, Map.of(), List.of("Gym"));
+
+        String encoded = codec.encode(snapshot);
+
+        assertTrue(encoded.contains("CATEGORY|Gym\n"));
+        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food\n"));
+        assertEquals(snapshot, codec.decode(encoded).snapshot());
+        assertEquals(Status.CLEAN, codec.decode(encoded).status());
+    }
+
+    @Test
+    public void decode_rowsSavedBeforeCategories_loadWithdrawalsAsOthersWithoutWarning() {
+        String text = "FINNUS|1\nOPENING|0\nTRANSACTION|WITHDRAWAL|4.50|THVuY2g=\n"
+                + "TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110\nTRANSACTION|DEPOSIT|1|\n";
+
+        LedgerCodec.DecodeResult result = codec.decode(text);
+
+        assertEquals(Status.CLEAN, result.status());
+        assertEquals("Others", result.snapshot().transactions().get(0).category());
+        assertEquals("Others", result.snapshot().transactions().get(1).category());
+        assertEquals(null, result.snapshot().transactions().get(2).category());
+    }
+
+    @Test
+    public void decode_unknownCategory_loadsAsOthersWithWarning() {
+        String text = "FINNUS|1\nOPENING|0\nTRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Gym\n";
+
+        LedgerCodec.DecodeResult result = codec.decode(text);
+
+        assertEquals(Status.PARTIAL, result.status());
+        assertEquals(1, result.snapshot().transactions().size());
+        assertEquals("Others", result.snapshot().transactions().getFirst().category());
+        assertTrue(result.warnings().getFirst().contains("unknown category 'Gym'"));
+    }
+
+    @Test
+    public void decode_categoryInDifferentCaseOrListedLater_usesOriginalSpelling() {
+        String text = "FINNUS|1\nOPENING|0\nTRANSACTION|WITHDRAWAL|4.50|THVuY2g=|food\n"
+                + "TRANSACTION|WITHDRAWAL|30|THVuY2g=|gym\nCATEGORY|Gym\n";
+
+        LedgerCodec.DecodeResult result = codec.decode(text);
+
+        assertEquals(Status.CLEAN, result.status());
+        assertEquals("Food", result.snapshot().transactions().get(0).category());
+        assertEquals("Gym", result.snapshot().transactions().get(1).category());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CATEGORY|FOOD", "CATEGORY|two words", "CATEGORY|a/b", "CATEGORY|", "CATEGORY|Gym|extra",
+        "TRANSACTION|DEPOSIT|1||Food"})
+    public void decode_invalidCategoryRecord_skipsRowWithWarning(String badRow) {
+        String text = "FINNUS|1\nOPENING|0\nCATEGORY|Gym\n" + badRow + "\n";
+
+        LedgerCodec.DecodeResult result = codec.decode(text);
+
+        assertEquals(Status.PARTIAL, result.status());
+        assertEquals(List.of("Gym"), result.snapshot().customCategories());
+        assertTrue(result.snapshot().transactions().isEmpty());
+    }
+
+    @Test
+    public void capture_ledgerWithCategories_restoresCategories() {
+        TransactionList ledger = new TransactionList();
+        ledger.getCategories().add("Gym");
+        ledger.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("30"), "Membership", "Gym"));
+
+        TransactionList restored = codec.decode(codec.encode(LedgerSnapshot.capture(ledger))).snapshot()
+                .toTransactionList();
+
+        assertEquals(List.of("Gym"), restored.getCategories().getCustom());
+        assertEquals("[Withdrawal] -$30.00 (Membership) #Gym", restored.get(0).toString());
+    }
+    //@@author
+
 }

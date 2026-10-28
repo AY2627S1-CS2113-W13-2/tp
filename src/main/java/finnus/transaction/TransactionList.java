@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
 import finnus.money.Money;
 
@@ -30,6 +31,13 @@ public class TransactionList {
      */
     private final CurrencyRates rates = new CurrencyRates();
 
+    //@@author nabijonzzz
+    /**
+     * Categories a withdrawal can be tagged with, including custom ones the user added.
+     */
+    private final CategoryList categories = new CategoryList();
+    //@@author
+
     /** Adds a transaction at the end of the ledger, preserving entry order. */
     public void add(Transaction transaction) {
         int oldSize = transactions.size();
@@ -53,6 +61,13 @@ public class TransactionList {
     public CurrencyRates getRates() {
         return rates;
     }
+
+    //@@author nabijonzzz
+    /** Returns the categories that withdrawals can be tagged with. */
+    public CategoryList getCategories() {
+        return categories;
+    }
+    //@@author
 
     /**
      * Returns a read-only view of all transactions, so callers cannot modify

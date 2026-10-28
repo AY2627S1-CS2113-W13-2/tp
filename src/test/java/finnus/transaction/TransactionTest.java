@@ -26,7 +26,7 @@ class TransactionTest {
     @Test
     public void toString_withdrawal_showsMinusSign() {
         Transaction t = new Transaction(TransactionType.WITHDRAWAL, Money.of("4.50"), "Lunch");
-        assertEquals("[Withdrawal] -$4.50 (Lunch)", t.toString());
+        assertEquals("[Withdrawal] -$4.50 (Lunch) #Others", t.toString());
     }
 
     @Test
@@ -44,7 +44,7 @@ class TransactionTest {
     public void toString_foreignWithdrawal_showsSgdValueAndOriginalAmount() {
         ForeignAmount yen = new ForeignAmount("JPY", new BigDecimal("1100"), new BigDecimal("110"));
         Transaction t = new Transaction(TransactionType.WITHDRAWAL, yen, "Ramen");
-        assertEquals("[Withdrawal] -$10.00 (Ramen) [JPY 1100]", t.toString());
+        assertEquals("[Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others", t.toString());
         assertEquals(Money.of("10"), t.getAmount());
     }
 

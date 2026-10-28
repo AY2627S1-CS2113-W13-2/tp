@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import finnus.category.CategoryList;
 import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
@@ -29,6 +30,11 @@ public class LedgerCodec {
     //@@author chancheese
     private static final int SGD_TRANSACTION_FIELDS = 4;
     private static final int FOREIGN_TRANSACTION_FIELDS = 7;
+    //@@author
+    //@@author nabijonzzz
+    private static final String CATEGORY = "CATEGORY";
+    /** Transactions saved since categories were added have the category as one extra, last field. */
+    private static final int CATEGORY_FIELDS = 1;
     //@@author
 
     /**
@@ -68,6 +74,9 @@ public class LedgerCodec {
         text.append(OPENING).append('|').append(snapshot.openingBalance().toPlainString()).append('\n');
         new TreeMap<>(snapshot.rates()).forEach((code, rate) -> text.append(RATE).append('|')
                 .append(code).append('|').append(rate.toPlainString()).append('\n'));
+        //@@author nabijonzzz
+        snapshot.customCategories().forEach(name -> text.append(CATEGORY).append('|').append(name).append('\n'));
+        //@@author
         for (StoredTransaction transaction : snapshot.transactions()) {
             String description = Base64.getEncoder().encodeToString(
                     transaction.description().getBytes(StandardCharsets.UTF_8));
@@ -79,6 +88,10 @@ public class LedgerCodec {
                 text.append('|').append(foreign.currencyCode()).append('|')
                         .append(foreign.amount().toPlainString()).append('|').append(foreign.rate().toPlainString());
             }
+            //@@author
+            //@@author nabijonzzz
+            // Always written, but empty for a deposit, so the field count tells old rows from new ones.
+            text.append('|').append(transaction.category() == null ? "" : transaction.category());
             //@@author
             text.append('\n');
         }
@@ -114,6 +127,7 @@ public class LedgerCodec {
                 continue;
             }
             try {
+                records.currentRow = index + 1;
                 parseRecord(lines.get(index), records);
                 records.validRecords++;
             } catch (IllegalArgumentException e) {
@@ -142,6 +156,7 @@ public class LedgerCodec {
         case OPENING -> parseOpening(fields, records);
         case RATE -> parseRate(fields, records);
         case TRANSACTION -> parseTransaction(fields, records);
+        case CATEGORY -> parseCategory(fields, records);
         default -> throw new IllegalArgumentException("Unknown record type");
         }
     }
@@ -174,9 +189,15 @@ public class LedgerCodec {
      * has three extra fields: the currency code, the amount as typed, and the rate used.
      */
     private void parseTransaction(String[] fields, Records records) {
-        if (fields.length != SGD_TRANSACTION_FIELDS && fields.length != FOREIGN_TRANSACTION_FIELDS) {
+        //@@author nabijonzzz
+        boolean hasCategory = fields.length == SGD_TRANSACTION_FIELDS + CATEGORY_FIELDS
+                || fields.length == FOREIGN_TRANSACTION_FIELDS + CATEGORY_FIELDS;
+        int baseFields = hasCategory ? fields.length - CATEGORY_FIELDS : fields.length;
+        if (baseFields != SGD_TRANSACTION_FIELDS && baseFields != FOREIGN_TRANSACTION_FIELDS) {
             throw new IllegalArgumentException("Incorrect field count");
         }
+        String rawCategory = hasCategory ? fields[fields.length - 1] : null;
+        //@@author
         TransactionType type;
         try {
             type = TransactionType.valueOf(fields[1]);
@@ -184,12 +205,43 @@ public class LedgerCodec {
             throw new IllegalArgumentException("Invalid transaction type");
         }
         //@@author chancheese
-        ForeignAmount foreign = fields.length == FOREIGN_TRANSACTION_FIELDS
+        ForeignAmount foreign = baseFields == FOREIGN_TRANSACTION_FIELDS
                 ? parseForeignAmount(fields[4], fields[5], fields[6]) : null;
         //@@author
-        records.transactions.add(new StoredTransaction(type, parseMoney(fields[2]), decodeDescription(fields[3]),
-                foreign));
+        //@@author nabijonzzz
+        if (type == TransactionType.DEPOSIT && rawCategory != null && !rawCategory.isEmpty()) {
+            throw new IllegalArgumentException("A deposit cannot have a category");
+        }
+        // Built with the default category now so that invalid amounts are rejected straight away;
+        // the real category is resolved once all CATEGORY records have been read.
+        StoredTransaction stored = new StoredTransaction(type, parseMoney(fields[2]), decodeDescription(fields[3]),
+                foreign);
+        records.transactions.add(new PendingTransaction(records.currentRow, stored, rawCategory));
+        //@@author
     }
+
+    //@@author nabijonzzz
+    /**
+     * Adds a custom category, rejecting invalid or duplicate names (ignoring case,
+     * including the predefined categories).
+     */
+    private void parseCategory(String[] fields, Records records) {
+        requireFields(fields, 2);
+        LedgerSnapshot.validateNewCategory(records.categories, fields[1]);
+        records.categories.add(fields[1]);
+    }
+
+    /**
+     * A decoded transaction whose category is resolved after every record has been read,
+     * because a hand-edited file may list a custom category after the transactions using it.
+     *
+     * @param row The line number, for warnings.
+     * @param stored The transaction with the default category.
+     * @param rawCategory The category as saved, or null for a row saved before categories existed.
+     */
+    private record PendingTransaction(int row, StoredTransaction stored, String rawCategory) {
+    }
+    //@@author
 
     //@@author chancheese
     /**
@@ -248,7 +300,11 @@ public class LedgerCodec {
         private Money opening = Money.ZERO;
         private boolean hasOpening;
         private int validRecords;
-        private final List<StoredTransaction> transactions = new ArrayList<>();
+        //@@author nabijonzzz
+        private int currentRow;
+        private final CategoryList categories = new CategoryList();
+        private final List<PendingTransaction> transactions = new ArrayList<>();
+        //@@author
         private final Map<String, BigDecimal> rates = new TreeMap<>();
         private final List<String> warnings = new ArrayList<>();
 
@@ -256,12 +312,37 @@ public class LedgerCodec {
             if (!hasOpening) {
                 warnings.add("Opening balance is missing or invalid; using zero. Balances may be incomplete.");
             }
+            //@@author nabijonzzz
+            List<StoredTransaction> resolved = transactions.stream().map(this::resolveCategory).toList();
+            //@@author
             Status status = validRecords == 0 ? Status.UNRECOVERABLE
                     : warnings.isEmpty() ? Status.CLEAN : Status.PARTIAL;
-            LedgerSnapshot snapshot = new LedgerSnapshot(opening, transactions, rates);
+            LedgerSnapshot snapshot = new LedgerSnapshot(opening, resolved, rates, categories.getCustom());
             assert snapshot != null : "Decoded ledger snapshot must exist";
             logger.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
             return new DecodeResult(snapshot, warnings, status);
         }
+
+        //@@author nabijonzzz
+        /**
+         * Gives a withdrawal its saved category in the spelling it was created with.
+         * Rows saved before categories existed silently become Others; an unknown category
+         * also becomes Others, with a warning, so the spending itself is not lost.
+         */
+        private StoredTransaction resolveCategory(PendingTransaction pending) {
+            StoredTransaction stored = pending.stored();
+            if (stored.type() != TransactionType.WITHDRAWAL || pending.rawCategory() == null) {
+                return stored;
+            }
+            String category = categories.find(pending.rawCategory()).orElse(null);
+            if (category == null) {
+                warnings.add("Row " + pending.row() + ": unknown category '" + pending.rawCategory()
+                        + "', recorded as " + CategoryList.DEFAULT_CATEGORY + ".");
+                category = CategoryList.DEFAULT_CATEGORY;
+            }
+            return new StoredTransaction(stored.type(), stored.amount(), stored.description(),
+                    stored.foreignAmount(), category);
+        }
+        //@@author
     }
 }
