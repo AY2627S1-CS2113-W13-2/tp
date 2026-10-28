@@ -165,10 +165,11 @@ Logging, console output, input validation and saving the ledger afterwards are l
 2. If a currency was given, `parseForeignAmount()` checks the amount and the parser returns a
    `ForeignTransactionCommand` instead of a `DepositCommand` or `WithdrawCommand`.
 3. `ForeignTransactionCommand#execute()` calls `CurrencyRates#convert()`, which throws a
-   `FinNusException` if no rate is set, or if the SGD value is below $0.01 or above
-   `Money.MAX_AMOUNT`.
-4. `convert()` returns a `ForeignAmount`, a record of the currency code, the amount as typed and
-   the rate used. `toSgd()` divides the amount by the rate and rounds it to the nearest cent.
+   `FinNusException` if no rate is set for the currency.
+4. Otherwise, `convert()` creates a `ForeignAmount`, a record of the currency code, the amount as
+   typed and the rate used, and calls its `toSgd()`, which divides the amount by the rate and
+   rounds it to the nearest cent. If the result is $0.00 or above `Money.MAX_AMOUNT`
+   ($1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 

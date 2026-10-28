@@ -18,9 +18,14 @@ activate Parser
 Parser -> Parser : parseWithdraw("1100 d/Ramen c/JPY")
 activate Parser
 Parser -> Parser : extractCurrency("1100 d/Ramen c/JPY")
+activate Parser
 note right of Parser : returns "JPY" and\n"1100 d/Ramen"
+deactivate Parser
 create Command
 Parser -> Command : new(WITHDRAWAL, 1100, "JPY", "Ramen")
+activate Command
+Command --> Parser : command
+deactivate Command
 deactivate Parser
 Parser --> FinNUS : command
 deactivate Parser
