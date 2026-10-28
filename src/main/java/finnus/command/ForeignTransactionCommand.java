@@ -27,9 +27,13 @@ public class ForeignTransactionCommand extends Command {
     private final BigDecimal amount;
     private final String currencyCode;
     private final String description;
+    //@@author nabijonzzz
+    /** The category name as typed after {@code t/}, or null to use the default category. */
+    private final String categoryName;
+    //@@author chancheese
 
     /**
-     * Creates the command.
+     * Creates the command with the default category.
      *
      * @param type Whether money was added or removed.
      * @param amount The amount in the foreign currency; must be positive.
@@ -38,6 +42,23 @@ public class ForeignTransactionCommand extends Command {
      */
     public ForeignTransactionCommand(TransactionType type, BigDecimal amount, String currencyCode,
             String description) {
+        this(type, amount, currencyCode, description, null);
+    }
+
+    //@@author nabijonzzz
+    /**
+     * Creates the command.
+     *
+     * @param type Whether money was added or removed.
+     * @param amount The amount in the foreign currency; must be positive.
+     * @param currencyCode An upper-case ISO 4217 code other than SGD, e.g. "JPY".
+     * @param description A short note, or an empty string if none was given.
+     * @param categoryName The category typed after {@code t/} for a withdrawal, or null for
+     *     the default category. Must be null for a deposit.
+     */
+    public ForeignTransactionCommand(TransactionType type, BigDecimal amount, String currencyCode,
+            String description, String categoryName) {
+        //@@author chancheese
         assert type != null : "Transaction type must not be null";
         assert amount != null && amount.signum() > 0 : "Foreign amount must be positive";
         assert currencyCode != null : "Currency code must not be null";
@@ -47,19 +68,28 @@ public class ForeignTransactionCommand extends Command {
         this.amount = amount;
         this.currencyCode = currencyCode;
         this.description = description;
+        //@@author nabijonzzz
+        assert type == TransactionType.WITHDRAWAL || categoryName == null : "A deposit must not have a category";
+        this.categoryName = categoryName;
+        //@@author chancheese
     }
 
     /**
      * Converts the amount to SGD, adds the transaction and shows the rate that was used.
      *
-     * @throws FinNusException If no rate is set for the currency, or the SGD value is out of range.
+     * @throws FinNusException If no rate is set for the currency, the SGD value is out of range,
+     *     or the category does not exist.
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
         assert transactions != null : "Transaction list must not be null";
         assert ui != null : "UI must not be null";
+        //@@author nabijonzzz
+        String category = type == TransactionType.WITHDRAWAL
+                ? transactions.getCategories().resolve(categoryName) : null;
+        //@@author chancheese
         ForeignAmount foreignAmount = transactions.getRates().convert(amount, currencyCode);
-        Transaction transaction = new Transaction(type, foreignAmount, description);
+        Transaction transaction = new Transaction(type, foreignAmount, description, category);
         transactions.add(transaction);
         logger.info("Added " + transaction + " at rate " + foreignAmount.rate().toPlainString()
                 + ", total transactions: " + transactions.size());

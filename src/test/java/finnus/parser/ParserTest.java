@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.command.BalanceCommand;
+import finnus.command.CategoryCommand;
 import finnus.command.Command;
 import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
@@ -48,6 +49,7 @@ class ParserTest {
             CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class),
             CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class),
             CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class),
+            CommandWord.CATEGORY, new CommandExample("category list", CategoryCommand.class),
             CommandWord.HELP, new CommandExample("help", HelpCommand.class),
             CommandWord.EXIT, new CommandExample("exit", ExitCommand.class));
 
@@ -90,12 +92,13 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE"})
+    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE", "CATEGORY"})
     public void parse_invalidArguments_reportsRegisteredUsage(CommandWord command) {
         Map<CommandWord, String> invalidInputs = Map.of(
                 CommandWord.DEPOSIT, "deposit",
                 CommandWord.WITHDRAW, "withdraw 1",
-                CommandWord.RATE, "rate JPY");
+                CommandWord.RATE, "rate JPY",
+                CommandWord.CATEGORY, "category remove Gym");
         FinNusException exception = assertThrows(FinNusException.class,
                 () -> Parser.parse(invalidInputs.get(command)));
         assertTrue(exception.getMessage().contains("Format: " + command.getUsage()));
@@ -357,4 +360,55 @@ class ParserTest {
         // 2,000,000 JPY is only about 18,000 SGD, so the SGD limit is checked after conversion.
         assertEquals(new BigDecimal("2000000"), Parser.parseForeignAmount("2000000", FORMAT));
     }
+
+    //@@author nabijonzzz
+    @ParameterizedTest
+    @ValueSource(strings = {"withdraw 4.50 d/Chicken rice t/food", "withdraw t/food d/Chicken rice 4.50",
+        "withdraw 4.50 t/FOOD d/Chicken rice", "withdraw d/Chicken rice 4.50 t/Food"})
+    public void parse_withdrawWithCategoryAnywhere_returnsWithdrawCommand(String input) throws FinNusException {
+        assertInstanceOf(WithdrawCommand.class, Parser.parse(input));
+    }
+
+    @Test
+    public void parse_foreignWithdrawWithCategory_returnsForeignTransactionCommand() throws FinNusException {
+        assertInstanceOf(ForeignTransactionCommand.class, Parser.parse("withdraw 1100 c/JPY d/Ramen t/food"));
+    }
+
+    @Test
+    public void extractCategory_categoryAnywhere_removesItFromArguments() throws FinNusException {
+        assertArrayEquals(new String[]{"food", "4.50 d/Chicken rice"},
+                Parser.extractCategory("4.50 t/food d/Chicken rice"));
+        assertArrayEquals(new String[]{null, "4.50 d/Lunch"}, Parser.extractCategory("4.50 d/Lunch"));
+        // t/ only counts at the start of a word, like c/ and d/.
+        assertArrayEquals(new String[]{null, "5 d/salt/pepper"}, Parser.extractCategory("5 d/salt/pepper"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"withdraw 4.50 d/Lunch t/", "withdraw 4.50 d/Lunch t/food t/bills",
+        "withdraw 4.50 d/Lunch t/fo/od", "withdraw 4.50 d/Lunch t/abcdefghijklmnopqrstu",
+        "deposit 500 d/Allowance t/food", "deposit t/food 500"})
+    public void parse_invalidCategory_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_categoryOnDeposit_explainsCategoriesAreForSpending() {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("deposit 500 t/food"));
+        assertTrue(e.getMessage().contains("only for spending"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"category list", "category LIST", "category add Gym", "category ADD bubble-tea"})
+    public void parse_validCategoryCommand_returnsCategoryCommand(String input) throws FinNusException {
+        assertInstanceOf(CategoryCommand.class, Parser.parse(input));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"category", "category add", "category add two words", "category add a/b",
+        "category delete Gym"})
+    public void parse_invalidCategoryCommand_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+    //@@author
+
 }

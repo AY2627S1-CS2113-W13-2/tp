@@ -7,7 +7,9 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import finnus.category.CategoryList;
 import finnus.command.BalanceCommand;
+import finnus.command.CategoryCommand;
 import finnus.command.Command;
 import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
@@ -44,11 +46,31 @@ public class Parser {
      * Prefix that marks the currency of an amount, e.g. {@code c/JPY}.
      */
     public static final String CURRENCY_PREFIX = "c/";
+    //@@author
 
+    //@@author nabijonzzz
+    /**
+     * Prefix that marks the category of a withdrawal, e.g. {@code t/food}.
+     * {@code c/} is already used for currency, so {@code t/} (tag) is used instead.
+     */
+    public static final String CATEGORY_PREFIX = "t/";
+    //@@author
+
+    //@@author chancheese
     /**
      * Matches {@code c/CODE} at the start of a word, capturing the code (which may be empty).
      */
     private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX + "(\\S*)");
+    //@@author
+
+    //@@author nabijonzzz
+    /**
+     * Matches {@code t/NAME} at the start of a word, capturing the name (which may be empty).
+     */
+    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX + "(\\S*)");
+
+    private static final String CATEGORY_LIST = "list";
+    private static final String CATEGORY_ADD = "add";
     //@@author
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
@@ -92,6 +114,8 @@ public class Parser {
             parseDelete(arguments);
         case RATE ->
             parseRate(arguments);
+        case CATEGORY ->
+            parseCategory(arguments);
         default ->
             throw new FinNusException("Unknown command: '" + commandWord + "'. Type '"
                     + CommandWord.HELP.getWord() + "' to see all commands.");
@@ -214,6 +238,11 @@ public class Parser {
      * Parses a positive deposit amount and its optional description.
      */
     private static Command parseDeposit(String arguments) throws FinNusException {
+        //@@author nabijonzzz
+        if (CATEGORY_PATTERN.matcher(arguments).find()) {
+            throw new FinNusException("Categories are only for spending, so " + CATEGORY_PREFIX
+                    + " cannot be used with " + CommandWord.DEPOSIT.getWord() + ".");
+        }
         //@@author chancheese
         String[] currencyAndRest = extractCurrency(arguments);
         String currencyCode = currencyAndRest[0];
@@ -233,8 +262,11 @@ public class Parser {
      * Parses a positive withdrawal amount and requires a non-empty description.
      */
     private static Command parseWithdraw(String arguments) throws FinNusException {
+        //@@author nabijonzzz
+        String[] categoryAndRest = extractCategory(arguments);
+        String categoryName = categoryAndRest[0];
         //@@author chancheese
-        String[] currencyAndRest = extractCurrency(arguments);
+        String[] currencyAndRest = extractCurrency(categoryAndRest[1]);
         String currencyCode = currencyAndRest[0];
         String[] amountAndDescription = splitAmountAndDescription(currencyAndRest[1],
                 CommandWord.WITHDRAW.getUsage());
@@ -247,11 +279,12 @@ public class Parser {
         //@@author chancheese
         if (currencyCode != null) {
             BigDecimal amount = parseForeignAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
-            return new ForeignTransactionCommand(TransactionType.WITHDRAWAL, amount, currencyCode, description);
+            return new ForeignTransactionCommand(TransactionType.WITHDRAWAL, amount, currencyCode, description,
+                    categoryName);
         }
         //@@author
         Money amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
-        return new WithdrawCommand(amount, description);
+        return new WithdrawCommand(amount, description, categoryName);
     }
 
     //@@author chancheese
@@ -266,24 +299,110 @@ public class Parser {
      *     code is not a valid currency.
      */
     static String[] extractCurrency(String arguments) throws FinNusException {
-        Matcher matcher = CURRENCY_PATTERN.matcher(arguments);
-        if (!matcher.find()) {
+        //@@author nabijonzzz
+        String[] codeAndRest = extractPrefixedValue(arguments, CURRENCY_PATTERN,
+                "Give only one currency, e.g. c/JPY.",
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        String codeText = codeAndRest[0];
+        String rest = codeAndRest[1];
+        if (codeText == null) {
             return new String[]{null, arguments};
         }
-        String codeText = matcher.group(1);
-        String rest = (arguments.substring(0, matcher.start()).trim() + " "
-                + arguments.substring(matcher.end()).trim()).trim();
-        if (CURRENCY_PATTERN.matcher(rest).find()) {
-            throw new FinNusException("Give only one currency, e.g. c/JPY.");
-        }
-        if (codeText.isEmpty()) {
-            throw new FinNusException("Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
-        }
+        //@@author chancheese
         if (codeText.equalsIgnoreCase(CurrencyRates.BASE_CURRENCY)) {
             return new String[]{null, rest};
         }
         return new String[]{parseCurrencyCode(codeText), rest};
     }
+    //@@author
+
+    //@@author nabijonzzz
+    /**
+     * Removes one {@code PREFIX/VALUE} word from the arguments. This is shared by {@code c/}
+     * and {@code t/}, which both mark a one-word value that may appear anywhere.
+     *
+     * @param pattern Matches the prefix at the start of a word and captures the value.
+     * @param duplicateMessage Error shown if the prefix appears more than once.
+     * @param missingMessage Error shown if the prefix has no value after it.
+     * @return The value (or null if the prefix is absent), and the remaining arguments.
+     * @throws FinNusException If the prefix appears more than once or has no value.
+     */
+    private static String[] extractPrefixedValue(String arguments, Pattern pattern, String duplicateMessage,
+            String missingMessage) throws FinNusException {
+        Matcher matcher = pattern.matcher(arguments);
+        if (!matcher.find()) {
+            return new String[]{null, arguments};
+        }
+        String value = matcher.group(1);
+        String rest = (arguments.substring(0, matcher.start()).trim() + " "
+                + arguments.substring(matcher.end()).trim()).trim();
+        if (pattern.matcher(rest).find()) {
+            throw new FinNusException(duplicateMessage);
+        }
+        if (value.isEmpty()) {
+            throw new FinNusException(missingMessage);
+        }
+        return new String[]{value, rest};
+    }
+
+    /**
+     * Removes an optional {@code t/CATEGORY} part from withdraw arguments,
+     * e.g. {@code "4.50 t/food d/Lunch"} becomes {@code ["food", "4.50 d/Lunch"]}.
+     * Whether the category exists is checked when the command runs, since custom
+     * categories live in the transaction list.
+     *
+     * @return The category name as typed (or null if none was given), and the remaining arguments.
+     * @throws FinNusException If {@code t/} is given more than once, has no name, or the
+     *     name has an invalid format.
+     */
+    static String[] extractCategory(String arguments) throws FinNusException {
+        String[] nameAndRest = extractPrefixedValue(arguments, CATEGORY_PATTERN,
+                "Give only one category, e.g. " + CATEGORY_PREFIX + "food.",
+                "Missing category after " + CATEGORY_PREFIX + ", e.g. " + CATEGORY_PREFIX + "food.");
+        if (nameAndRest[0] != null) {
+            checkCategoryName(nameAndRest[0]);
+        }
+        return nameAndRest;
+    }
+
+    /**
+     * Parses {@code category list} or {@code category add NAME}.
+     */
+    private static Command parseCategory(String arguments) throws FinNusException {
+        String[] parts = arguments.split("\\s+", 2);
+        String subCommand = parts[0].toLowerCase(Locale.ROOT);
+        if (subCommand.equals(CATEGORY_LIST)) {
+            return new CategoryCommand();
+        }
+        if (!subCommand.equals(CATEGORY_ADD)) {
+            throw new FinNusException("Use " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_ADD
+                    + " NAME or " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_LIST
+                    + ".\nFormat: " + CommandWord.CATEGORY.getUsage());
+        }
+        String name = parts.length > 1 ? parts[1].trim() : "";
+        if (name.isEmpty()) {
+            throw new FinNusException("Missing category name, e.g. " + CommandWord.CATEGORY.getWord() + " "
+                    + CATEGORY_ADD + " Gym.");
+        }
+        checkCategoryName(name);
+        return new CategoryCommand(name);
+    }
+
+    /**
+     * Checks that a category name is one word made of letters, digits and '-', so it
+     * cannot swallow the description or break the save file.
+     *
+     * @throws FinNusException If the name has an invalid format.
+     */
+    private static void checkCategoryName(String name) throws FinNusException {
+        if (!CategoryList.isValidName(name)) {
+            throw new FinNusException("'" + name + "' is not a valid category name. Use one word of letters, "
+                    + "digits and '-', at most " + CategoryList.MAX_NAME_LENGTH + " characters.");
+        }
+    }
+    //@@author
+
+    //@@author chancheese
 
     /**
      * Converts text such as {@code "1100"} into a positive amount in a foreign currency.

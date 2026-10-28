@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import finnus.exception.FinNusException;
 import finnus.money.Money;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -30,7 +31,7 @@ class OpeningBalanceCommandTest {
     }
 
     @Test
-    public void execute_withExistingTransactions_shiftsBalanceButAddsNoTransaction() {
+    public void execute_withExistingTransactions_shiftsBalanceButAddsNoTransaction() throws FinNusException {
         TransactionList transactions = new TransactionList();
         new DepositCommand(Money.of("50")).execute(transactions, ui);
         new WithdrawCommand(Money.of("20"), "Books").execute(transactions, ui);

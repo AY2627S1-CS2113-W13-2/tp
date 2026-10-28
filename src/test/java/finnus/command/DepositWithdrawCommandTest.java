@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import finnus.exception.FinNusException;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -26,7 +27,7 @@ class DepositWithdrawCommandTest {
     }
 
     @Test
-    public void execute_withdraw_addsWithdrawalToList() {
+    public void execute_withdraw_addsWithdrawalToList() throws FinNusException {
         TransactionList transactions = new TransactionList();
         new WithdrawCommand(Money.of("4.50"), "Lunch").execute(transactions, ui);
 
@@ -37,7 +38,7 @@ class DepositWithdrawCommandTest {
     }
 
     @Test
-    public void execute_depositThenWithdraw_keepsOrder() {
+    public void execute_depositThenWithdraw_keepsOrder() throws FinNusException {
         TransactionList transactions = new TransactionList();
         new DepositCommand(Money.of("100")).execute(transactions, ui);
         new WithdrawCommand(Money.of("20"), "Books").execute(transactions, ui);
