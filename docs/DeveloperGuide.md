@@ -312,15 +312,21 @@ original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ra
 
 #### How it works
 
+The sequence diagram below shows what happens when the user enters `withdraw 1100 d/Ramen c/JPY`.
+Logging, console output, input validation and saving the ledger afterwards are left out.
+
+![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
+
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
    split into amount and description exactly as before. `c/SGD` counts as no currency.
 2. If a currency was given, `parseForeignAmount()` checks the amount and the parser returns a
    `ForeignTransactionCommand` instead of a `DepositCommand` or `WithdrawCommand`.
 3. `ForeignTransactionCommand#execute()` calls `CurrencyRates#convert()`, which throws a
-   `FinNusException` if no rate is set, or if the SGD value is below $0.01 or above
-   `Money.MAX_AMOUNT`.
-4. `convert()` returns a `ForeignAmount`, a record of the currency code, the amount as typed and
-   the rate used. `toSgd()` divides the amount by the rate and rounds it to the nearest cent.
+   `FinNusException` if no rate is set for the currency.
+4. Otherwise, `convert()` creates a `ForeignAmount`, a record of the currency code, the amount as
+   typed and the rate used, and calls its `toSgd()`, which divides the amount by the rate and
+   rounds it to the nearest cent. If the result is $0.00 or above `Money.MAX_AMOUNT`
+   ($1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 
