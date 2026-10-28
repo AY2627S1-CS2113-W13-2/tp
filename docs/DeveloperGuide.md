@@ -25,6 +25,7 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 - [Instructions for manual testing](#instructions-for-manual-testing)
 - [Planned enhancements](#planned-enhancements)
 
+<!-- @@author naieel04 -->
 ## Acknowledgements
 
 The following peer guides informed this template's organisation:
@@ -34,9 +35,11 @@ The following peer guides informed this template's organisation:
   and developer-guide organisation.
 - [Gradle](https://gradle.org/): builds the project and runs automated checks and tests.
 - [JUnit 5](https://junit.org/junit5/): supports automated unit and integration tests.
+<!-- @@author -->
 
 ---
 
+<!-- @@author naieel04 -->
 ## Setting up and getting started
 
 ### Prerequisites
@@ -63,11 +66,13 @@ On macOS, use `sdk use java 25.0.3.fx-zulu` if switching Java versions with SDKM
 
 Run the packaged application using `java -jar build/libs/finnus.jar`. Enter `help` to view commands and `exit` to quit.
 The application entry point is `finnus.FinNUS`.
+<!-- @@author -->
 
 ---
 
 ## Design
 
+<!-- @@author naieel04 -->
 ### Architecture
 
 `FinNUS` coordinates startup, command execution, and persistence. The parser produces command objects, which read or
@@ -109,6 +114,7 @@ extend `Command` and implement `execute(TransactionList, Ui)`.
 [Insert UML class diagram of Command, its subclasses, Parser, CommandWord, and Ui here]
 
 [Insert explanation of parsing responsibilities versus execution responsibilities, with one example here]
+<!-- @@author -->
 
 <!-- @@author nkyjStar -->
 ### Representing money
@@ -177,6 +183,7 @@ immutability after negation, rounding only for display, signed sub-cent output, 
 across different decimal scales.
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
 ### Storage
 
 `Storage` defines the persistence interface. `FileStorage` handles files, while `LedgerCodec` converts between text
@@ -193,6 +200,7 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 [Insert UML class diagram of the storage interface, implementation, codec, snapshot, and load result here]
 
 [Insert sample save-file records and explain fields, validation, and format compatibility here]
+<!-- @@author -->
 
 ## Implementation
 
@@ -561,6 +569,7 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
   * Cons: typos create unwanted categories that the user cannot remove.
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
 ### Automatic saving and recovery
 
 **Key classes:** `FinNUS`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult`
@@ -604,7 +613,9 @@ Duplicate this subsection for any other feature that warrants a detailed explana
 **Design considerations:** [Insert chosen approach, alternatives, rationale, and tradeoffs here]
 
 **Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Documentation, logging, testing, and DevOps
 
 ### Documentation and diagrams
@@ -630,7 +641,9 @@ Tests are in `src/test/java/finnus`, including parser, command, model, storage, 
 Run `check` using the setup table above. GitHub Actions runs checks with Java 25 on Windows, macOS, and Linux.
 
 [Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Product scope
 
 ### Target user profile
@@ -649,7 +662,9 @@ to make allowance and campus-expense tracking straightforward, including for stu
 [Insert features included in this release and explicit exclusions here]
 
 [Insert confirmation of whether daily spending allowances or foreign-currency transaction conversion are planned here]
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## User stories
 
 The stories below are based on the supplied requirements image. Confirm their acceptance criteria with the team.
@@ -666,7 +681,9 @@ The stories below are based on the supplied requirements image. Confirm their ac
 | US-08 | forward-planning student | see how many days remain until my next allowance | I can pace my spending |
 
 [Add acceptance criteria for each story selected for implementation.]
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Use cases
 
 ### UC-01: Record a foreign-currency allowance
@@ -701,7 +718,9 @@ The stories below are based on the supplied requirements image. Confirm their ac
 **Main success scenario:** The user enters `recent 2`. FinNUS displays up to two transactions, newest first, with descriptions and indices that can be used by `delete`.
 
 **Extension:** If the ledger is empty, FinNUS displays an empty-list message.
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Non-functional requirements
 
 The images describe product goals rather than formal quality constraints. The following are proposed non-functional
@@ -716,7 +735,9 @@ requirements inferred from those goals. Confirm the targets with the team before
 | NFR-05 | Compatibility | The application must run with Java 25 on the operating systems supported by the project. | Build and run the automated checks on Windows, macOS, and Linux CI environments. |
 
 [Confirm the supported operating systems and rounding policy with the team.]
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Glossary
 
 | Term | Meaning |
@@ -729,7 +750,9 @@ requirements inferred from those goals. Confirm the targets with the team before
 | Snapshot | An immutable value copy of financial state for persistence and change detection. |
 | Recent-list index | A one-based position counting from the newest transaction. |
 | [Insert term here] | [Insert definition here] |
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Instructions for manual testing
 
 Complete and execute these draft scenarios for the target release. Record observed results separately from expectations;
@@ -776,7 +799,9 @@ Use disposable test copies and stop the application before editing fixture files
 | MT-10 | Save failure | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
 
 [Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Planned enhancements
 
 Keep approved future work separate from implemented behaviour. Remove this section if outside the release scope.
@@ -786,3 +811,4 @@ Keep approved future work separate from implemented behaviour. Remove this secti
 | [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here] | [Insert release here] |
 
 [Insert UML diagram of a proposed feature here, if applicable]
+<!-- @@author -->
