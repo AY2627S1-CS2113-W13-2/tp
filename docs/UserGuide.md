@@ -16,8 +16,9 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
    java -jar finnus.jar
    ```
 
-5. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
-6. Refer to the Features section below for details of each command.
+5. The first time you run FinNUS, it asks for your opening balance. See [First-run setup](#first-run-setup-opening-balance).
+6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
+7. Refer to the Features section below for details of each command.
 
 ## Saving and recovering your data
 
@@ -86,27 +87,25 @@ Format: withdraw AMOUNT d/DESCRIPTION
 ____________________________________________________________
 ```
 
-### Setting your opening balance: `opening`
-Sets how much money you had before you started using FinNUS, so your balance starts from an accurate figure.
+### First-run setup: opening balance
+The first time you run FinNUS, it asks how much money you currently have, so your balance starts from an accurate figure.
 
-Format: `opening AMOUNT`
+* Enter the amount in SGD. It follows the same rules as for `deposit`, except that `0` is also allowed.
+* Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
+* The opening balance is not a transaction, so it does not show up in `recent` and cannot be removed with `delete`.
+* Setup only happens once. Afterwards, `opening` is not a command.
 
-* `AMOUNT` follows the same rules as for `deposit`, except that `0` is also allowed.
-* If you never set it, your opening balance is `0`.
-* Running `opening` again replaces the previous value. It does not add a transaction, so it will not show up in `recent` and cannot be removed with `delete`.
-* Changing the opening balance also changes your balance by the same difference, even if you have already recorded transactions.
-
-Examples:
-
-* `opening 1200.50`
-* `opening 0` (resets the opening balance)
-
-Expected output for `opening 1200.50` after recording a deposit of `500` and a withdrawal of `4.50`:
+Example of first-run setup, entering `1200.50` and then `yes`:
 ```
 ____________________________________________________________
-Opening balance updated: $0.00 -> $1200.50
-Your balance is now $1696.00.
-Note: this also changes the balance for your 2 existing transaction(s).
+First-time setup
+Enter your current opening balance in SGD.
+This is your starting balance and will not be recorded as a transaction.
+____________________________________________________________
+Opening balance (SGD): 1200.50
+Confirm opening balance $1200.50 SGD? [yes/no]: yes
+____________________________________________________________
+Welcome to FinNUS! Type a command to get started.
 ____________________________________________________________
 ```
 
@@ -118,7 +117,8 @@ Format: `rate CURRENCY RATE` to set a rate, or `rate` to list all rates.
 
 * `CURRENCY` is a 3-letter currency code such as `JPY`, `USD` or `MYR`, in upper or lower case. `SGD` cannot be given a rate, because all amounts are already in SGD.
 * `RATE` is how many units of `CURRENCY` 1 SGD buys, e.g. `110` for 1 SGD = 110 JPY. It must be a positive number with at most 6 decimal places, and not more than `1000000`.
-* Setting a rate for a currency that already has one replaces the old rate.
+* Setting a rate for a currency that already has one replaces the old rate, and the old rate is shown.
+* If no rates are set yet, `rate` shows `No exchange rates set yet.` with an example.
 
 Examples:
 
@@ -130,6 +130,13 @@ Expected output for `rate JPY 110`:
 ```
 ____________________________________________________________
 Exchange rate set: 1 SGD = 110 JPY
+____________________________________________________________
+```
+
+Expected output for `rate JPY 112` when JPY already has a rate:
+```
+____________________________________________________________
+Exchange rate set: 1 SGD = 112 JPY (was 1 SGD = 110 JPY)
 ____________________________________________________________
 ```
 
@@ -282,7 +289,6 @@ ____________________________________________________________
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY]`
 * View recent transactions: `recent [NUMBER]`
 * Delete a transaction: `delete INDEX`
-* Set opening balance: `opening AMOUNT`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * View command usage: `help`
 * Exit the application: `exit`
