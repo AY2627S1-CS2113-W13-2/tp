@@ -1,5 +1,6 @@
 package finnus.command;
 
+import java.time.LocalDate;
 import java.util.logging.Logger;
 
 import finnus.exception.FinNusException;
@@ -19,6 +20,8 @@ public class WithdrawCommand extends Command {
     private final String description;
     /** The category name as typed after {@code t/}, or null to use the default category. */
     private final String categoryName;
+    /** The day of the withdrawal, or null if unknown. */
+    private final LocalDate date;
 
     /** Creates a withdrawal command with a required description and the default category. */
     public WithdrawCommand(Money amount, String description) {
@@ -26,17 +29,28 @@ public class WithdrawCommand extends Command {
     }
 
     /**
-     * Creates a withdrawal command with a required description.
+     * Creates a withdrawal command without a date.
      *
      * @param categoryName The category as typed after {@code t/}, or null for the default category.
      */
     public WithdrawCommand(Money amount, String description, String categoryName) {
+        this(amount, description, categoryName, null);
+    }
+
+    /**
+     * Creates a withdrawal command with a required description.
+     *
+     * @param categoryName The category as typed after {@code t/}, or null for the default category.
+     * @param date The day of the withdrawal, or null if unknown.
+     */
+    public WithdrawCommand(Money amount, String description, String categoryName, LocalDate date) {
         assert amount != null && amount.isPositive() : "Withdrawal amount must be positive";
         assert description != null : "Withdrawal description must not be null";
         assert !description.isBlank() : "A withdrawal must have a description";
         this.amount = amount;
         this.description = description;
         this.categoryName = categoryName;
+        this.date = date;
     }
 
     /**
@@ -51,7 +65,7 @@ public class WithdrawCommand extends Command {
         // The category is checked here rather than in the parser, because the list of
         // categories (including custom ones) lives in the TransactionList.
         String category = transactions.getCategories().resolve(categoryName);
-        Transaction withdrawal = new Transaction(TransactionType.WITHDRAWAL, amount, description, category);
+        Transaction withdrawal = new Transaction(TransactionType.WITHDRAWAL, amount, description, category, date);
         transactions.add(withdrawal);
         logger.info("Added " + withdrawal + ", total transactions: " + transactions.size());
         ui.showMessage("Withdrawal added:", "  " + withdrawal,

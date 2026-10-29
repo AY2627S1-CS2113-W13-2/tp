@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.logging.Logger;
 import finnus.category.CategoryList;
 import finnus.currency.ForeignAmount;
 import finnus.money.Money;
+import finnus.parser.Parser;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.TransactionType;
 
@@ -40,6 +43,12 @@ public class LedgerCodec {
     private static final String CATEGORY = "CATEGORY";
     /** Transactions saved since categories were added have the category as one extra, last field. */
     private static final int CATEGORY_FIELDS = 1;
+    /**
+     * Transactions saved since dates were added also have the date as one more, last field,
+     * after the category. Dates are only ever saved together with a category, so every field
+     * count (4, 5, 6 for SGD; 7, 8, 9 for a foreign currency) still means exactly one format.
+     */
+    private static final int DATE_FIELDS = 1;
     //@@author
 
     //@@author naieel04
@@ -104,6 +113,8 @@ public class LedgerCodec {
             //@@author nabijonzzz
             // Always written, but empty for a deposit, so the field count tells old rows from new ones.
             text.append('|').append(transaction.category() == null ? "" : transaction.category());
+            // ISO format (2026-10-30) so the file is easy to read and edit by hand; empty if unknown.
+            text.append('|').append(transaction.date() == null ? "" : transaction.date().toString());
             //@@author
             text.append('\n');
         }
@@ -223,13 +234,11 @@ public class LedgerCodec {
     //@@author naieel04
     private void parseTransaction(String[] fields, Records records) {
         //@@author nabijonzzz
-        boolean hasCategory = fields.length == SGD_TRANSACTION_FIELDS + CATEGORY_FIELDS
-                || fields.length == FOREIGN_TRANSACTION_FIELDS + CATEGORY_FIELDS;
-        int baseFields = hasCategory ? fields.length - CATEGORY_FIELDS : fields.length;
-        if (baseFields != SGD_TRANSACTION_FIELDS && baseFields != FOREIGN_TRANSACTION_FIELDS) {
-            throw new IllegalArgumentException("Incorrect field count");
-        }
-        String rawCategory = hasCategory ? fields[fields.length - 1] : null;
+        int baseFields = baseFieldCount(fields.length);
+        boolean hasCategory = fields.length > baseFields;
+        boolean hasDate = fields.length == baseFields + CATEGORY_FIELDS + DATE_FIELDS;
+        String rawCategory = hasCategory ? fields[baseFields] : null;
+        LocalDate date = hasDate ? parseDate(fields[baseFields + CATEGORY_FIELDS]) : null;
         //@@author
         //@@author naieel04
         TransactionType type;
@@ -249,12 +258,50 @@ public class LedgerCodec {
         // Built with the default category now so that invalid amounts are rejected straight away;
         // the real category is resolved once all CATEGORY records have been read.
         StoredTransaction stored = new StoredTransaction(type, parseMoney(fields[2]), decodeDescription(fields[3]),
-                foreign);
+                foreign, type == TransactionType.WITHDRAWAL ? CategoryList.DEFAULT_CATEGORY : null, date);
         records.transactions.add(new PendingTransaction(records.currentRow, stored, rawCategory));
         //@@author
     }
 
     //@@author nabijonzzz
+    /**
+     * Returns how many fields a transaction row has without its optional category and date fields.
+     *
+     * @throws IllegalArgumentException If the count matches no known transaction format.
+     */
+    private int baseFieldCount(int fieldCount) {
+        for (int base : new int[]{SGD_TRANSACTION_FIELDS, FOREIGN_TRANSACTION_FIELDS}) {
+            if (fieldCount >= base && fieldCount <= base + CATEGORY_FIELDS + DATE_FIELDS) {
+                return base;
+            }
+        }
+        throw new IllegalArgumentException("Incorrect field count");
+    }
+
+    /**
+     * Parses a saved date in ISO format (e.g. 2026-10-30); an empty field means the date is unknown.
+     * Uses the same rules as the parser, so a hand-edited file cannot load a date that a command
+     * would reject, such as {@code -2026-01-01} or {@code 0001-01-01}.
+     */
+    private LocalDate parseDate(String text) {
+        if (text.isEmpty()) {
+            return null;
+        }
+        if (!text.matches(Parser.DATE_FORMAT_REGEX)) {
+            throw new IllegalArgumentException("Invalid date");
+        }
+        LocalDate date;
+        try {
+            date = LocalDate.parse(text);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Invalid date");
+        }
+        if (date.isBefore(Parser.EARLIEST_DATE)) {
+            throw new IllegalArgumentException("Date is before " + Parser.EARLIEST_DATE);
+        }
+        return date;
+    }
+
     /**
      * Adds a custom category, rejecting invalid or duplicate names (ignoring case,
      * including the predefined categories).
@@ -385,7 +432,7 @@ public class LedgerCodec {
                 category = CategoryList.DEFAULT_CATEGORY;
             }
             return new StoredTransaction(stored.type(), stored.amount(), stored.description(),
-                    stored.foreignAmount(), category);
+                    stored.foreignAmount(), category, stored.date());
         }
         //@@author
     }

@@ -455,8 +455,8 @@ ones whose description contains the keyword. Each result is numbered with the sa
 
 ```
 find lunch
-1. [Withdrawal] -$12.00 (Lunch with friends) #Food    <- position 3, index 4 - 3 = 1
-3. [Withdrawal] -$4.50 (Lunch) #Food                  <- position 1, index 4 - 1 = 3
+1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food    <- position 3, index 4 - 3 = 1
+3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food                  <- position 1, index 4 - 1 = 3
 ```
 
 The command only reads the list, so searching never changes any transaction.
@@ -537,7 +537,7 @@ may still retry a save that failed after an earlier command.
 
 Adding `c/CURRENCY` to `deposit` or `withdraw` (e.g. `withdraw 1100 d/Ramen c/JPY`) records an
 amount typed in another currency. It is converted to SGD with the rate set by `rate`, and the
-original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others`.
+original amount is kept so it can be shown later, e.g. `[30 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others`.
 
 #### How it works
 
@@ -593,7 +593,8 @@ match its amount and rate is skipped, since the file must have been edited by ha
 <!-- @@author nabijonzzz -->
 ### Categorising spending
 
-Every withdrawal belongs to exactly one category, given with `t/CATEGORY` (e.g. `withdraw 4.50 d/Lunch t/food`).
+Every withdrawal belongs to exactly one category. The category is optional: it is given with `t/CATEGORY`
+(e.g. `withdraw 4.50 d/Lunch t/food`), and a withdrawal without `t/` is recorded under `Others`.
 Users can also add their own categories with `category add NAME` and see them with `category list`.
 
 #### Classes involved
@@ -603,6 +604,14 @@ Users can also add their own categories with `category add NAME` and see them wi
 * `TransactionList` owns the `CategoryList`, in the same way it owns `CurrencyRates`.
 * `Transaction` has a `category` field: the category name for a withdrawal, and `null` for a deposit.
 * `CategoryCommand` handles both `category add NAME` and `category list`.
+
+The class diagram below shows how these classes are related. Only the members relevant to categories are shown.
+
+![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
+
+`TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
+it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
+is only checked at that point.
 
 #### How a categorised withdrawal is processed
 
@@ -615,7 +624,10 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
 3. `WithdrawCommand#execute()` calls `CategoryList#resolve("FOOD")`, which returns `Food`. If the category did not
    exist, `resolve()` would throw a `FinNusException` listing the valid categories.
 4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
-   `[Withdrawal] -$4.50 (Lunch) #Food`.
+   `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
+
+The sequence diagram in [How a dated withdrawal is processed](#how-a-dated-withdrawal-is-processed) shows these
+steps for a withdrawal that also has a date.
 
 `c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
 the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
@@ -654,6 +666,75 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
 * **Alternative 2:** create a new category automatically.
   * Pros: faster for the user.
   * Cons: typos create unwanted categories that the user cannot remove.
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
+### Recording transaction dates
+
+Every `Transaction` has a `LocalDate date`, given with `on/DATE` (e.g. `withdraw 4.50 d/Lunch on/2026-10-20`) or
+set to today by default. It is shown first, e.g. `[20 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others`. Dates are
+the basis for features that look at spending over a period, such as a budget cycle.
+
+#### How a dated withdrawal is processed
+
+1. `Parser#parse(input, today)` receives today's date as a parameter. `Parser#parse(input)`, used by the app,
+   passes `LocalDate.now()`, while tests pass a fixed date so they never depend on the real date.
+2. `Parser#extractDate()` removes `on/2026-10-20` with the same `extractPrefixedValue()` helper used for `c/` and
+   `t/`, and checks the date. `LocalDate.parse()` uses the strict ISO format, so it rejects both badly formatted
+   text (`2026-2-3`) and dates that do not exist (`2026-02-30`). Before that, the text must match
+   `\d{4}-\d{2}-\d{2}` exactly, because `LocalDate.parse()` alone also accepts signed years such as
+   `-2026-01-01`. Dates before `Parser.EARLIEST_DATE` (2000-01-01) or after `today` are rejected too.
+3. If no `on/` is given, `today` is used.
+4. The date is passed through `WithdrawCommand` (or `DepositCommand` / `ForeignTransactionCommand`) to the new
+   `Transaction`.
+
+The sequence diagram below shows the whole flow for `withdraw 4.50 d/Lunch t/food on/2026-10-20`, including how
+the category from [Categorising spending](#categorising-spending) is resolved. Logging, output and amount
+validation are left out.
+
+![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
+
+The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
+description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
+becomes `Food` when `CategoryList#resolve()` runs during `execute()`.
+
+#### Saving dates
+
+The date is saved in ISO format as one more, last field of a `TRANSACTION` record, after the category, e.g.
+`TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20`. An empty field means the date is unknown.
+
+Records are told apart by their number of fields. Because a date is only ever saved together with a category,
+each count still means exactly one format, so older save files keep loading:
+
+| Fields | SGD transaction | Fields | Foreign-currency transaction |
+|--------|-----------------|--------|------------------------------|
+| 4 | saved before categories | 7 | saved before categories |
+| 5 | with category | 8 | with category |
+| 6 | with category and date | 9 | with category and date |
+
+Transactions loaded from rows without a date have a `null` date and are shown without one. A row with an invalid
+date is skipped with a warning, like other damaged rows. Loading uses the same format and earliest-date rules as
+the parser, so a hand-edited file cannot load a date that a command would reject.
+
+#### Design considerations
+
+**Aspect: where today's date comes from**
+
+* **Alternative 1 (current choice):** pass `today` into `Parser#parse()`.
+  * Pros: tests can use a fixed date, so they give the same result on any day.
+  * Cons: one extra parameter.
+* **Alternative 2:** call `LocalDate.now()` wherever it is needed.
+  * Pros: simpler code.
+  * Cons: tests that check the default date or reject future dates would depend on when they are run.
+
+**Aspect: order of transactions entered with an earlier date**
+
+* **Alternative 1 (current choice):** keep the order they were entered in.
+  * Pros: the indices shown by `recent` and used by `delete` never shift when a transaction is backdated.
+  * Cons: the list is not always in date order.
+* **Alternative 2:** insert transactions in date order.
+  * Pros: the list reads like a bank statement.
+  * Cons: adding one transaction could change the index of others, so `delete` might remove the wrong one.
 <!-- @@author -->
 
 <!-- @@author naieel04 -->
