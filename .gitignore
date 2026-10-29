@@ -24,7 +24,7 @@ text-ui-test/EXPECTED-UNIX.TXT
 
 # FinNUS log files
 *.log
-*.log.lck
+*.log.*
 
 # FinNUS saved state and recovery artifacts
 /finnus.txt

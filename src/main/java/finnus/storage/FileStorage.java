@@ -1,3 +1,4 @@
+//@@author naieel04
 package finnus.storage;
 
 import java.io.IOException;
@@ -18,23 +19,35 @@ import java.util.logging.Logger;
  * Saves ledger snapshots beside the JAR using atomic replacement and a previous-state backup.
  */
 public class FileStorage implements Storage {
+    //@@author nkyjStar
     private static final Logger logger = Logger.getLogger(FileStorage.class.getName());
+    //@@author naieel04
     private static final String FILE_NAME = "finnus.txt";
 
     private final Path path;
     private final LedgerCodec codec = new LedgerCodec();
     private final AtomicReplacement replacement;
+    //@@author lololol8484
     /** True after a clean main file was loaded or saved, so it can safely become a backup. */
+    //@@author naieel04
     private boolean knownClean;
+    //@@author lololol8484
     /** Tracks whether load has initialized recovery and overwrite policy. */
+    //@@author naieel04
     private boolean initialized;
+    //@@author lololol8484
     /** False when the source format or read failure makes overwriting unsafe. */
+    //@@author naieel04
     private boolean savingAllowed = true;
+    //@@author lololol8484
     /** True when the main file records that first-run setup is still incomplete. */
     private boolean setupRequired;
     /** Requests preserving damaged source bytes before the next successful replacement. */
+    //@@author naieel04
     private boolean preserveOriginal;
+    //@@author lololol8484
     /** Prevents the same damaged source from being copied more than once per session. */
+    //@@author naieel04
     private final Set<Path> preservedSources = new HashSet<>();
 
     /**
@@ -45,7 +58,9 @@ public class FileStorage implements Storage {
                 StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
 
+    //@@author lololol8484
     /** Creates storage with an injected replacement strategy for controlled failure handling. */
+    //@@author naieel04
     FileStorage(Path path, AtomicReplacement replacement) {
         this.path = path.toAbsolutePath().normalize();
         this.replacement = replacement;
@@ -63,7 +78,9 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author lololol8484
     /** Chooses the JAR directory for packaged runs or the working directory for development runs. */
+    //@@author naieel04
     static Path resolvePath(Path codeLocation, Path workingDirectory) {
         Path location = codeLocation.toAbsolutePath().normalize();
         Path folder = location.getFileName().toString().endsWith(".jar")
@@ -89,14 +106,18 @@ public class FileStorage implements Storage {
         knownClean = false;
         preserveOriginal = false;
         savingAllowed = true;
+        //@@author lololol8484
         setupRequired = false;
+        //@@author naieel04
         preservedSources.clear();
         try {
             LedgerCodec.DecodeResult decoded = read(path);
             if (decoded == null) {
+                //@@author lololol8484
                 if (!Files.exists(backupPath())) {
                     return createSetupPendingFile(new ArrayList<>());
                 }
+                //@@author naieel04
                 return recoverBackup(false, new ArrayList<>());
             }
             return handleMainFile(decoded);
@@ -108,15 +129,21 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author lololol8484
     /** Applies the recovery policy for a decoded main file. */
+    //@@author naieel04
     private LoadResult handleMainFile(LedgerCodec.DecodeResult decoded) {
+        //@@author lololol8484
         assert decoded != null : "Decoded main file result must not be null";
+        //@@author naieel04
         List<String> warnings = new ArrayList<>(decoded.warnings());
         switch (decoded.status()) {
+        //@@author lololol8484
         case SETUP_PENDING:
             setupRequired = true;
             logger.info("First-run setup is incomplete; prompting for an opening balance");
             return result(LedgerSnapshot.empty(), warnings);
+        //@@author naieel04
         case CLEAN:
             knownClean = true;
             logger.fine("Loaded clean ledger file");
@@ -140,7 +167,9 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author lololol8484
     /** Uses a clean backup when available and otherwise returns an empty, safely unsaved state. */
+    //@@author naieel04
     private LoadResult recoverBackup(boolean damagedMain, List<String> warnings) {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
@@ -150,11 +179,13 @@ public class FileStorage implements Storage {
                         + ". Files will remain unchanged until a state-changing command is used.");
                 return result(backup.snapshot(), warnings);
             }
+            //@@author lololol8484
             if (backup != null && backup.status() == LedgerCodec.Status.SETUP_PENDING) {
                 logger.info("Resuming setup from pending backup state");
                 warnings.add("First-run setup was not completed. Enter and confirm an opening balance to continue.");
                 return createSetupPendingFile(warnings);
             }
+            //@@author naieel04
             if (backup != null && backup.status() == LedgerCodec.Status.UNSUPPORTED) {
                 savingAllowed = false;
                 warnings.add("Unsupported backup format at " + backupPath()
@@ -169,10 +200,12 @@ public class FileStorage implements Storage {
         } catch (IOException e) {
             return readFailure(backupPath());
         }
+        //@@author lololol8484
         if (!damagedMain) {
             logger.warning("No usable main ledger exists; creating a pending setup file");
             return createSetupPendingFile(warnings);
         }
+        //@@author naieel04
         warnings.add("The save file is corrupted and no saved state could be recovered. "
                 + "FinNUS is starting with an empty ledger. To inspect or repair the original, "
                 + "exit without changing transactions, opening balance or rates. Open "
@@ -180,19 +213,27 @@ public class FileStorage implements Storage {
         return result(LedgerSnapshot.empty(), warnings);
     }
 
+    //@@author lololol8484
     /** Disables saving after a source cannot be read, protecting data that may be inaccessible. */
+    //@@author naieel04
     private LoadResult readFailure(Path source) {
         savingAllowed = false;
+        //@@author nkyjStar
         logger.log(java.util.logging.Level.WARNING, "Unable to read storage file " + source);
+        //@@author naieel04
         return result(LedgerSnapshot.empty(), List.of("Unable to read " + source
                 + ". Starting an unsaved session. Saving is disabled to protect data that could not be loaded."));
     }
 
+    //@@author lololol8484
     /** Logs recovery warnings and packages the result with the current saving policy. */
+    //@@author naieel04
     private LoadResult result(LedgerSnapshot snapshot, List<String> warnings) {
         for (String warning : warnings) {
+            //@@author nkyjStar
             logger.warning(warning);
         }
+        //@@author lololol8484
         return new LoadResult(snapshot, warnings, savingAllowed, setupRequired);
     }
 
@@ -210,11 +251,15 @@ public class FileStorage implements Storage {
             replacement.replace(temporary, path);
             assert Files.exists(path) : "Pending setup replacement must create the ledger file";
             preserveOriginal = false;
+            //@@author nkyjStar
             logger.info("Created pending setup file at " + path);
+            //@@author lololol8484
             return result(LedgerSnapshot.empty(), warnings);
         } catch (IOException e) {
             savingAllowed = false;
+            //@@author nkyjStar
             logger.log(java.util.logging.Level.SEVERE, "Could not create pending setup file at " + path, e);
+            //@@author lololol8484
             warnings.add("Unable to initialize " + path + ". Setup can continue, but the opening balance "
                     + "cannot be saved.");
             return result(LedgerSnapshot.empty(), warnings);
@@ -226,6 +271,7 @@ public class FileStorage implements Storage {
     }
 
     /** Decodes a storage file, returning {@code null} when it does not exist. */
+    //@@author naieel04
     private LedgerCodec.DecodeResult read(Path source) throws IOException {
         try {
             return codec.decode(Files.readString(source, StandardCharsets.UTF_8));
@@ -241,8 +287,11 @@ public class FileStorage implements Storage {
      */
     @Override
     public void save(LedgerSnapshot snapshot) throws IOException {
+        //@@author lololol8484
         assert snapshot != null : "Cannot save a null ledger snapshot";
+        //@@author nkyjStar
         logger.fine("Saving ledger to " + path);
+        //@@author naieel04
         if (!initialized) {
             load();
         }
@@ -262,16 +311,23 @@ public class FileStorage implements Storage {
             replacement.replace(temporary, path);
             knownClean = true;
             preserveOriginal = false;
+            //@@author nkyjStar
             logger.fine("Saved ledger snapshot");
+        //@@author lololol8484
         } catch (IOException e) {
+            //@@author nkyjStar
             logger.log(java.util.logging.Level.WARNING, "Failed to save ledger to " + path, e);
+            //@@author lololol8484
             throw e;
+        //@@author naieel04
         } finally {
             removeTemporary(temporary);
         }
     }
 
+    //@@author lololol8484
     /** Copies the current clean ledger into the backup using atomic replacement. */
+    //@@author naieel04
     private void rotateBackup() throws IOException {
         protectDamagedBackup();
         Path temporary = Files.createTempFile(path.getParent(), ".finnus-", ".tmp");
@@ -283,7 +339,9 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author lololol8484
     /** Preserves a damaged backup before rotating another ledger over it. */
+    //@@author naieel04
     private void protectDamagedBackup() throws IOException {
         try {
             LedgerCodec.DecodeResult backup = read(backupPath());
@@ -320,12 +378,16 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author lololol8484
     /** Returns the sibling path used for the previous clean ledger. */
+    //@@author naieel04
     private Path backupPath() {
         return path.resolveSibling(path.getFileName() + ".bak");
     }
 
+    //@@author lololol8484
     /** Removes a temporary file and logs cleanup failures without hiding the main result. */
+    //@@author naieel04
     private void removeTemporary(Path temporary) {
         try {
             Files.deleteIfExists(temporary);
@@ -334,6 +396,7 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author naieel04
     /**
      * Provides a narrow failure-injection seam without depending on platform permission behavior.
      */
@@ -343,3 +406,4 @@ public class FileStorage implements Storage {
         void replace(Path source, Path target) throws IOException;
     }
 }
+//@@author

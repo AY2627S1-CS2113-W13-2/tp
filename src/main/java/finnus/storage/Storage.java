@@ -1,3 +1,4 @@
+//@@author naieel04
 package finnus.storage;
 
 import java.io.IOException;
@@ -18,3 +19,4 @@ public interface Storage {
      */
     void save(LedgerSnapshot snapshot) throws IOException;
 }
+//@@author

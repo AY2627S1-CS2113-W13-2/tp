@@ -1,3 +1,4 @@
+//@@author naieel04
 package finnus.command;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -13,8 +14,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+//@@author nkyjStar
 import finnus.money.Money;
 
+//@@author naieel04
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -32,6 +35,7 @@ class HelpCommandTest {
         String expectedOutput = String.join(System.lineSeparator(),
                 "____________________________________________________________",
                 "Available commands:",
+                //@@author nabijonzzz
                 "+----------+---------------------+----------------"
                         + "---------------------------------------------------+",
                 "| Command  | Description         | Syntax         "
@@ -60,6 +64,7 @@ class HelpCommandTest {
                         + "                                                   |",
                 "+----------+---------------------+----------------"
                         + "---------------------------------------------------+",
+                //@@author naieel04
                 "",
                 "[] means optional.",
                 "____________________________________________________________",
@@ -73,9 +78,11 @@ class HelpCommandTest {
                 .filter(line -> line.startsWith("|"))
                 .skip(1)
                 .toList();
+        //@@author lololol8484
         CommandWord[] commands = java.util.Arrays.stream(CommandWord.values())
                 .filter(command -> command != CommandWord.OPENING)
                 .toArray(CommandWord[]::new);
+        //@@author naieel04
         assertEquals(commands.length, rows.size());
         for (int i = 0; i < commands.length; i++) {
             String[] columns = rows.get(i).split("\\|", -1);
@@ -104,8 +111,10 @@ class HelpCommandTest {
     @Test
     public void execute_help_preservesExistingTransactions() {
         TransactionList transactions = new TransactionList();
+        //@@author nkyjStar
         transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of("100"), "Allowance"));
         transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("4.50"), "Lunch"));
+        //@@author naieel04
         List<Transaction> expectedTransactions = transactions.getAll();
 
         new HelpCommand().execute(transactions, new Ui());
@@ -153,3 +162,4 @@ class HelpCommandTest {
         return boundaries;
     }
 }
+//@@author

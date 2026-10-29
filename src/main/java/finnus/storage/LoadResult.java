@@ -15,12 +15,16 @@ public record LoadResult(LedgerSnapshot snapshot, List<String> warnings, boolean
         this(snapshot, warnings, savingAllowed, false);
     }
 
+    //@@author naieel04
     /**
      * Prevents load diagnostics from changing after they are returned to the application.
      */
     public LoadResult {
         Objects.requireNonNull(snapshot);
+        //@@author
         Objects.requireNonNull(warnings);
+        //@@author naieel04
         warnings = List.copyOf(warnings);
     }
 }
+//@@author

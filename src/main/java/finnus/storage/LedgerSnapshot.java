@@ -16,18 +16,23 @@ import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /**
  * An immutable value copy of all financial state, used for saving and change detection.
  * Decimal scales are retained so persistence never silently rounds a value.
  */
+//@@author
 public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
                              Map<String, BigDecimal> rates, List<String> customCategories) {
+    //@@author naieel04
     /**
      * Copies mutable collections and rejects values that cannot represent a valid ledger.
      */
     public LedgerSnapshot {
+        //@@author
         assert transactions != null : "Transactions must not be null";
         assert rates != null : "Rates must not be null";
+        //@@author naieel04
         Objects.requireNonNull(openingBalance);
         validateOpeningBalance(openingBalance);
         transactions = List.copyOf(transactions);
@@ -81,11 +86,14 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     }
     //@@author
 
+    //@@author naieel04
     /**
      * A transaction value independent of the mutable ledger and console formatting.
      */
+    //@@author
     public record StoredTransaction(TransactionType type, Money amount, String description,
                                     ForeignAmount foreignAmount, String category, LocalDate date) {
+        //@@author naieel04
         /**
          * Validates external values before they reach assertion-based domain constructors.
          */
@@ -93,9 +101,12 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             Objects.requireNonNull(type, "Transaction type must not be null");
             Objects.requireNonNull(amount, "Transaction amount must not be null");
             Objects.requireNonNull(description, "Description must not be null");
+            //@@author
             if (!amount.isPositive()) {
+                //@@author naieel04
                 throw new IllegalArgumentException("Transaction amount must be positive");
             }
+            //@@author
             if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
                 throw new IllegalArgumentException("Transaction amount must not exceed "
                         + Money.MAX_AMOUNT.format());
@@ -147,26 +158,33 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         //@@author
     }
 
+    //@@author naieel04
     /**
      * Returns an empty ledger with no exchange rates and a zero opening balance.
      */
     public static LedgerSnapshot empty() {
+        //@@author
         return new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of());
     }
 
+    //@@author naieel04
     /**
      * Captures values rather than live views so later commands cannot alter this snapshot.
      */
     public static LedgerSnapshot capture(TransactionList ledger) {
         List<StoredTransaction> records = ledger.getAll().stream()
                 .map(transaction -> new StoredTransaction(transaction.getType(), transaction.getAmount(),
+                        //@@author
                         transaction.getDescription(), transaction.getForeignAmount().orElse(null),
                         transaction.getCategory().orElse(null), transaction.getDate().orElse(null)))
+                //@@author naieel04
                 .toList();
+        //@@author
         return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll(),
                 ledger.getCategories().getCustom());
     }
 
+    //@@author naieel04
     /**
      * Builds a fresh mutable ledger in the original transaction order.
      */
@@ -176,6 +194,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         //@@author nabijonzzz
         customCategories.forEach(ledger.getCategories()::add);
         //@@author
+        //@@author naieel04
         for (StoredTransaction record : transactions) {
             //@@author chancheese
             if (record.foreignAmount() != null) {
@@ -187,6 +206,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             ledger.add(new Transaction(record.type(), record.amount(), record.description(), record.category(),
                     record.date()));
         }
+        //@@author naieel04
         rates.forEach(ledger.getRates()::setRate);
         return ledger;
     }
@@ -194,15 +214,19 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     /**
      * Checks the domain rules for a stored opening balance.
      */
+    //@@author
     static void validateOpeningBalance(Money amount) {
         if (amount == null || amount.isNegative()) {
+            //@@author naieel04
             throw new IllegalArgumentException("Opening balance must not be negative");
         }
+        //@@author
         if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
             throw new IllegalArgumentException("Opening balance must not exceed " + Money.MAX_AMOUNT.format());
         }
     }
 
+    //@@author naieel04
     /**
      * Checks the domain rules for a stored rate without depending on console argument limits.
      */
@@ -220,3 +244,4 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         }
     }
 }
+//@@author
