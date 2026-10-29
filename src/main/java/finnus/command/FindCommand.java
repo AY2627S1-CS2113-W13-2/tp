@@ -3,7 +3,6 @@ package finnus.command;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.logging.Logger;
 
 import finnus.transaction.Transaction;
@@ -58,15 +57,31 @@ public class FindCommand extends Command {
      * the same index that {@code recent} shows and {@code delete} expects.
      */
     private List<String> findMatches(TransactionList transactions) {
-        String lowerKeyword = keyword.toLowerCase(Locale.ROOT);
         List<String> matches = new ArrayList<>();
         int size = transactions.size();
         for (int position = size - 1; position >= 0; position--) {
             Transaction transaction = transactions.get(position);
-            if (transaction.getDescription().toLowerCase(Locale.ROOT).contains(lowerKeyword)) {
+            if (containsIgnoreCase(transaction.getDescription(), keyword)) {
                 matches.add((size - position) + ". " + transaction);
             }
         }
         return matches;
+    }
+
+    /**
+     * Returns whether {@code text} contains {@code keyword}, ignoring case.
+     *
+     * <p>This compares one character at a time with {@code regionMatches} instead of lowercasing
+     * both strings, because lowercasing can change the length of some text. For example, the Turkish
+     * capital {@code İ} lowercases to two characters ({@code i} plus a dot), so
+     * {@code "İstanbul".toLowerCase().contains("istanbul")} is false.
+     */
+    static boolean containsIgnoreCase(String text, String keyword) {
+        for (int start = 0; start + keyword.length() <= text.length(); start++) {
+            if (text.regionMatches(true, start, keyword, 0, keyword.length())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

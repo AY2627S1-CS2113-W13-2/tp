@@ -1,0 +1,41 @@
+@startuml CommandExecutionSequenceDiagram
+' @@author naieel04
+' One successful SGD deposit after setup; saving is allowed.
+' Transaction construction and snapshot internals are omitted.
+actor User
+participant ":FinNUS" as FinNUS
+participant "<<class>>\nParser" as Parser
+participant "command:DepositCommand" as Deposit
+participant "transactions:TransactionList" as Ledger
+participant "ui:Ui" as Ui
+participant "storage:FileStorage" as Storage
+
+FinNUS -> Ui: readCommand()
+User -> Ui: deposit 500 d/Allowance
+Ui --> FinNUS: input
+FinNUS -> Parser: parse(input)
+activate Parser
+create Deposit
+Parser -> Deposit: new DepositCommand(...)
+activate Deposit
+Deposit --> Parser: constructed command
+deactivate Deposit
+Parser --> FinNUS: command
+deactivate Parser
+
+note over FinNUS: capture ledger snapshot before execution
+FinNUS -> Deposit: execute(transactions, ui)
+activate Deposit
+Deposit -> Ledger: add(deposit)
+Ledger --> Deposit: return
+Deposit -> Ui: showMessage(...)
+Ui --> User: deposit confirmation
+Ui --> Deposit: return
+Deposit --> FinNUS: return
+deactivate Deposit
+
+note over FinNUS: compare snapshots and mark ledger changes as pending
+ref over FinNUS, Storage
+    AutomaticSaveSequenceDiagram
+end ref
+@enduml

@@ -2,13 +2,11 @@
 
 FinNUS is a command-line personal finance tracker. This guide explains how to set up, understand, extend, and test it.
 
-**Release:** [Insert release version here]
+**Release:** [Release Page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases)
 
-**Last reviewed:** [Insert date and corresponding commit or tag here]
+> Draft status: Some sections still contain prompts for team decisions or release-specific details.
 
-> Template instructions: Replace every `[Insert ... here]` prompt. Class names and commands below reflect the current
-> repository; confirm requirements and design rationale with the team. Label future features as proposed. Replace UML
-> placeholders with diagram images, captions, and links to their editable sources.
+---
 
 ## Table of contents
 
@@ -25,10 +23,13 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 - [Instructions for manual testing](#instructions-for-manual-testing)
 - [Planned enhancements](#planned-enhancements)
 
+---
+
 <!-- @@author naieel04 -->
 ## Acknowledgements
 
-The following peer guides informed this template's organisation:
+The following resources support the project and this guide:
+
 - [CS2113 project template](https://github.com/NUS-CS2113-AY2627-S1/tp): provides the starter structure and conventions
   for projects in the CS2113 module.
 - [Address Book Level 3](https://se-education.org/addressbook-level3/): reference for code quality, project structure,
@@ -52,17 +53,17 @@ On macOS, use `sdk use java 25.0.3.fx-zulu` if switching Java versions with SDKM
 
 ### Importing, building, and running
 
-1. Clone the repository: [W13-2 Repo](https://github.com/AY2627S1-CS2113-W13-2/tp/)  .
+1. Clone the repository: [W13-2 Repo](https://github.com/AY2627S1-CS2113-W13-2/tp/).
 2. Open the repository root containing `build.gradle` and import it as a Gradle project.
 3. Confirm that `java -version` reports Java 25 and that the IDE's Gradle JVM uses Java 25.
 4. Run the following commands from the repository root.
 
-| Task | Windows PowerShell | macOS / Linux |
-| --- | --- | --- |
-| Run from source | `.\gradlew.bat run` | `./gradlew run` |
-| Run automated tests | `.\gradlew.bat test` | `./gradlew test` |
-| Run tests and Checkstyle | `.\gradlew.bat check` | `./gradlew check` |
-| Package the application | `.\gradlew.bat shadowJar` | `./gradlew shadowJar` |
+| Task                     | Windows PowerShell        | macOS / Linux         |
+|--------------------------|---------------------------|-----------------------|
+| Run from source          | `.\gradlew.bat run`       | `./gradlew run`       |
+| Run automated tests      | `.\gradlew.bat test`      | `./gradlew test`      |
+| Run tests and Checkstyle | `.\gradlew.bat check`     | `./gradlew check`     |
+| Package the application  | `.\gradlew.bat shadowJar` | `./gradlew shadowJar` |
 
 Run the packaged application using `java -jar build/libs/finnus.jar`. Enter `help` to view commands and `exit` to quit.
 The application entry point is `finnus.FinNUS`.
@@ -78,21 +79,21 @@ The application entry point is `finnus.FinNUS`.
 `FinNUS` coordinates startup, command execution, and persistence. The parser produces command objects, which read or
 modify the ledger and display results through the UI. Storage loads and saves complete ledger snapshots.
 
-[Insert UML diagram of app architecture here]
+![Main components and dependencies of FinNUS](images/ArchitectureDiagram.png)
 
-[Insert figure caption explaining dependencies, arrow notation, and omitted details here]
+*Figure 1. FinNUS architecture and component dependencies. [PlantUML source](diagrams/ArchitectureDiagram.puml).*
 
-| Component | Main classes / package | Responsibility |
-| --- | --- | --- |
-| Application | `finnus.FinNUS` | Restore state, run commands, detect changes, save pending state, and handle shutdown. |
-| UI | `finnus.ui.Ui` | Read console input and display messages, errors, and command results. |
-| Parser | `finnus.parser.Parser` | Validate command syntax and construct a command. |
-| Commands | `finnus.command` | Execute operations through the shared `Command` abstraction. |
-| Ledger model | `TransactionList`, `Transaction`, `TransactionType` | Maintain transactions, opening balance, and balance calculation. |
-| Currency model | `CurrencyRates` | Maintain user-entered exchange rates relative to SGD. |
-| Category model | `CategoryList` | Maintain predefined and custom spending categories for withdrawals. |
-| Storage | `Storage`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult` | Encode, persist, validate, and recover financial state. |
-| Expected errors | `FinNusException` | Carry command failure messages to the application's error handler. |
+| Component       | Main classes / package                                                  | Responsibility                                                                                               |
+|-----------------|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| Application     | `finnus.FinNUS`, `finnus.Setup`                                         | Restore state, guide first-run setup, run commands, detect changes, save pending state, and handle shutdown. |
+| UI              | `finnus.ui.Ui`                                                          | Read console input and display messages, errors, and command results.                                        |
+| Parser          | `finnus.parser.Parser`                                                  | Validate command syntax and construct a command.                                                             |
+| Commands        | `finnus.command`                                                        | Execute operations through the shared `Command` abstraction.                                                 |
+| Ledger model    | `TransactionList`, `Transaction`, `TransactionType`                     | Maintain transactions, opening balance, and balance calculation.                                             |
+| Currency model  | `CurrencyRates`                                                         | Maintain user-entered exchange rates relative to SGD.                                                        |
+| Category model  | `CategoryList`                                                          | Maintain predefined and custom spending categories for withdrawals.                                          |
+| Storage         | `Storage`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult` | Encode, persist, validate, and recover financial state.                                                      |
+| Expected errors | `FinNusException`                                                       | Carry command failure messages to the application's error handler.                                           |
 
 ### Application lifecycle
 
@@ -102,18 +103,38 @@ modify the ledger and display results through the UI. Storage loads and saves co
 4. `FinNUS` compares ledger snapshots to detect changes and attempts to save pending changes.
 5. `exit` or end of input ends the loop; pending changes are retried before shutdown.
 
-[Insert UML sequence diagram of a successful command from user input to automatic save here]
+![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-[Insert explanation of blank input, FinNusException handling, shutdown, and unsaved changes here]
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 9's saving sequence.
+Transaction construction and snapshot internals are omitted.
+[PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
+
+Blank input is ignored. If parsing or execution throws a `FinNusException`, the main loop displays its message through
+`Ui#showError()` and continues accepting commands. Both `exit` and end of input trigger a final attempt to save pending
+changes. If that attempt fails or saving is disabled, FinNUS warns that unsaved changes will be lost after exit.
 
 ### UI, parser, and commands
 
 `CommandWord` defines names, descriptions, and usage strings shared by the parser and help output. Concrete commands
 extend `Command` and implement `execute(TransactionList, Ui)`.
 
-[Insert UML class diagram of Command, its subclasses, Parser, CommandWord, and Ui here]
+The class diagram shows how `DepositCommand` and `BalanceCommand` extend `Command` and use `TransactionList`.
+`DepositCommand` represents commands that add transactions; `BalanceCommand` represents commands that read ledger state.
+Other subclasses, private members, and parser and UI relationships are omitted.
 
-[Insert explanation of parsing responsibilities versus execution responsibilities, with one example here]
+![Class diagram of Command and Model structure](images/CommandClassDiagram.png)
+
+*Figure 3. Command and ledger model relationships. [PlantUML source](diagrams/CommandClassDiagram.puml).*
+
+#### Parsing vs execution responsibilities
+
+1. **Separation of concerns:** `Parser` is responsible solely for syntax validation, prefix extraction (`d/`, `c/`, `t/`), and format verification. It converts raw string tokens into validated values (such as `Money` or currency codes) and constructs concrete, immutable `Command` objects.
+2. **Stateless command execution:** Commands encapsulate user intent but do not retain long-lived references to application state. Instead, `Command#execute(TransactionList, Ui)` receives the working `TransactionList` as an argument when executed by the main loop.
+3. **Domain mutation example (`DepositCommand`):**
+   - The user inputs `deposit 50 d/Allowance`.
+   - `Parser#parseDeposit()` verifies that `50` is a valid positive monetary value at or below `Money.MAX_AMOUNT`, extracts the optional description, and constructs a `DepositCommand(amount, description)`.
+   - When `DepositCommand#execute(transactions, ui)` runs, it creates a new immutable `Transaction(TransactionType.DEPOSIT, amount, description)` and invokes `transactions.add(transaction)`.
+   - `TransactionList` stores the new `Transaction` in entry order. The `Money` value object remains shared and immutable across calculations such as `TransactionList#getBalance()`.
 <!-- @@author -->
 
 <!-- @@author nkyjStar -->
@@ -147,6 +168,9 @@ inputs and the nonzero sum are distinct objects:
 
 ![Sequence diagram for invoking Money methods](images/MoneySequenceDiagram.png)
 
+*Figure 4. Exact addition, display rounding, and preservation of the original monetary value.
+[PlantUML source](diagrams/MoneySequenceDiagram.puml).*
+
 `Money` does not require every value to be positive or below `Money.MAX_AMOUNT`.
 `Parser#parseAmount()` enforces those rules for user-entered transaction amounts, while
 `parseNonNegativeAmount()` permits zero for an opening balance. Keeping sign validation at the
@@ -178,7 +202,7 @@ exactly in binary floating point. A raw `BigDecimal` in every command would pres
 but each command would have to repeat sign operations, rounding, and output rules. `Money`
 centralizes those rules while still using `BigDecimal` for exact arithmetic. The tradeoff is an
 extra class and method calls instead of operators; in return, the balance and transaction
-display use the same monetary behavior. `MoneyTest` checks exact repeated addition,
+display use the same monetary behaviour. `MoneyTest` checks exact repeated addition,
 immutability after negation, rounding only for display, signed sub-cent output, and equality
 across different decimal scales.
 <!-- @@author -->
@@ -191,16 +215,39 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 - The main file is `finnus.txt`, beside the packaged JAR or in the working directory during development.
 - The previous-state backup is `finnus.txt.bak`.
-- The current text format starts with `FINNUS|1` and stores opening balance, rates, and transactions.
+- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, and transactions.
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
 - Saving uses temporary files and atomic replacement; loading can recover valid rows or a clean backup.
 
-[Insert UML class diagram of the storage interface, implementation, codec, snapshot, and load result here]
+![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
-[Insert sample save-file records and explain fields, validation, and format compatibility here]
+*Figure 5. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
+
+A complete save file can contain the following records:
+
+```text
+FINNUS|1
+OPENING|100
+RATE|JPY|110
+CATEGORY|Meals
+TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
+TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
+```
+
+`OPENING` stores the starting SGD balance. `RATE` stores foreign-currency units per SGD, and `CATEGORY` declares a custom
+category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
+and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
+Foreign transactions place their currency code, original amount, and recorded rate before the category field.
+
+Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
+seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
+and categories before restoring the ledger. Unsupported numbered format versions disable saving; malformed rows can be
+skipped with warnings, as described in [Automatic saving and recovery](#automatic-saving-and-recovery).
 <!-- @@author -->
+
+---
 
 ## Implementation
 
@@ -276,25 +323,38 @@ message to the user, so invalid input never stops the app.
 
 <!-- @@author -->
 
-<!-- @@author chancheese -->
-### Setting the opening balance
+<!-- @@author lololol8484 -->
+### First-run setup
 
-The opening balance is the money the user had before they started using FinNUS. It is set once,
-during first-run setup, when no save file exists yet.
+The opening balance is the money the user had before they started using FinNUS. The setup flow
+collects and confirms this value once, before normal commands become available.
 
 #### How it works
 
-1. `FinNUS` sees that setup has not been completed and runs `Setup#run()`, which asks for the
-   opening balance in SGD.
-2. `Setup` checks the input with `Parser#parseNonNegativeAmount()`, which uses the same rules as
-   deposits except that 0 is allowed. Invalid input shows an error and asks again.
-3. `Setup` asks the user to confirm the amount with `yes` or `no`. Answering `no` asks for the
-   amount again.
-4. Once confirmed, `OpeningBalanceCommand#execute()` stores the amount with
-   `TransactionList#setOpeningBalance()`, and the ledger is saved.
+1. `FinNUS#restoreSession()` checks `LoadResult#setupRequired()`. `FileStorage` requires setup
+   when there is no existing ledger or when it loads a `SETUP_PENDING` marker.
+2. `FinNUS` runs `Setup#run()` before showing the normal welcome message. `Setup` prompts for an
+   opening balance in SGD and parses it with `Parser#parseNonNegativeAmount()`, which permits
+   zero. Invalid amounts show an error and return to the amount prompt.
+3. `Setup` asks the user to confirm the amount with `yes` or `y`. Invalid confirmation answers
+   repeat the confirmation prompt; `no` or `n` returns to the amount prompt.
+4. The ledger is not changed while the user is entering or reviewing an amount. Only after
+   confirmation does `Setup` execute `OpeningBalanceCommand`.
+5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
+   without saving the unconfirmed amount. The pending marker remains, so setup is offered again
+   on the next run. After successful setup, `FinNUS` saves the ledger and later runs skip setup.
 
 `opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
-treated as an unknown command.
+treated as an unknown command. `SetupTest` covers valid and invalid amounts, confirmation,
+re-entry, and input ending before confirmation.
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+### Applying the confirmed opening balance
+
+`OpeningBalanceCommand#execute()` stores the confirmed amount with
+`TransactionList#setOpeningBalance()`. This command was implemented separately from the setup
+flow.
 
 The opening balance is a separate field in `TransactionList`, not a `Transaction`.
 `getBalance()` uses it as the starting value when adding up all transactions:
@@ -316,6 +376,38 @@ return transactions.stream()
 * **Alternative 2:** a special first `DEPOSIT` transaction.
     * Pros: no extra field.
     * Cons: it would look like real income in the history and could be deleted by accident.
+<!-- @@author -->
+
+<!-- @@author lololol8484 -->
+### Deleting a transaction
+
+The `delete INDEX` command removes a transaction using the one-based index shown by `recent`
+and `find`. Index 1 refers to the newest transaction. The opening balance is not a transaction
+and cannot be deleted.
+
+#### How it works
+
+1. `Parser#parse()` dispatches `delete` to `parseDelete()`. The parser requires a positive
+   integer index and returns a `DeleteCommand`.
+2. `DeleteCommand#execute()` checks that the index is within the transaction count. It converts
+   the newest-first index to the ledger's zero-based, oldest-first index using
+   `transactions.size() - index`.
+3. `TransactionList#delete()` removes and returns the selected transaction. The command logs
+   the deletion and displays the deleted transaction through `Ui`.
+4. `FinNUS` compares ledger snapshots before and after command execution. If the ledger changed,
+   it attempts to save the updated snapshot.
+
+An invalid or out-of-range index raises `FinNusException`; the main loop displays the error and
+continues without changing the ledger. `DeleteCommandTest` and `ParserTest` cover command
+validation and deletion behavior.
+
+#### Design considerations
+
+The transaction list remains in insertion order, oldest first. `delete` translates the
+newest-first index displayed to the user instead of rearranging stored transactions. This keeps
+adding a transaction as a simple append while making deletion indices consistent with `recent`
+and `find`.
+<!-- @@author -->
 
 ### Setting exchange rates
 
@@ -379,8 +471,11 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
-Java decides when its memory is actually reclaimed.
+*Figure 6. Retrieving and displaying up to two recent transactions.
+[PlantUML source](diagrams/RecentSequenceDiagram.puml).*
+
+An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
+Java deletion or guarantee immediate collection.
 
 For example, if TransactionList contains a deposit followed by a withdrawal, `recent 2` prints the
 withdrawal as `1.` and the deposit as `2.`. The displayed numbers are positions in the current
@@ -410,8 +505,8 @@ ones whose description contains the keyword. Each result is numbered with the sa
 
 ```
 find lunch
-1. [Withdrawal] -$12.00 (Lunch with friends) #Food    <- position 3, index 4 - 3 = 1
-3. [Withdrawal] -$4.50 (Lunch) #Food                  <- position 1, index 4 - 1 = 3
+1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food    <- position 3, index 4 - 3 = 1
+3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food                  <- position 1, index 4 - 1 = 3
 ```
 
 The command only reads the list, so searching never changes any transaction.
@@ -464,7 +559,7 @@ Because the sum is recalculated whenever `balance` is invoked, deleting a transa
 opening balance is reflected in the next `balance` result.
 
 `Money` wraps `BigDecimal`, so addition keeps decimal values exact. `Money#format()` rounds only
-the displayed result to two decimal places using `HALF_UP` and adds the dollar sign. Thus the
+the displayed result to two decimal places using `HALF_UP` and adds the dollar sign. Thus, the
 calculation retains precision if a stored amount has more than two decimal places. Such amounts
 are covered by the balance command tests, even though ordinary user input is limited to cents.
 Negative balances are allowed and displayed with a minus sign when their rounded value is
@@ -474,8 +569,11 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
-Java decides when its memory is actually reclaimed.
+*Figure 7. Calculating and displaying the current balance.
+[PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
+
+An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
+Java deletion or guarantee immediate collection.
 
 #### Design considerations
 
@@ -492,7 +590,7 @@ may still retry a save that failed after an earlier command.
 
 Adding `c/CURRENCY` to `deposit` or `withdraw` (e.g. `withdraw 1100 d/Ramen c/JPY`) records an
 amount typed in another currency. It is converted to SGD with the rate set by `rate`, and the
-original amount is kept so it can be shown later, e.g. `[Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others`.
+original amount is kept so it can be shown later, e.g. `[30 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others`.
 
 #### How it works
 
@@ -500,6 +598,9 @@ The sequence diagram below shows what happens when the user enters `withdraw 110
 Logging, console output, input validation and saving the ledger afterwards are left out.
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
+
+*Figure 8. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+[PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
    split into amount and description exactly as before. `c/SGD` counts as no currency.
@@ -514,10 +615,11 @@ Logging, console output, input validation and saving the ledger afterwards are l
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 
-In the save file, a foreign transaction has three extra fields: the currency code, the amount as
-typed and the rate, e.g. `TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110`. SGD-only rows keep
-the old format, so existing save files still load. When loading, a row whose SGD amount does not
-match its amount and rate is skipped, since the file must have been edited by hand.
+In the save file, a foreign transaction includes the currency code, the amount as typed, and the
+rate before its final category field, e.g. `TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Others`.
+Both SGD and foreign rows now include the category field; older rows without it still load.
+When loading, a row whose SGD amount does not match its original amount and rate is skipped
+because the record is inconsistent.
 
 #### Design considerations
 
@@ -559,6 +661,14 @@ Users can add their own categories with `category NAME` and list all categories 
 * `Transaction` has a `category` field: the category name for a withdrawal, and `null` for a deposit.
 * `CategoryCommand` handles both `category NAME` and `category`.
 
+The class diagram below shows how these classes are related. Only the members relevant to categories are shown.
+
+![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
+
+`TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
+it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
+is only checked at that point.
+
 #### How a categorised withdrawal is processed
 
 Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
@@ -570,7 +680,10 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
 3. `WithdrawCommand#execute()` calls `CategoryList#resolve("FOOD")`, which returns `Food`. If the category did not
    exist, `resolve()` would throw a `FinNusException` listing the valid categories.
 4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
-   `[Withdrawal] -$4.50 (Lunch) #Food`.
+   `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
+
+The sequence diagram in [How a dated withdrawal is processed](#how-a-dated-withdrawal-is-processed) shows these
+steps for a withdrawal that also has a date.
 
 `c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
 the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
@@ -611,34 +724,147 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
   * Cons: typos create unwanted categories that the user cannot remove.
 <!-- @@author -->
 
+<!-- @@author nabijonzzz -->
+### Recording transaction dates
+
+Every `Transaction` has a `LocalDate date`, given with `on/DATE` (e.g. `withdraw 4.50 d/Lunch on/2026-10-20`) or
+set to today by default. It is shown first, e.g. `[20 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others`. Dates are
+the basis for features that look at spending over a period, such as a budget cycle.
+
+#### How a dated withdrawal is processed
+
+1. `Parser#parse(input, today)` receives today's date as a parameter. `Parser#parse(input)`, used by the app,
+   passes `LocalDate.now()`, while tests pass a fixed date so they never depend on the real date.
+2. `Parser#extractDate()` removes `on/2026-10-20` with the same `extractPrefixedValue()` helper used for `c/` and
+   `t/`, and checks the date. `LocalDate.parse()` uses the strict ISO format, so it rejects both badly formatted
+   text (`2026-2-3`) and dates that do not exist (`2026-02-30`). Before that, the text must match
+   `\d{4}-\d{2}-\d{2}` exactly, because `LocalDate.parse()` alone also accepts signed years such as
+   `-2026-01-01`. Dates before `Parser.EARLIEST_DATE` (2000-01-01) or after `today` are rejected too.
+3. If no `on/` is given, `today` is used.
+4. The date is passed through `WithdrawCommand` (or `DepositCommand` / `ForeignTransactionCommand`) to the new
+   `Transaction`.
+
+The sequence diagram below shows the whole flow for `withdraw 4.50 d/Lunch t/food on/2026-10-20`, including how
+the category from [Categorising spending](#categorising-spending) is resolved. Logging, output and amount
+validation are left out.
+
+![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
+
+The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
+description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
+becomes `Food` when `CategoryList#resolve()` runs during `execute()`.
+
+#### Saving dates
+
+The date is saved in ISO format as one more, last field of a `TRANSACTION` record, after the category, e.g.
+`TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20`. An empty field means the date is unknown.
+
+Records are told apart by their number of fields. Because a date is only ever saved together with a category,
+each count still means exactly one format, so older save files keep loading:
+
+| Fields | SGD transaction | Fields | Foreign-currency transaction |
+|--------|-----------------|--------|------------------------------|
+| 4 | saved before categories | 7 | saved before categories |
+| 5 | with category | 8 | with category |
+| 6 | with category and date | 9 | with category and date |
+
+Transactions loaded from rows without a date have a `null` date and are shown without one. A row with an invalid
+date is skipped with a warning, like other damaged rows. Loading uses the same format and earliest-date rules as
+the parser, so a hand-edited file cannot load a date that a command would reject.
+
+#### Design considerations
+
+**Aspect: where today's date comes from**
+
+* **Alternative 1 (current choice):** pass `today` into `Parser#parse()`.
+  * Pros: tests can use a fixed date, so they give the same result on any day.
+  * Cons: one extra parameter.
+* **Alternative 2:** call `LocalDate.now()` wherever it is needed.
+  * Pros: simpler code.
+  * Cons: tests that check the default date or reject future dates would depend on when they are run.
+
+**Aspect: order of transactions entered with an earlier date**
+
+* **Alternative 1 (current choice):** keep the order they were entered in.
+  * Pros: the indices shown by `recent` and used by `delete` never shift when a transaction is backdated.
+  * Cons: the list is not always in date order.
+* **Alternative 2:** insert transactions in date order.
+  * Pros: the list reads like a bank statement.
+  * Cons: adding one transaction could change the index of others, so `delete` might remove the wrong one.
+<!-- @@author -->
+
 <!-- @@author naieel04 -->
 ### Automatic saving and recovery
 
 **Key classes:** `FinNUS`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult`
 
-[Insert explanation of snapshot change detection, pending changes, save retries, and previous-state backups here]
+`FinNUS#executeCommand()` captures a `LedgerSnapshot` before a command runs and compares it with a snapshot captured
+after the command returns. A difference marks the session as having pending changes. Snapshots include the opening
+balance, transactions, exchange rates, and custom categories, so changes to any of these can trigger a save.
 
-[Insert UML sequence diagram of saving changed financial state here]
+After a successful non-exit command, `savePendingChanges()` attempts to save the current snapshot if changes are pending
+and saving is allowed. A successful save clears the pending flag. An `IOException` leaves the flag set and displays an
+error, allowing a later successful command or shutdown to retry. A read-only command such as `balance` can therefore
+retry an earlier failed save even though it creates no new change itself.
 
-[Insert UML activity diagram of loading, partial recovery, backup recovery, and disabled saving here]
+![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-[Insert recovery table for missing files, corrupt rows, unusable files, unsupported versions, read failures, and save failures here]
+*Figure 9. One successful automatic save. File operations are summarised; failure handling is described in the notes
+and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
-For each recovery case, specify recovered state, warnings, whether saving is allowed, and how originals are preserved.
+`FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
+it copies that previous state into `finnus.txt.bak` before atomically replacing the main file. The backup therefore holds
+the previous saved state, not a copy of the new snapshot. A damaged main file or backup is preserved in a uniquely named
+`.corrupt-*` recovery copy before a save replaces it. Temporary-file clean-up is attempted whether saving succeeds or fails.
 
-**Design consideration:** [Insert rationale and tradeoffs for snapshot-based text storage and atomic replacement here]
+#### Loading and recovery
+
+Loading returns a `LoadResult` containing the recovered snapshot, warnings, saving permission, and whether setup is
+required. A partially valid main file contributes its valid rows directly; the backup is considered only when the main
+file is missing or unrecoverable. Invalid UTF-8 counts as damaged data, whereas other read failures disable saving to
+protect data that could not be inspected.
+
+![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
+
+*Figure 10. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
+
+| Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
+|----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Main file missing; backup absent or damaged                                | Request first-run setup.                                                                                                   | Create a setup-pending main file. If initialization fails, setup can continue with saving disabled. An unsupported or unreadable backup follows the disabled-saving rules below. |
+| Main file records pending setup                                            | Return an empty snapshot and request opening-balance confirmation.                                                         | Resume setup; save the confirmed balance afterwards if saving is allowed. A setup-pending backup can also restart this process.                                                  |
+| Main file contains some invalid rows                                       | Recover valid rows and warn that balances may be incomplete. Unknown withdrawal categories become `Others` with a warning. | Allow saving, but preserve the damaged main file before replacement. Do not fall back to the backup for partial recovery.                                                        |
+| Main file missing, unrecoverable, or invalid UTF-8; backup is clean        | Restore the backup snapshot and display a recovery warning.                                                                | Allow saving. Preserve any damaged main-file bytes before replacement and retain the clean backup rather than rotating a damaged main over it.                                   |
+| Damaged main file; backup is missing or damaged                            | Return an empty snapshot with corruption warnings.                                                                         | Allow saving, but retain the damaged main file until a save preserves and replaces it. An unsupported or unreadable backup follows the disabled-saving rules below.              |
+| Unsupported numbered format in the main file or a backup being considered  | Return an empty snapshot with a format warning.                                                                            | Disable saving for the session; leave incompatible files unchanged.                                                                                                              |
+| Other I/O failure while reading the main file or a backup being considered | Return an empty snapshot with a read warning.                                                                              | Disable saving for the session; leave unreadable files unchanged.                                                                                                                |
+| Save fails                                                                 | Keep the current ledger in memory and display an automatic-save warning.                                                   | Retain pending changes for retry. Failed atomic replacement leaves its target unchanged; backup rotation may already have completed.                                             |
+
+#### Design considerations
+
+Immutable snapshots provide one representation for change detection and persistence, keeping save decisions out of
+individual commands. Versioned text is inspectable and supports recovery of valid rows, but the codec must validate every
+external value and preserve compatibility. Capturing and encoding the complete ledger also takes time proportional to
+its size. An incremental change log could reduce repeated work, at the cost of more complex replay and recovery logic.
+
+Temporary files and atomic replacement avoid truncating the main file while writing a new snapshot. This approach needs
+additional disk space and filesystem support for atomic moves. If replacement is unsupported or fails, the application
+reports the failure and retains pending changes instead of falling back to a non-atomic overwrite.
 
 ### Validation and error handling
 
-| Boundary | What to explain |
-| --- | --- |
-| Parser | Required arguments, numeric formats, limits, currency codes, and positive indices. |
-| Command execution | Checks depending on current state, such as whether a deletion index exists. |
-| Model | Internal invariants and assertions; distinguish these from external-input validation. |
-| Storage decoding | Record validation, skipped rows, compatibility checks, and recovery warnings. |
-| Application | Handling expected errors, retaining unsaved changes, and communicating save failures. |
+| Boundary          | Responsibility                                                                                      |
+|-------------------|-----------------------------------------------------------------------------------------------------|
+| Parser            | Validate required arguments, numeric formats, limits, currency codes, and positive indices.         |
+| Command execution | Check current state, such as whether a deletion index or category exists.                           |
+| Model             | Assert internal invariants; validate external input before it reaches assertion-based constructors. |
+| Storage decoding  | Validate records, skip invalid rows, check compatibility, and collect recovery warnings.            |
+| Application       | Display expected errors, retain unsaved changes, and communicate save failures.                     |
 
-[Insert invalid-command walkthrough identifying where the error originates and how it reaches the user here]
+For example, `withdraw 4.50` reaches `Parser#parseWithdraw()`, which rejects the missing description with a
+`FinNusException`. No command is returned or executed, so the ledger is unchanged. `FinNUS#run()` catches the exception,
+passes its message to `Ui#showError()`, and reads the next command. Any changes still pending from an earlier command
+remain available for a later save attempt.
 
 ### Additional feature template
 
@@ -657,6 +883,8 @@ Duplicate this subsection for any other feature that warrants a detailed explana
 **Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Documentation, logging, testing, and DevOps
 
@@ -666,7 +894,9 @@ Duplicate this subsection for any other feature that warrants a detailed explana
 - [README](../README.md): project overview and contributor setup information.
 - [Build configuration](../build.gradle): Java toolchain, dependencies, packaging, and checks.
 
-[Insert agreed locations for editable UML sources and exported images here]
+Editable PlantUML files are in `docs/diagrams`, and the guide displays their exported PNGs from
+`docs/images`. Each figure caption links to its source. After changing a diagram, regenerate its PNG with
+PlantUML and check that the source and displayed image agree.
 
 Keep diagrams consistent with the code. Explain relationships, number figures, and link images to their editable sources.
 
@@ -684,6 +914,8 @@ Run `check` using the setup table above. GitHub Actions runs checks with Java 25
 
 [Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Product scope
@@ -703,27 +935,33 @@ to make allowance and campus-expense tracking straightforward, including for stu
 
 [Insert features included in this release and explicit exclusions here]
 
-[Insert confirmation of whether daily spending allowances or foreign-currency transaction conversion are planned here]
+Foreign-currency transaction conversion is implemented. [Confirm whether allowance-cycle and daily-budget features
+are included in this release.]
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## User stories
 
-The stories below are based on the supplied requirements image. Confirm their acceptance criteria with the team.
+The stories below describe product goals; some features are not implemented. Confirm release priorities and acceptance
+criteria with the team.
 
-| ID | As a/an... | I want to... | So that... |
-| --- | --- | --- | --- |
-| US-01 | active user | edit the display currency | I can change the currency used for display |
-| US-02 | lazy user | set the day my allowance arrives | the app knows my budgeting cycle |
-| US-03 | habitual user | view all transactions | I can review my spending history |
-| US-04 | international student | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD |
-| US-05 | forgetful user | categorise my spending | I can later see where my money went |
-| US-06 | disciplined user | list this cycle's spending | I can check that nothing is missing |
-| US-07 | power user | see my balance through visual charts | I can see my financial status clearly |
-| US-08 | forward-planning student | see how many days remain until my next allowance | I can pace my spending |
+| ID    | As a/an...               | I want to...                                                            | So that...                                 |
+|-------|--------------------------|-------------------------------------------------------------------------|--------------------------------------------|
+| US-01 | active user              | edit the display currency                                               | I can change the currency used for display |
+| US-02 | lazy user                | set the day my allowance arrives                                        | the app knows my budgeting cycle           |
+| US-03 | habitual user            | view all transactions                                                   | I can review my spending history           |
+| US-04 | international student    | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD             |
+| US-05 | forgetful user           | categorise my spending                                                  | I can later see where my money went        |
+| US-06 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
+| US-07 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
+| US-08 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
 
 [Add acceptance criteria for each story selected for implementation.]
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Use cases
@@ -762,37 +1000,42 @@ The stories below are based on the supplied requirements image. Confirm their ac
 **Extension:** If the ledger is empty, FinNUS displays an empty-list message.
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Non-functional requirements
 
-The images describe product goals rather than formal quality constraints. The following are proposed non-functional
-requirements inferred from those goals. Confirm the targets with the team before treating them as release commitments.
+The following proposed quality requirements are derived from the product goals. Confirm their targets with the team
+before treating them as release commitments.
 
-| ID | Quality | Proposed requirement | How to verify |
-| --- | --- | --- | --- |
+| ID     | Quality            | Proposed requirement                                                                                                                                                                                                                                    | How to verify                                                                                                                    |
+|--------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | NFR-01 | Financial accuracy | Monetary calculations must use decimal arithmetic. Displayed SGD balances must equal the opening balance plus deposits minus withdrawals, to the cent. Converted allowances must use the rate recorded for that deposit and a documented rounding rule. | Test decimal edge cases, repeated additions, deposits in foreign currencies, and balance totals against hand-calculated results. |
-| NFR-02 | Data integrity | A rejected command must leave the ledger unchanged. A completed state change must either be saved or clearly reported as unsaved. | Exercise invalid input and simulated storage failures; compare ledger state before and after. |
-| NFR-03 | Persistence | The opening balance, transactions, and exchange rates must be available after restarting the application. | Create sample ledger data, exit, restart using the same data folder, and compare restored values. |
-| NFR-04 | Usability | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command. | Manually test documented commands, malformed inputs, and recovery with a following valid command. |
-| NFR-05 | Compatibility | The application must run with Java 25 on the operating systems supported by the project. | Build and run the automated checks on Windows, macOS, and Linux CI environments. |
+| NFR-02 | Data integrity     | A rejected command must leave the ledger unchanged. A completed state change must either be saved or clearly reported as unsaved.                                                                                                                       | Exercise invalid input and simulated storage failures; compare ledger state before and after.                                    |
+| NFR-03 | Persistence        | The opening balance, transactions, and exchange rates must be available after restarting the application.                                                                                                                                               | Create sample ledger data, exit, restart using the same data folder, and compare restored values.                                |
+| NFR-04 | Usability          | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command.                                                                                                      | Manually test documented commands, malformed inputs, and recovery with a following valid command.                                |
+| NFR-05 | Compatibility      | The application must run with Java 25 on the operating systems supported by the project.                                                                                                                                                                | Build and run the automated checks on Windows, macOS, and Linux CI environments.                                                 |
 
 [Confirm the supported operating systems and rounding policy with the team.]
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Glossary
 
-| Term | Meaning |
-| --- | --- |
-| CLI | Command-line interface accepting text commands. |
-| Ledger | Transactions, opening balance, and exchange rates held by FinNUS. |
-| Opening balance | Funds held before recording transactions; separate from transaction history. |
-| Base currency | SGD, used for transaction amounts and balances. |
-| Exchange rate | Foreign-currency units equivalent to one SGD. |
-| Snapshot | An immutable value copy of financial state for persistence and change detection. |
-| Recent-list index | A one-based position counting from the newest transaction. |
-| [Insert term here] | [Insert definition here] |
+| Term              | Meaning                                                                                       |
+|-------------------|-----------------------------------------------------------------------------------------------|
+| CLI               | Command-line interface accepting text commands.                                               |
+| Ledger            | Transactions, opening balance, exchange rates, and custom spending categories held by FinNUS. |
+| Opening balance   | Funds held before recording transactions; separate from transaction history.                  |
+| Base currency     | SGD, used for transaction amounts and balances.                                               |
+| Exchange rate     | Foreign-currency units equivalent to one SGD.                                                 |
+| Snapshot          | An immutable value copy of financial state for persistence and change detection.              |
+| Recent-list index | A one-based position counting from the newest transaction.                                    |
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Instructions for manual testing
@@ -820,37 +1063,39 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 ### Functional scenarios
 
-| ID | Preconditions | Steps / input | Expected result |
-| --- | --- | --- | --- |
-| MT-01 | Fresh folder | Launch, enter `help`, then `exit`. | Welcome and help appear; the process exits. [Insert exact output here] |
-| MT-02 | First-run setup completed with opening balance SGD 100 | Enter sample commands, then `balance`. | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here] |
-| MT-03 | Sample ledger | Enter `recent 2`, `delete 1`, then `balance`. | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here] |
-| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`. | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
-| MT-05 | Sample ledger | Enter `rate JPY 120`, then `rate`. | JPY changes to 120 without a duplicate entry. [Insert exact output here] |
-| MT-06 | Saved sample ledger | Exit, restart, then enter `balance`, `recent 2`, and `rate`. | Opening balance, transactions, and rate are restored. [Insert exact output here] |
+| ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
+|-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
+| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
+| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
+| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
+| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry. [Insert exact output here]                                    |
+| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored. [Insert exact output here]                            |
 
 ### Storage and recovery scenarios
 
 Use disposable test copies and stop the application before editing fixture files.
 
-| ID | Fixture / failure | Procedure and expected result to complete |
-| --- | --- | --- |
-| MT-07 | One corrupt row | [Insert file contents, launch steps, warning, recovered records, and resulting balance here] |
-| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here] |
-| MT-09 | Unsupported version | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here] |
-| MT-10 | Save failure | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
+| ID    | Fixture / failure                   | Procedure and expected result to complete                                                           |
+|-------|-------------------------------------|-----------------------------------------------------------------------------------------------------|
+| MT-07 | One corrupt row                     | [Insert file contents, launch steps, warning, recovered records, and resulting balance here]        |
+| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here]                       |
+| MT-09 | Unsupported version                 | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here]                |
+| MT-10 | Save failure                        | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
 
 [Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Planned enhancements
 
 Keep approved future work separate from implemented behaviour. Remove this section if outside the release scope.
 
-| Enhancement | User need | Proposed design and affected components | Target release |
-| --- | --- | --- | --- |
-| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here] | [Insert release here] |
+| Enhancement               | User need          | Proposed design and affected components | Target release        |
+|---------------------------|--------------------|-----------------------------------------|-----------------------|
+| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here]    | [Insert release here] |
 
 [Insert UML diagram of a proposed feature here, if applicable]
 <!-- @@author -->

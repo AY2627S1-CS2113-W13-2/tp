@@ -8,8 +8,8 @@ import java.util.Optional;
  * Declaration order determines the order of commands in help output.
  */
 public enum CommandWord {
-    DEPOSIT("deposit", "Record income", "AMOUNT [d/DESCRIPTION] [c/CURRENCY]"),
-    WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]"),
+    DEPOSIT("deposit", "Record income", "AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]"),
+    WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]"),
     RECENT("recent", "Recent activity", "[NUMBER]"),
     FIND("find", "Search descriptions", "KEYWORD"),
     DELETE("delete", "Delete a record", "INDEX"),

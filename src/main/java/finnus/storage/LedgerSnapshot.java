@@ -1,6 +1,7 @@
 package finnus.storage;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +92,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
      */
     //@@author
     public record StoredTransaction(TransactionType type, Money amount, String description,
-                                    ForeignAmount foreignAmount, String category) {
+                                    ForeignAmount foreignAmount, String category, LocalDate date) {
         //@@author naieel04
         /**
          * Validates external values before they reach assertion-based domain constructors.
@@ -137,6 +138,14 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             this(type, amount, description, foreignAmount,
                     type == TransactionType.WITHDRAWAL ? CategoryList.DEFAULT_CATEGORY : null);
         }
+
+        /**
+         * Creates a stored transaction without a date, as saved before dates were recorded.
+         */
+        public StoredTransaction(TransactionType type, Money amount, String description,
+                ForeignAmount foreignAmount, String category) {
+            this(type, amount, description, foreignAmount, category, null);
+        }
         //@@author
 
         //@@author chancheese
@@ -167,7 +176,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
                 .map(transaction -> new StoredTransaction(transaction.getType(), transaction.getAmount(),
                         //@@author
                         transaction.getDescription(), transaction.getForeignAmount().orElse(null),
-                        transaction.getCategory().orElse(null)))
+                        transaction.getCategory().orElse(null), transaction.getDate().orElse(null)))
                 //@@author naieel04
                 .toList();
         //@@author
@@ -190,11 +199,12 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             //@@author chancheese
             if (record.foreignAmount() != null) {
                 ledger.add(new Transaction(record.type(), record.foreignAmount(), record.description(),
-                        record.category()));
+                        record.category(), record.date()));
                 continue;
             }
             //@@author
-            ledger.add(new Transaction(record.type(), record.amount(), record.description(), record.category()));
+            ledger.add(new Transaction(record.type(), record.amount(), record.description(), record.category(),
+                    record.date()));
         }
         //@@author naieel04
         rates.forEach(ledger.getRates()::setRate);

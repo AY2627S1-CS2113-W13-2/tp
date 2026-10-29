@@ -1,7 +1,6 @@
 //@@author naieel04
 package finnus.command;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -69,13 +68,11 @@ class HelpCommandTest {
                 .filter(command -> command != CommandWord.OPENING)
                 .toArray(CommandWord[]::new);
         //@@author naieel04
-        assertEquals(commands.length, rows.size());
-        for (int i = 0; i < commands.length; i++) {
-            String[] columns = rows.get(i).split("\\|", -1);
-            assertEquals(5, columns.length, "Each row must contain three columns and outer borders");
-            String[] expectedColumns = {commands[i].getWord(), commands[i].getDescription(), commands[i].getUsage()};
-            assertArrayEquals(expectedColumns,
-                    new String[] {columns[1].trim(), columns[2].trim(), columns[3].trim()});
+        for (CommandWord command : commands) {
+            long matchingRows = rows.stream()
+                    .filter(row -> row.split("\\|", -1)[1].trim().equals(command.getWord()))
+                    .count();
+            assertEquals(1, matchingRows, command.getWord() + " must appear in one command row");
         }
     }
 
@@ -88,10 +85,31 @@ class HelpCommandTest {
         List<Integer> expectedBoundaries = findColumnBoundaries(border, '+');
         assertEquals(4, expectedBoundaries.size());
         for (String line : tableLines) {
+            assertEquals(80, line.length(), "Table lines must stay within the 80-column limit");
             assertEquals(border.length(), line.length(), "Table rows must fit within the border");
             char delimiter = line.startsWith("+") ? '+' : '|';
             assertEquals(expectedBoundaries, findColumnBoundaries(line, delimiter));
         }
+    }
+
+    @Test
+    public void wrap_longUnbrokenToken_splitsWithoutLosingCharacters() {
+        assertEquals(List.of("abcdefgh", "ijklmnop", "q"), HelpCommand.wrap("abcdefghijklmnopq", 8));
+    }
+
+    @Test
+    public void wrap_wordsAtColumnWidth_wrapsBetweenWords() {
+        assertEquals(List.of("alpha", "beta"), HelpCommand.wrap("alpha beta", 5));
+    }
+
+    @Test
+    public void wrap_exactWidthToken_staysOnOneLine() {
+        assertEquals(List.of("abcdefgh"), HelpCommand.wrap("abcdefgh", 8));
+    }
+
+    @Test
+    public void wrap_emptyText_returnsNoLines() {
+        assertEquals(List.of(), HelpCommand.wrap("", 8));
     }
 
     @Test
