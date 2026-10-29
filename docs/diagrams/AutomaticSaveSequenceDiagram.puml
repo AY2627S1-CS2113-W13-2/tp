@@ -1,0 +1,38 @@
+@startuml AutomaticSaveSequenceDiagram
+' @@author naieel04
+' One successful save; filesystem messages summarize operations and the replacement strategy.
+participant ":FinNUS" as FinNUS
+participant "storage:FileStorage" as Storage
+participant "codec:LedgerCodec" as Codec
+participant "<<class>>\nFiles" as Files
+
+note over FinNUS
+    Ledger changes are pending and saving is allowed.
+    Capture the current ledger snapshot.
+end note
+FinNUS -> Storage: save(snapshot)
+activate Storage
+note over Storage, Files
+    File operations are summarised.
+    Preserve damaged files before replacement.
+end note
+Storage -> Codec: encode(snapshot)
+activate Codec
+Codec --> Storage: text
+deactivate Codec
+Storage -> Files: writeString(...)
+Files --> Storage: return
+opt main file exists and is known clean
+    Storage -> Files: save previous ledger as backup
+    Files --> Storage: return
+end
+Storage -> Files: atomically replace main file
+Files --> Storage: return
+Storage --> FinNUS: return
+deactivate Storage
+note over FinNUS
+    Clear pending changes after saving.
+    Failed saves remain pending for retry after
+    a successful command or at shutdown.
+end note
+@enduml
