@@ -269,6 +269,7 @@ Formats: `category` or `category NAME`
 
 * `NAME` is one word made of letters, digits and `-`, at most 20 characters, e.g. `Gym` or `bubble-tea`.
 * `NAME` must not already exist, ignoring case. For example, `category FOOD` is rejected because `Food` exists.
+* `add` and `list` are valid category names when entered alone: `category add` creates `add`, and `category list` creates `list`.
 
 Example: `category Gym`, then `withdraw 30 d/Membership t/gym`
 ```
@@ -534,7 +535,7 @@ Available commands:
 | allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
 |              |                      | [c/CURRENCY]] or off                   |
 | rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
-| category     | Manage categories    | category add NAME or list              |
+| category     | Manage categories    | category [NAME]                        |
 | help         | List commands        | help                                   |
 | exit         | Close FinNUS         | exit                                   |
 +--------------+----------------------+----------------------------------------+

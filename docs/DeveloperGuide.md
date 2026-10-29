@@ -657,7 +657,8 @@ because the record is inconsistent.
 ### Categorising spending
 
 Every withdrawal belongs to exactly one category, given with `t/CATEGORY` (e.g. `withdraw 4.50 d/Lunch t/food`).
-Users can add their own categories with `category NAME` and list all categories with `category`.
+Users can add their own categories with `category NAME` and list all categories with `category`. A name may be `add` or
+`list`; these are treated as category names, not subcommands.
 
 #### Classes involved
 

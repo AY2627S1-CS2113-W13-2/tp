@@ -111,6 +111,12 @@ public class Parser {
     private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX
             + "\\s*(\\S*)");
 
+    /** Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty). */
+    private static final Pattern DATE_PATTERN = Pattern.compile("(?<!\\S)" + DATE_PREFIX + "\\s*(\\S*)");
+
+    /** A date safely in the past, so the example remains valid on future runs. */
+    private static final String DATE_EXAMPLE = DATE_PREFIX + "2026-01-15";
+
     //@@author
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
@@ -511,10 +517,7 @@ public class Parser {
         return nameAndRest;
     }
 
-    /**
-     * Parses {@code category} (list categories) or {@code category NAME} (add a category).
-     * The date of a transaction together with the arguments left after removing {@code on/DATE}.
-     */
+    /** The date of a transaction and the arguments left after removing {@code on/DATE}. */
     record DateAndRest(LocalDate date, String rest) {
     }
 
@@ -558,7 +561,7 @@ public class Parser {
     }
 
     /**
-     * Parses {@code category list} or {@code category add NAME}.
+     * Parses {@code category} to list categories or {@code category NAME} to add one.
      */
     private static Command parseCategory(String arguments) throws FinNusException {
         if (arguments.isBlank()) {

@@ -407,7 +407,8 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"category", "CATEGORY", "category Gym", "category bubble-tea"})
+    @ValueSource(strings = {"category", "CATEGORY", "category Gym", "category bubble-tea",
+        "category add", "category list"})
     public void parse_validCategoryCommand_returnsCategoryCommand(String input) throws FinNusException {
         assertInstanceOf(CategoryCommand.class, Parser.parse(input));
     }
@@ -440,6 +441,22 @@ class ParserTest {
 
         Parser.parse("category Gym").execute(transactions, ui);
         assertEquals(List.of("Gym"), transactions.getCategories().getCustom());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"add", "list"})
+    public void parse_categoryNameMatchingFormerSubcommand_addsCategory(String name) throws FinNusException {
+        TransactionList transactions = new TransactionList();
+        Ui ui = new Ui() {
+            @Override
+            public void showMessage(String... lines) {
+                // Category creation has no effect on the ledger output needed by this test.
+            }
+        };
+
+        Parser.parse("category " + name).execute(transactions, ui);
+
+        assertEquals(List.of(name), transactions.getCategories().getCustom());
     }
 
     @Test
