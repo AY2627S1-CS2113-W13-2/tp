@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
 import finnus.currency.ForeignAmount;
@@ -23,7 +24,8 @@ import finnus.transaction.TransactionType;
  */
 //@@author
 public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
-                             Map<String, BigDecimal> rates, List<String> customCategories) {
+                             Map<String, BigDecimal> rates, List<String> customCategories,
+                             Allowance allowance) {
     //@@author naieel04
     /**
      * Copies mutable collections and rejects values that cannot represent a valid ledger.
@@ -50,7 +52,23 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             }
         }
         //@@author
+        //@@author chancheese
+        if (allowance != null) {
+            validateAllowance(allowance.day(), allowance.amount(), allowance.currencyCode(),
+                    allowance.lastCredited());
+        }
+        //@@author
     }
+
+    //@@author chancheese
+    /**
+     * Creates a snapshot without an allowance.
+     */
+    public LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
+            Map<String, BigDecimal> rates, List<String> customCategories) {
+        this(openingBalance, transactions, rates, customCategories, null);
+    }
+    //@@author
 
     //@@author nabijonzzz
     /**
@@ -164,7 +182,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
      */
     public static LedgerSnapshot empty() {
         //@@author
-        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of());
+        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of(), null);
     }
 
     //@@author naieel04
@@ -181,7 +199,9 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
                 .toList();
         //@@author
         return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll(),
-                ledger.getCategories().getCustom());
+                //@@author chancheese
+                ledger.getCategories().getCustom(), ledger.getAllowance().orElse(null));
+        //@@author
     }
 
     //@@author naieel04
@@ -208,6 +228,9 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         }
         //@@author naieel04
         rates.forEach(ledger.getRates()::setRate);
+        //@@author chancheese
+        ledger.setAllowance(allowance);
+        //@@author
         return ledger;
     }
 
@@ -243,5 +266,39 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             throw new IllegalArgumentException("Rate must not exceed " + Parser.MAX_RATE);
         }
     }
+
+    //@@author chancheese
+    /**
+     * Checks the values of a stored allowance before they reach the assertion-checked
+     * {@link Allowance} constructor, since a save file may have been edited by hand.
+     */
+    static void validateAllowance(int day, BigDecimal amount, String currencyCode, LocalDate lastCredited) {
+        if (day < Allowance.MIN_DAY || day > Allowance.MAX_DAY) {
+            throw new IllegalArgumentException("Allowance day must be from 1 to 31");
+        }
+        if (amount != null && (amount.signum() <= 0 || amount.scale() > 2)) {
+            throw new IllegalArgumentException("Allowance amount must be positive with at most 2 decimal places");
+        }
+        if (amount != null && currencyCode == null && amount.compareTo(Money.MAX_AMOUNT.toBigDecimal()) > 0) {
+            throw new IllegalArgumentException("Allowance amount must not exceed " + Money.MAX_AMOUNT.format());
+        }
+        if (currencyCode != null) {
+            if (amount == null) {
+                throw new IllegalArgumentException("Allowance currency needs an amount");
+            }
+            try {
+                Currency.getInstance(currencyCode);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid currency code");
+            }
+            if (CurrencyRates.BASE_CURRENCY.equals(currencyCode)) {
+                throw new IllegalArgumentException("SGD allowances are saved without a currency");
+            }
+        }
+        if (lastCredited == null || lastCredited.isBefore(Parser.EARLIEST_DATE)) {
+            throw new IllegalArgumentException("Invalid last credited date");
+        }
+    }
+    //@@author
 }
 //@@author

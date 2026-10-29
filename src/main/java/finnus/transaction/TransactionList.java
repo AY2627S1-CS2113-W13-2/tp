@@ -3,7 +3,9 @@ package finnus.transaction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
+import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
 import finnus.money.Money;
@@ -38,6 +40,14 @@ public class TransactionList {
     private final CategoryList categories = new CategoryList();
     //@@author
 
+    //@@author chancheese
+    /**
+     * The user's monthly allowance, or null if it has not been set. It is a setting, not a
+     * transaction, so it never shifts the indices used by {@code recent} and {@code delete}.
+     */
+    private Allowance allowance;
+    //@@author
+
     /** Adds a transaction at the end of the ledger, preserving entry order. */
     public void add(Transaction transaction) {
         int oldSize = transactions.size();
@@ -66,6 +76,22 @@ public class TransactionList {
     /** Returns the categories that withdrawals can be tagged with. */
     public CategoryList getCategories() {
         return categories;
+    }
+    //@@author
+
+    //@@author chancheese
+    /** Returns the user's allowance, or an empty Optional if it has not been set. */
+    public Optional<Allowance> getAllowance() {
+        return Optional.ofNullable(allowance);
+    }
+
+    /**
+     * Replaces the allowance setting.
+     *
+     * @param allowance The new allowance, or null to remove it.
+     */
+    public void setAllowance(Allowance allowance) {
+        this.allowance = allowance;
     }
     //@@author
 

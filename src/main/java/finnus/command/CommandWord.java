@@ -15,6 +15,9 @@ public enum CommandWord {
     DELETE("delete", "Delete a record", "INDEX"),
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),
+    //@@author chancheese
+    ALLOWANCE("allowance", "Monthly allowance", "[DAY [a/AMOUNT] [c/CURRENCY]] or off"),
+    //@@author
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
     CATEGORY("category", "Manage categories", "add NAME or list"),
     HELP("help", "List commands", ""),

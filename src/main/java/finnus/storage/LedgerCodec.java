@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.ForeignAmount;
 import finnus.money.Money;
@@ -41,6 +42,11 @@ public class LedgerCodec {
     //@@author
     //@@author nabijonzzz
     private static final String CATEGORY = "CATEGORY";
+    //@@author chancheese
+    /** {@code ALLOWANCE|DAY|AMOUNT|CURRENCY|LAST_CREDITED}; amount and currency may be empty. */
+    private static final String ALLOWANCE = "ALLOWANCE";
+    private static final int ALLOWANCE_FIELDS = 5;
+    //@@author nabijonzzz
     /** Transactions saved since categories were added have the category as one extra, last field. */
     private static final int CATEGORY_FIELDS = 1;
     /**
@@ -95,6 +101,15 @@ public class LedgerCodec {
                 .append(code).append('|').append(rate.toPlainString()).append('\n'));
         //@@author nabijonzzz
         snapshot.customCategories().forEach(name -> text.append(CATEGORY).append('|').append(name).append('\n'));
+        //@@author
+        //@@author chancheese
+        Allowance allowance = snapshot.allowance();
+        if (allowance != null) {
+            text.append(ALLOWANCE).append('|').append(allowance.day()).append('|')
+                    .append(allowance.hasAmount() ? allowance.amount().toPlainString() : "").append('|')
+                    .append(allowance.currencyCode() == null ? "" : allowance.currencyCode()).append('|')
+                    .append(allowance.lastCredited()).append('\n');
+        }
         //@@author
         //@@author naieel04
         for (StoredTransaction transaction : snapshot.transactions()) {
@@ -192,6 +207,8 @@ public class LedgerCodec {
         case TRANSACTION -> parseTransaction(fields, records);
         //@@author
         case CATEGORY -> parseCategory(fields, records);
+        //@@author chancheese
+        case ALLOWANCE -> parseAllowance(fields, records);
         //@@author naieel04
         default -> throw new IllegalArgumentException("Unknown record type");
         }
@@ -302,6 +319,27 @@ public class LedgerCodec {
         return date;
     }
 
+    //@@author chancheese
+    /**
+     * Reads the allowance setting, rejecting invalid values and a second allowance record.
+     */
+    private void parseAllowance(String[] fields, Records records) {
+        requireFields(fields, ALLOWANCE_FIELDS);
+        if (!fields[1].matches("\\d{1,2}")) {
+            throw new IllegalArgumentException("Invalid allowance day");
+        }
+        int day = Integer.parseInt(fields[1]);
+        BigDecimal amount = fields[2].isEmpty() ? null : parseDecimal(fields[2]);
+        String currencyCode = fields[3].isEmpty() ? null : fields[3];
+        LocalDate lastCredited = parseDate(fields[4]);
+        LedgerSnapshot.validateAllowance(day, amount, currencyCode, lastCredited);
+        if (records.allowance != null) {
+            throw new IllegalArgumentException("Duplicate allowance record");
+        }
+        records.allowance = new Allowance(day, amount, currencyCode, lastCredited);
+    }
+    //@@author nabijonzzz
+
     /**
      * Adds a custom category, rejecting invalid or duplicate names (ignoring case,
      * including the predefined categories).
@@ -393,6 +431,9 @@ public class LedgerCodec {
         private final CategoryList categories = new CategoryList();
         private final List<PendingTransaction> transactions = new ArrayList<>();
         //@@author
+        //@@author chancheese
+        private Allowance allowance;
+        //@@author
         //@@author naieel04
         private final Map<String, BigDecimal> rates = new TreeMap<>();
         private final List<String> warnings = new ArrayList<>();
@@ -408,7 +449,8 @@ public class LedgerCodec {
             Status status = validRecords == 0 ? Status.UNRECOVERABLE
                     : warnings.isEmpty() ? Status.CLEAN : Status.PARTIAL;
             //@@author
-            LedgerSnapshot snapshot = new LedgerSnapshot(opening, resolved, rates, categories.getCustom());
+            LedgerSnapshot snapshot = new LedgerSnapshot(opening, resolved, rates, categories.getCustom(),
+                    allowance);
             assert snapshot != null : "Decoded ledger snapshot must exist";
             logger.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
             return new DecodeResult(snapshot, warnings, status);
