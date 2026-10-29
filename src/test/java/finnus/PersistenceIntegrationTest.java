@@ -31,7 +31,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_twoSessions_restoresBalanceRatesAndRecentOrdering() {
         Path path = directory.resolve("finnus.txt");
-        new FinNUS(new ScriptedUi("100.00", "yes", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
+        new FinNUS(new ScriptedUi("100.00", "yes", "", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
                 "rate JPY 110.00", "exit"), new FileStorage(path)).run();
         ScriptedUi second = new ScriptedUi("balance", "recent", "rate", "deposit 1", "delete 2", "exit");
         new FinNUS(second, new FileStorage(path)).run();
@@ -54,7 +54,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_setupConfirmation_persistsOpeningBalanceAndSkipsSetupNextTime() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi setup = new ScriptedUi("67", "yes", "exit");
+        ScriptedUi setup = new ScriptedUi("67", "yes", "", "exit");
         new FinNUS(setup, new FileStorage(path)).run();
 
         LedgerSnapshot saved = new FileStorage(path).load().snapshot();
@@ -75,7 +75,7 @@ class PersistenceIntegrationTest {
 
         assertTrue(new FileStorage(path).load().setupRequired());
 
-        ScriptedUi retry = new ScriptedUi("67", "yes", "exit");
+        ScriptedUi retry = new ScriptedUi("67", "yes", "", "exit");
         new FinNUS(retry, new FileStorage(path)).run();
         assertFalse(new FileStorage(path).load().setupRequired());
         assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
@@ -143,7 +143,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_interruptedBeforeExit_changesAreAlreadySaved() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi interrupted = new ScriptedUi("3", "yes", "deposit 3") {
+        ScriptedUi interrupted = new ScriptedUi("3", "yes", "", "deposit 3") {
             @Override
             public String readCommand() {
                 String command = super.readCommand();

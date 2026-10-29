@@ -193,7 +193,18 @@ public class Transaction {
         return Optional.ofNullable(date);
     }
     //@@author
-    
+
+    //@@author chancheese
+    /**
+     * Formats a date the same way transactions show it, e.g. {@code 30 Oct 2026}, so other
+     * features such as the allowance summary show dates consistently.
+     */
+    public static String formatDate(LocalDate date) {
+        assert date != null : "Date must not be null";
+        return date.format(DISPLAY_DATE);
+    }
+    //@@author
+
     /**
      * Returns the effect of this transaction on the balance:
      * positive for a deposit, negative for a withdrawal.

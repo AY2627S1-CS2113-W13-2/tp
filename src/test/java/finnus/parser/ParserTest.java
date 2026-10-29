@@ -20,6 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.command.AllowanceCommand;
 import finnus.command.BalanceCommand;
 import finnus.command.CategoryCommand;
 import finnus.command.Command;
@@ -55,6 +56,7 @@ class ParserTest {
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
+            Map.entry(CommandWord.ALLOWANCE, new CommandExample("allowance 5 a/500", AllowanceCommand.class)),
             Map.entry(CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class)),
             Map.entry(CommandWord.CATEGORY, new CommandExample("category", CategoryCommand.class)),
             Map.entry(CommandWord.HELP, new CommandExample("help", HelpCommand.class)),

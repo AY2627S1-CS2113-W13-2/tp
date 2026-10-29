@@ -1,14 +1,17 @@
 package finnus.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
+import finnus.allowance.Allowance;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -133,4 +136,24 @@ class BalanceCommandTest {
 
         return output.toString(StandardCharsets.UTF_8);
     }
+
+    //@@author chancheese
+    @Test
+    public void execute_allowanceSet_showsCountdown() {
+        TransactionList transactions = new TransactionList();
+        transactions.setAllowance(new Allowance(5, null, null, LocalDate.of(2026, 10, 5)));
+
+        String output = runAndCaptureOutput(new BalanceCommand(LocalDate.of(2026, 10, 29)), transactions);
+
+        assertTrue(output.contains("Your current balance is: $0.00"));
+        assertTrue(output.contains("Next allowance in 7 days (5 Nov 2026)."));
+    }
+
+    @Test
+    public void execute_noAllowance_showsNoCountdown() {
+        String output = runAndCaptureOutput(new BalanceCommand(LocalDate.of(2026, 10, 29)), new TransactionList());
+
+        assertFalse(output.contains("Next allowance"));
+    }
+    //@@author
 }

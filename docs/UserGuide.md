@@ -16,7 +16,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
    java -jar finnus.jar
    ```
 
-5. The first time you run FinNUS, it asks for your opening balance. See [First-run setup](#first-run-setup-opening-balance).
+5. The first time you run FinNUS, it asks for your opening balance, and optionally your monthly allowance. See [First-run setup](#first-run-setup-opening-balance).
 6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
 7. Refer to the Features section below for details of each command.
 
@@ -109,7 +109,8 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
-* After confirmation, setup is complete and normal commands begin. Afterwards, `opening` is not a command.
+* After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
+  skip, and then normal commands begin. Afterwards, `opening` is not a command.
 
 Example of first-run setup, entering `1200.50` and then `yes`:
 ```
@@ -120,10 +121,39 @@ This is your starting balance and will not be recorded as a transaction.
 ____________________________________________________________
 Opening balance (SGD): 1200.50
 Confirm opening balance $1200.50 SGD? [yes/no]: yes
+```
+
+<!-- @@author chancheese -->
+Next, FinNUS asks when your monthly allowance arrives and how much it is. Both are optional:
+
+* Enter the day of the month it arrives (1 to 31), then its amount in SGD.
+* Press Enter at the day to skip the allowance, or at the amount to only count the days until it arrives.
+* For an allowance in another currency, skip this and use [`allowance`](#setting-your-monthly-allowance-allowance)
+  after setting an exchange rate.
+
+Example, entering `5` and then `500` on 30 Oct 2026:
+```
+____________________________________________________________
+Optional: when does your monthly allowance arrive?
+FinNUS can count the days until it arrives and add it for you each month.
+Press Enter to skip; you can set it later with: allowance 5 a/500
+____________________________________________________________
+Allowance day (1-31): 5
+Allowance amount in SGD (Enter to only count days): 500
+____________________________________________________________
+Allowance set.
+Allowance: $500.00 on day 5 (added automatically)
+This cycle: 5 Oct 2026 - 4 Nov 2026
+Next allowance in 6 days (5 Nov 2026).
+Received this cycle: $0.00 in 0 deposit(s).
+Spent this cycle: $0.00 in 0 withdrawal(s).
+From 5 Nov 2026, FinNUS adds it as a deposit for you, so you do not need to record it.
+____________________________________________________________
 ____________________________________________________________
 Welcome to FinNUS! Type a command to get started.
 ____________________________________________________________
 ```
+<!-- @@author -->
 
 ### Setting an exchange rate: `rate`
 Sets how much of another currency 1 SGD buys, so FinNUS can convert amounts in that currency to SGD.
@@ -297,6 +327,86 @@ ____________________________________________________________
 ```
 <!-- @@author -->
 
+<!-- @@author chancheese -->
+### Setting your monthly allowance: `allowance`
+Tells FinNUS when your allowance arrives and how much it is. FinNUS then adds it as a deposit each month, and shows
+how many days your money has to last.
+
+Format: `allowance DAY [a/AMOUNT] [c/CURRENCY]`, `allowance` or `allowance off`
+
+* `DAY` is the day of the month the allowance arrives, from 1 to 31. In shorter months, the last day of the month is
+  used, e.g. `31` becomes 28 Feb.
+* `AMOUNT` follows the same rules as for `deposit`. Without `a/AMOUNT`, FinNUS only counts the days.
+* `c/CURRENCY` gives the currency of the amount, as for [`deposit`](#recording-an-amount-in-another-currency-c). It
+  needs `a/AMOUNT`.
+* Your budget cycle runs from one allowance day to the day before the next, e.g. 5 Oct to 4 Nov.
+* `allowance` on its own shows a summary of the current cycle. Running `allowance DAY ...` again replaces the old
+  setting.
+* `allowance off` stops it. Deposits that were already added are kept.
+
+How the allowance is added:
+
+* When FinNUS starts, it adds a deposit described as `Allowance` for each allowance day that has passed, dated on that
+  day. If FinNUS was closed for two months, both months are added.
+* It starts from the **next** allowance day, never an earlier one, so it will not double an allowance you already
+  recorded yourself.
+* An amount in another currency is converted at the exchange rate set at the time it is added. If no rate is set,
+  FinNUS waits and adds it once you set one with `rate`.
+* If you delete an allowance deposit, it is not added again. Changing the amount only affects later deposits.
+
+The summary counts deposits and withdrawals dated in the current cycle, in SGD. Transactions saved by older versions of
+FinNUS have no date, so they are not counted.
+
+Examples:
+
+* `allowance 5 a/500`
+* `allowance 25 a/60000 c/JPY`
+* `allowance 31`
+* `allowance`
+* `allowance off`
+
+Expected output for `allowance 5 a/500`:
+```
+____________________________________________________________
+Allowance set.
+Allowance: $500.00 on day 5 (added automatically)
+This cycle: 5 Oct 2026 - 4 Nov 2026
+Next allowance in 6 days (5 Nov 2026).
+Received this cycle: $0.00 in 0 deposit(s).
+Spent this cycle: $0.00 in 0 withdrawal(s).
+From 5 Nov 2026, FinNUS adds it as a deposit for you, so you do not need to record it.
+____________________________________________________________
+```
+
+Expected output for `allowance`, after recording an allowance and three withdrawals this cycle:
+```
+____________________________________________________________
+Allowance: $500.00 on day 5 (added automatically)
+This cycle: 5 Oct 2026 - 4 Nov 2026
+Next allowance in 6 days (5 Nov 2026).
+Received this cycle: $500.00 in 1 deposit(s).
+Spent this cycle: $18.30 in 3 withdrawal(s).
+____________________________________________________________
+```
+
+Expected output when FinNUS starts on or after 5 Nov 2026:
+```
+____________________________________________________________
+Welcome to FinNUS! Type a command to get started.
+____________________________________________________________
+____________________________________________________________
+Allowance added: [5 Nov 2026] [Deposit] +$500.00 (Allowance)
+____________________________________________________________
+```
+
+Example of an allowance that cannot be added yet, `allowance 5 a/60000 c/JPY` with no rate set for JPY:
+```
+____________________________________________________________
+Your allowance for 5 Nov 2026 was not added yet. No exchange rate set for JPY. Set one first with: rate JPY RATE
+____________________________________________________________
+```
+<!-- @@author -->
+
 ### Viewing balance: `balance`
 Shows the remaining balance of the user's account. 
 
@@ -313,6 +423,17 @@ ____________________________________________________________
 Your current balance is: $100.00
 ____________________________________________________________
 ```
+
+<!-- @@author chancheese -->
+If you have [set your allowance](#setting-your-monthly-allowance-allowance), `balance` also shows how many days are
+left until it arrives:
+```text
+____________________________________________________________
+Your current balance is: $581.70
+Next allowance in 6 days (5 Nov 2026).
+____________________________________________________________
+```
+<!-- @@author -->
 
 ### Viewing recent transactions: `recent`
 Shows the user's most recent transactions, ordered by recency with the newest transaction first.
@@ -399,20 +520,24 @@ Expected output:
 ```text
 ____________________________________________________________
 Available commands:
-+----------+---------------------+---------------------------------------------------------+
-| Command  | Description         | Syntax                                                  |
-+----------+---------------------+---------------------------------------------------------+
-| deposit  | Record income       | deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]             |
-| withdraw | Record spending     | withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] |
-| recent   | Recent activity     | recent [NUMBER]                                         |
-| find     | Search descriptions | find KEYWORD                                            |
-| delete   | Delete a record     | delete INDEX                                            |
-| balance  | Current balance     | balance                                                 |
-| rate     | Manage FX rates     | rate [CURRENCY RATE]                                    |
-| category | Manage categories   | category add NAME or list                               |
-| help     | List commands       | help                                                    |
-| exit     | Close FinNUS        | exit                                                    |
-+----------+---------------------+---------------------------------------------------------+
++--------------+----------------------+----------------------------------------+
+| Command      | Description          | Syntax                                 |
++--------------+----------------------+----------------------------------------+
+| deposit      | Record income        | deposit AMOUNT [d/DESCRIPTION]         |
+|              |                      | [c/CURRENCY] [on/DATE]                 |
+| withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |
+|              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |
+| recent       | Recent activity      | recent [NUMBER]                        |
+| find         | Search descriptions  | find KEYWORD                           |
+| delete       | Delete a record      | delete INDEX                           |
+| balance      | Current balance      | balance                                |
+| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
+|              |                      | [c/CURRENCY]] or off                   |
+| rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
+| category     | Manage categories    | category add NAME or list              |
+| help         | List commands        | help                                   |
+| exit         | Close FinNUS         | exit                                   |
++--------------+----------------------+----------------------------------------+
 
 [] means optional.
 ____________________________________________________________
@@ -435,11 +560,20 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 **A**: The opening balance can only be set during the first-run setup. After that, record changes to your money with
 `deposit` and `withdraw` instead.
 
+<!-- @@author chancheese -->
+**Q**: My allowance was counted twice. What happened?
+
+**A**: You probably recorded it with `deposit` as well as setting an amount with `allowance`. Remove one of them with
+`delete`. FinNUS does not add a deleted allowance again.
+<!-- @@author -->
+
 ## Command Summary
 
 * Add a deposit: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]`
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]`
 * View balance: `balance`
+* Set your monthly allowance: `allowance DAY [a/AMOUNT] [c/CURRENCY]`
+* View or stop your allowance: `allowance` or `allowance off`
 * View recent transactions: `recent [NUMBER]`
 * Find transactions by description: `find KEYWORD`
 * Delete a transaction: `delete INDEX`
