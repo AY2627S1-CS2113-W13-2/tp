@@ -1,0 +1,32 @@
+@startuml StorageClassDiagram
+' Name-only view of the main storage types; members and utility types are omitted.
+' Associations show stored references. Dashed dependencies show use/creation.
+hide members
+hide circle
+
+class "<<interface>>\nStorage" as Storage
+class FileStorage
+class LedgerCodec
+class LedgerSnapshot
+class LoadResult
+class "LedgerCodec.DecodeResult" as DecodeResult
+
+FileStorage ..|> Storage
+FileStorage --> "1" LedgerCodec: codec
+Storage ..> LoadResult: returns
+Storage ..> LedgerSnapshot: saves
+LedgerCodec ..> DecodeResult: creates
+LedgerCodec ..> LedgerSnapshot: encodes / creates
+LoadResult --> "1" LedgerSnapshot: snapshot
+DecodeResult --> "1" LedgerSnapshot: snapshot
+
+note bottom of LoadResult
+    Includes warnings, saving permission
+    and whether setup is required.
+end note
+note bottom of LedgerSnapshot
+    Immutable financial state:
+    opening balance, transactions,
+    rates and custom categories.
+end note
+@enduml

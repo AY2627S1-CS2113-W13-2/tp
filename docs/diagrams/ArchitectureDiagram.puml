@@ -1,0 +1,27 @@
+@startuml ArchitectureDiagram
+' Selected component dependencies, not a complete map of Java imports.
+top to bottom direction
+caption Only principal component dependencies are shown.
+
+component "Application\n(FinNUS, Setup)" as App
+component UI
+component Parser
+component Commands
+component "Ledger Model" as Model
+component Storage
+
+App ..> UI
+App ..> Parser
+App ..> Commands
+App ..> Model
+App ..> Storage
+Parser ..> Commands
+Commands ..> UI
+Commands ..> Model
+Storage ..> Model
+
+note bottom of Model
+    Includes transactions, money,
+    exchange rates and categories.
+end note
+@enduml

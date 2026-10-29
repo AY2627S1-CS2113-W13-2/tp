@@ -1,0 +1,41 @@
+@startuml StorageRecoveryActivityDiagram
+' Recovery policy only: filesystem operations, exceptions and internal flags are omitted.
+' Every path returns LoadResult; Setup runs later in FinNUS when requested.
+!pragma useVerticalIf on
+
+start
+:Load main file;
+if (Main outcome?) then ([clean or partial])
+    :Restore ledger from main file;
+    note right
+        Partial recovery adds warnings.
+        Preserve damaged bytes before saving.
+    end note
+elseif (Main outcome?) then ([setup pending])
+    :Request setup;
+elseif (Main outcome?) then ([unsupported format or other I/O failure])
+    :Use empty ledger\nDisable saving;
+else ([missing or unrecoverable])
+    :Load backup;
+    if (Backup outcome?) then ([clean])
+        :Restore ledger from backup\nAdd recovery warning;
+    elseif (Backup outcome?) then ([unsupported format or other I/O failure])
+        :Use empty ledger\nDisable saving;
+    elseif (Setup needed?) then ([backup setup pending or main missing])
+        :Prepare setup marker\nRequest setup;
+        note right
+            If marker creation fails,
+            setup continues with saving disabled.
+        end note
+    else ([else])
+        :Use empty ledger\nRetain damaged main file;
+    endif
+endif
+:Return ledger snapshot and warnings;
+note right
+    Invalid UTF-8 is damaged data;
+    other I/O failures disable saving.
+    Preserve damaged originals before replacement.
+end note
+stop
+@enduml
