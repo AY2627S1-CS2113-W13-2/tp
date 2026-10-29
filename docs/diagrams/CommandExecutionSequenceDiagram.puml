@@ -1,4 +1,5 @@
 @startuml CommandExecutionSequenceDiagram
+' @@author naieel04
 ' One successful SGD deposit after setup; saving is allowed.
 ' Transaction construction and snapshot internals are omitted.
 actor User

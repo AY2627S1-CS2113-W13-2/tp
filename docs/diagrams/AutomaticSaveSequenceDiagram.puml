@@ -1,4 +1,5 @@
 @startuml AutomaticSaveSequenceDiagram
+' @@author naieel04
 ' One successful save; filesystem messages summarize operations and the replacement strategy.
 participant ":FinNUS" as FinNUS
 participant "storage:FileStorage" as Storage

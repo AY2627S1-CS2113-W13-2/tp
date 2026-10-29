@@ -1,4 +1,5 @@
 @startuml CommandClassDiagram
+' @@author naieel04
 ' Representative command inheritance and ledger references.
 ' Logical groups are shown, not the full Java package structure.
 hide circle

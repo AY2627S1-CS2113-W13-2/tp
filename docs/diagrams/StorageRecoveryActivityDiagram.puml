@@ -1,4 +1,5 @@
 @startuml StorageRecoveryActivityDiagram
+' @@author naieel04
 ' Recovery policy only: filesystem operations, exceptions and internal flags are omitted.
 ' Every path returns LoadResult; Setup runs later in FinNUS when requested.
 !pragma useVerticalIf on
