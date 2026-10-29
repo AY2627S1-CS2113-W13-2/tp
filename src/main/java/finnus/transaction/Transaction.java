@@ -1,5 +1,8 @@
 package finnus.transaction;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Optional;
 
 import finnus.category.CategoryList;
@@ -15,6 +18,14 @@ import finnus.money.Money;
  * which would make balances drift over many transactions.
  */
 public class Transaction {
+    //@@author nabijonzzz
+    /**
+     * Shows dates such as {@code 30 Oct 2026}. English month names are used on every computer,
+     * so the output does not depend on the user's language settings.
+     */
+    private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+    //@@author
+
     private final TransactionType type;
     private final Money amount;
     private final String description;
@@ -27,6 +38,9 @@ public class Transaction {
     //@@author nabijonzzz
     /** The spending category of a withdrawal, or null for a deposit. */
     private final String category;
+
+    /** The day the transaction happened, or null if it was saved before dates were recorded. */
+    private final LocalDate date;
     //@@author
 
     /**
@@ -50,6 +64,19 @@ public class Transaction {
      * @param category The category of a withdrawal, or null for a deposit.
      */
     public Transaction(TransactionType type, Money amount, String description, String category) {
+        this(type, amount, description, category, null);
+    }
+
+    /**
+     * Creates a transaction typed in SGD with a spending category and a date.
+     *
+     * @param type Whether money was added or removed.
+     * @param amount A strictly positive amount; the sign is implied by {@code type}.
+     * @param description A short note, or an empty string if none was given.
+     * @param category The category of a withdrawal, or null for a deposit.
+     * @param date The day it happened, or null if unknown.
+     */
+    public Transaction(TransactionType type, Money amount, String description, String category, LocalDate date) {
         assert type != null : "Transaction type must not be null";
         assert amount != null && amount.isPositive() : "Transaction amount must be positive";
         assert description != null : "Description must not be null (use \"\" instead)";
@@ -59,6 +86,7 @@ public class Transaction {
         this.description = description;
         this.foreignAmount = null;
         this.category = category;
+        this.date = date;
     }
     //@@author
 
@@ -86,6 +114,20 @@ public class Transaction {
      * @param category The category of a withdrawal, or null for a deposit.
      */
     public Transaction(TransactionType type, ForeignAmount foreignAmount, String description, String category) {
+        this(type, foreignAmount, description, category, null);
+    }
+
+    /**
+     * Creates a transaction typed in another currency with a spending category and a date.
+     *
+     * @param type Whether money was added or removed.
+     * @param foreignAmount The amount as typed; its SGD value must be at least $0.01.
+     * @param description A short note, or an empty string if none was given.
+     * @param category The category of a withdrawal, or null for a deposit.
+     * @param date The day it happened, or null if unknown.
+     */
+    public Transaction(TransactionType type, ForeignAmount foreignAmount, String description, String category,
+            LocalDate date) {
         assert type != null : "Transaction type must not be null";
         assert foreignAmount != null && foreignAmount.toSgd().isPositive() : "Transaction amount must be positive";
         assert description != null : "Description must not be null (use \"\" instead)";
@@ -95,6 +137,7 @@ public class Transaction {
         this.description = description;
         this.foreignAmount = foreignAmount;
         this.category = category;
+        this.date = date;
     }
 
     /**
@@ -141,6 +184,14 @@ public class Transaction {
     public Optional<String> getCategory() {
         return Optional.ofNullable(category);
     }
+
+    /**
+     * Returns the day the transaction happened, or an empty Optional if it was saved
+     * before dates were recorded.
+     */
+    public Optional<LocalDate> getDate() {
+        return Optional.ofNullable(date);
+    }
     //@@author
     
     /**
@@ -159,6 +210,7 @@ public class Transaction {
      * [WITHDRAWAL] -$50.00 (DESCRIPTION)
      * [WITHDRAWAL] -$10.00 (DESCRIPTION) [JPY 1100]
      * [WITHDRAWAL] -$4.50 (DESCRIPTION) #Food
+     * [30 Oct 2026] [WITHDRAWAL] -$4.50 (DESCRIPTION) #Food
      */
     @Override
     public String toString() {
@@ -171,7 +223,8 @@ public class Transaction {
         //@@author nabijonzzz
         // '#' marks the category so it cannot be confused with the [JPY 1100] brackets.
         String categoryTag = category == null ? "" : " #" + category;
+        String datePrefix = date == null ? "" : "[" + date.format(DISPLAY_DATE) + "] ";
         //@@author
-        return "[" + label + "] " + signedAmount.formatWithSign() + note + original + categoryTag;
+        return datePrefix + "[" + label + "] " + signedAmount.formatWithSign() + note + original + categoryTag;
     }
 }

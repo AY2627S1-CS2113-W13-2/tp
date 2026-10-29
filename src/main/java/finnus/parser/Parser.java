@@ -1,6 +1,8 @@
 package finnus.parser;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Currency;
 import java.util.Locale;
 import java.util.logging.Logger;
@@ -15,6 +17,7 @@ import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
 import finnus.command.RateCommand;
@@ -54,6 +57,23 @@ public class Parser {
      * {@code c/} is already used for currency, so {@code t/} (tag) is used instead.
      */
     public static final String CATEGORY_PREFIX = "t/";
+
+    /**
+     * Prefix that marks the date of a transaction, e.g. {@code on/2026-10-30}.
+     */
+    public static final String DATE_PREFIX = "on/";
+
+    /**
+     * The earliest date a transaction can have. FinNUS tracks a student's current spending, so
+     * anything earlier is almost certainly a typo, e.g. 0001-01-01.
+     */
+    public static final LocalDate EARLIEST_DATE = LocalDate.of(2000, 1, 1);
+
+    /**
+     * Exactly {@code YYYY-MM-DD}. Checked before parsing because {@code LocalDate.parse} also accepts
+     * signed years such as {@code -2026-01-01} and {@code +2026-01-01}.
+     */
+    public static final String DATE_FORMAT_REGEX = "\\d{4}-\\d{2}-\\d{2}";
     //@@author
 
     //@@author chancheese
@@ -69,6 +89,13 @@ public class Parser {
      */
     private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX + "(\\S*)");
 
+    /**
+     * Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty).
+     */
+    private static final Pattern DATE_PATTERN = Pattern.compile("(?<!\\S)" + DATE_PREFIX + "(\\S*)");
+
+    // A date that is safely in the past, so copying the example never gives a "future date" error.
+    private static final String DATE_EXAMPLE = DATE_PREFIX + "2026-01-15";
     private static final String CATEGORY_LIST = "list";
     private static final String CATEGORY_ADD = "add";
     //@@author
@@ -85,6 +112,22 @@ public class Parser {
      *     are invalid.
      */
     public static Command parse(String input) throws FinNusException {
+        return parse(input, LocalDate.now());
+    }
+
+    //@@author nabijonzzz
+    /**
+     * Parses a full line of user input, using {@code today} as the date of transactions
+     * without {@code on/DATE}. Taking the date as a parameter lets tests use a fixed day.
+     *
+     * @param input The raw text typed by the user.
+     * @param today The current date.
+     * @return The command to execute.
+     * @throws FinNusException If the command word is unknown or its arguments are invalid.
+     */
+    public static Command parse(String input, LocalDate today) throws FinNusException {
+        assert today != null : "Today's date must not be null";
+        //@@author
         String trimmed = input.trim();
         // Split into the command word and everything after it (which may be empty).
         String[] parts = trimmed.split("\\s+", 2);
@@ -99,13 +142,15 @@ public class Parser {
         // Setup-only command words are filtered out by CommandWord.fromWord.
         Command parsed = switch (command) {
         case DEPOSIT ->
-            parseDeposit(arguments);
+            parseDeposit(arguments, today);
         case WITHDRAW ->
-            parseWithdraw(arguments);
+            parseWithdraw(arguments, today);
         case HELP ->
             new HelpCommand();
         case RECENT ->
             parseRecent(arguments);
+        case FIND ->
+            parseFind(arguments);
         case BALANCE ->
             new BalanceCommand();
         case EXIT ->
@@ -146,6 +191,22 @@ public class Parser {
         }
         return new DeleteCommand(index);
     }
+
+    //@@author nabijonzzz
+    /**
+     * Parses {@code find KEYWORD}. Everything after the command word is the keyword,
+     * so a phrase such as {@code find chicken rice} is searched as a whole.
+     *
+     * @throws FinNusException If no keyword is given.
+     */
+    private static Command parseFind(String arguments) throws FinNusException {
+        if (arguments.isBlank()) {
+            throw new FinNusException("Missing keyword to search for, e.g. " + CommandWord.FIND.getWord()
+                    + " lunch.\nFormat: " + CommandWord.FIND.getUsage());
+        }
+        return new FindCommand(arguments.trim());
+    }
+    //@@author
 
     /**
      * Returns RecentTransactionCommand instance
@@ -237,36 +298,40 @@ public class Parser {
     /**
      * Parses a positive deposit amount and its optional description.
      */
-    private static Command parseDeposit(String arguments) throws FinNusException {
+    private static Command parseDeposit(String arguments, LocalDate today) throws FinNusException {
         //@@author nabijonzzz
         if (CATEGORY_PATTERN.matcher(arguments).find()) {
             throw new FinNusException("Categories are only for spending, so " + CATEGORY_PREFIX
                     + " cannot be used with " + CommandWord.DEPOSIT.getWord() + ".");
         }
+        DateAndRest dateAndRest = extractDate(arguments, today);
+        LocalDate date = dateAndRest.date();
         //@@author chancheese
-        String[] currencyAndRest = extractCurrency(arguments);
+        String[] currencyAndRest = extractCurrency(dateAndRest.rest());
         String currencyCode = currencyAndRest[0];
         String[] amountAndDescription = splitAmountAndDescription(currencyAndRest[1],
                 CommandWord.DEPOSIT.getUsage());
         if (currencyCode != null) {
             BigDecimal amount = parseForeignAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
             return new ForeignTransactionCommand(TransactionType.DEPOSIT, amount, currencyCode,
-                    amountAndDescription[1]);
+                    amountAndDescription[1], null, date);
         }
         //@@author
         Money amount = parseAmount(amountAndDescription[0], CommandWord.DEPOSIT.getUsage());
-        return new DepositCommand(amount, amountAndDescription[1]);
+        return new DepositCommand(amount, amountAndDescription[1], date);
     }
 
     /**
      * Parses a positive withdrawal amount and requires a non-empty description.
      */
-    private static Command parseWithdraw(String arguments) throws FinNusException {
+    private static Command parseWithdraw(String arguments, LocalDate today) throws FinNusException {
         //@@author nabijonzzz
         String[] categoryAndRest = extractCategory(arguments);
         String categoryName = categoryAndRest[0];
+        DateAndRest dateAndRest = extractDate(categoryAndRest[1], today);
+        LocalDate date = dateAndRest.date();
         //@@author chancheese
-        String[] currencyAndRest = extractCurrency(categoryAndRest[1]);
+        String[] currencyAndRest = extractCurrency(dateAndRest.rest());
         String currencyCode = currencyAndRest[0];
         String[] amountAndDescription = splitAmountAndDescription(currencyAndRest[1],
                 CommandWord.WITHDRAW.getUsage());
@@ -280,11 +345,11 @@ public class Parser {
         if (currencyCode != null) {
             BigDecimal amount = parseForeignAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
             return new ForeignTransactionCommand(TransactionType.WITHDRAWAL, amount, currencyCode, description,
-                    categoryName);
+                    categoryName, date);
         }
         //@@author
         Money amount = parseAmount(amountAndDescription[0], CommandWord.WITHDRAW.getUsage());
-        return new WithdrawCommand(amount, description, categoryName);
+        return new WithdrawCommand(amount, description, categoryName, date);
     }
 
     //@@author chancheese
@@ -363,6 +428,51 @@ public class Parser {
             checkCategoryName(nameAndRest[0]);
         }
         return nameAndRest;
+    }
+
+    /**
+     * The date of a transaction together with the arguments left after removing {@code on/DATE}.
+     */
+    record DateAndRest(LocalDate date, String rest) {
+    }
+
+    /**
+     * Removes an optional {@code on/DATE} part from deposit or withdraw arguments,
+     * e.g. {@code "4.50 on/2026-10-20 d/Lunch"} becomes {@code [2026-10-20, "4.50 d/Lunch"]}.
+     *
+     * @param today The date to use if no {@code on/} is given, and the latest date allowed.
+     * @return The date (today if none was given) and the remaining arguments.
+     * @throws FinNusException If {@code on/} is given more than once, has no date, is not a real
+     *     date in {@code YYYY-MM-DD} format, is before {@link #EARLIEST_DATE}, or is in the future.
+     */
+    static DateAndRest extractDate(String arguments, LocalDate today) throws FinNusException {
+        String[] dateAndRest = extractPrefixedValue(arguments, DATE_PATTERN,
+                "Give only one date, e.g. " + DATE_EXAMPLE + ".",
+                "Missing date after " + DATE_PREFIX + ", e.g. " + DATE_EXAMPLE + ".");
+        if (dateAndRest[0] == null) {
+            return new DateAndRest(today, arguments);
+        }
+        String invalidDateMessage = "'" + dateAndRest[0] + "' is not a valid date. Use YYYY-MM-DD, e.g. "
+                + DATE_EXAMPLE + ".";
+        if (!dateAndRest[0].matches(DATE_FORMAT_REGEX)) {
+            throw new FinNusException(invalidDateMessage);
+        }
+        LocalDate date;
+        try {
+            // The default ISO format is strict, so it also rejects dates that do not exist, e.g. 2026-02-30.
+            date = LocalDate.parse(dateAndRest[0]);
+        } catch (DateTimeParseException e) {
+            throw new FinNusException(invalidDateMessage);
+        }
+        if (date.isBefore(EARLIEST_DATE)) {
+            throw new FinNusException("The date " + date + " is too early. Transactions can only be recorded from "
+                    + EARLIEST_DATE + " onwards.");
+        }
+        if (date.isAfter(today)) {
+            throw new FinNusException("The date " + date + " is in the future. Transactions can only be "
+                    + "recorded for today or earlier.");
+        }
+        return new DateAndRest(date, dateAndRest[1]);
     }
 
     /**
