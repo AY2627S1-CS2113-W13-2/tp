@@ -344,6 +344,12 @@ collects and confirms this value once, before normal commands become available.
    without saving the unconfirmed amount. The pending marker remains, so setup is offered again
    on the next run. After successful setup, `FinNUS` saves the ledger and later runs skip setup.
 
+<!-- @@author chancheese -->
+After the opening balance is confirmed, `Setup` also asks for the allowance day and its SGD amount. Pressing Enter (or
+input ending) skips either one, and setup still counts as complete. See
+[Setting a monthly allowance](#setting-a-monthly-allowance).
+<!-- @@author lololol8484 -->
+
 `opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
 treated as an unknown command. `SetupTest` covers valid and invalid amounts, confirmation,
 re-entry, and input ending before confirmation.
@@ -794,6 +800,100 @@ the parser, so a hand-edited file cannot load a date that a command would reject
   * Cons: adding one transaction could change the index of others, so `delete` might remove the wrong one.
 <!-- @@author -->
 
+<!-- @@author chancheese -->
+### Setting a monthly allowance
+
+`allowance DAY [a/AMOUNT] [c/CURRENCY]` sets the day of the month the user's allowance arrives and, optionally, how
+much it is. The day splits time into budget cycles, e.g. day 5 gives cycles from 5 Oct to 4 Nov. With an amount,
+FinNUS adds the allowance as a deposit each month by itself. `allowance` shows a summary of the current cycle, and
+`allowance off` removes the setting.
+
+#### Classes involved
+
+* `Allowance` (package `finnus.allowance`): an immutable record of the `day`, the optional `amount` and
+  `currencyCode`, and `lastCredited`, the latest allowance date that has already been dealt with. It also does all
+  the date arithmetic: `cycleStart()`, `cycleEnd()`, `nextDate()`, `daysUntilNext()` and `nextDueDate()`.
+* `AllowanceCommand`: sets, shows or stops the allowance, and builds the summary.
+* `CreditAllowanceCommand`: adds the deposits that are due. It is not in `CommandWord`, because the user never types
+  it; `FinNUS` runs it.
+* `TransactionList` holds the setting (`getAllowance()` / `setAllowance()`), next to the rates and categories.
+
+#### Working out the cycle
+
+If a month is shorter than `day`, the allowance arrives on its last day, so `Allowance#dateIn(month, day)` returns
+`month.atDay(Math.min(day, month.lengthOfMonth()))`. For example, day 31 gives 28 Feb 2027 and 30 Apr 2026.
+
+`cycleStart(today)` is this month's allowance date if `today` is on or after it, and last month's otherwise. So on
+the allowance day itself a new cycle starts, and `daysUntilNext()` is never 0. `nextDate()` is the allowance date in
+the month after `cycleStart()`, and `cycleEnd()` is the day before that.
+
+The summary adds up the SGD amounts of transactions dated from `cycleStart()` up to, but not including, `nextDate()`.
+Transactions saved before dates existed have no date, so they are left out and counted in a short note instead.
+
+#### How the allowance is added automatically
+
+FinNUS only runs while it is open, so "on the 5th" really means "the first time FinNUS runs on or after the 5th".
+
+1. Setting an allowance calls `Allowance.startingFrom(day, amount, currency, today)`, which sets `lastCredited` to
+   `cycleStart(today)`. The allowance date that has just passed, including today, is treated as already received,
+   so FinNUS never adds an allowance the user may have recorded by hand. If the same day is set again while an
+   allowance is still waiting to be added, the earlier `lastCredited` is kept, so re-entering it never drops that
+   deposit. A foreign amount is also converted once when it is set, if a rate exists, so an amount that is out of
+   range is rejected straight away rather than on the allowance day.
+2. After loading (and setup), `FinNUS#restoreSession()` runs `CreditAllowanceCommand`. While `nextDueDate()` (the
+   allowance date in the month after `lastCredited`) is not after today, it adds a `DEPOSIT` described as
+   `Allowance`, dated on that allowance date, and moves `lastCredited` forward. If FinNUS was closed for two months,
+   both are added, each on its own date.
+3. A foreign amount is converted with `CurrencyRates#convert()` at the current rate. If no rate is set, `convert()`
+   throws a `FinNusException`; the loop stops without moving `lastCredited`, so that date stays due.
+4. `FinNUS#executeCommand()` also runs `CreditAllowanceCommand` after every other command. This adds a waiting
+   allowance as soon as the user sets the missing rate, and handles FinNUS staying open past midnight. Only the run
+   at startup shows the warning, so it does not repeat after every command.
+5. Both runs happen before the snapshot comparison, so any added deposit is saved like any other change.
+
+Deleting an automatic deposit does not bring it back, because `lastCredited` has already moved past its date.
+
+Today's date comes from a `Clock` given to `FinNUS`. The app uses the system clock, while tests use
+`Clock.fixed(...)`, and the date is passed on to `Parser#parse(input, today)`, `Setup#run()` and the commands.
+
+#### Saving the allowance
+
+The setting is saved as one `ALLOWANCE|DAY|AMOUNT|CURRENCY|LAST_CREDITED` record, with empty fields for a missing
+amount or SGD, e.g. `ALLOWANCE|5|500||2026-11-05` or `ALLOWANCE|5|60000|JPY|2026-11-05`. `LedgerSnapshot` has an
+`allowance` component, so setting, changing or crediting the allowance is detected as a change and saved. Files
+without the record load with no allowance. A record with an invalid day, amount, currency or date, or a second
+`ALLOWANCE` record, is skipped with a warning like other damaged rows.
+
+#### Design considerations
+
+**Aspect: when an automatic deposit is added**
+
+* **Alternative 1 (current choice):** at startup and after each command, for every due date since `lastCredited`.
+  * Pros: works even though FinNUS is not always running; missed months are added on their real dates.
+  * Cons: needs the extra `lastCredited` field so the same month is never added twice.
+* **Alternative 2:** only add the allowance while FinNUS is open on the allowance day.
+  * Pros: simpler, with no extra state.
+  * Cons: a user who does not open FinNUS on that exact day never gets the deposit.
+
+**Aspect: the first automatic deposit**
+
+* **Alternative 1 (current choice):** start from the next allowance date.
+  * Pros: never doubles an allowance the user already recorded with `deposit`.
+  * Cons: a user who sets it up after the allowance day must record this month's allowance by hand.
+* **Alternative 2:** also add the allowance date that has just passed.
+  * Pros: the current cycle is complete straight away.
+  * Cons: most users setting this up have already recorded this month's allowance, so it would be counted twice.
+
+**Aspect: where the summary shows this cycle's spending**
+
+* **Alternative 1 (current choice):** a total and count in the summary.
+  * Pros: short enough to check every day, alongside the countdown.
+  * Cons: does not list the withdrawals; a cycle filter on the planned `history` command is a better fit for that.
+* **Alternative 2:** list every withdrawal of the cycle in the summary.
+  * Pros: one command shows everything.
+  * Cons: a month of logged meals and bus rides is 60 to 100 lines, which hides the countdown.
+<!-- @@author -->
+
 <!-- @@author naieel04 -->
 ### Automatic saving and recovery
 
@@ -1066,12 +1166,15 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
 |-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
 | MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
 | MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
 | MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
 | MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry. [Insert exact output here]                                    |
 | MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored. [Insert exact output here]                            |
+| MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
+| MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
+| MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
 
 ### Storage and recovery scenarios
 
