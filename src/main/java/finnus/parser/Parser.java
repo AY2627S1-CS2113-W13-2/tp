@@ -78,16 +78,20 @@ public class Parser {
 
     //@@author chancheese
     /**
-     * Matches {@code c/CODE} at the start of a word, capturing the code (which may be empty).
+     * Matches {@code c/CODE} at the start of a word, allowing whitespace after {@code c/}.
+     * Captures the code, which may be empty.
      */
-    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX + "(\\S*)");
+    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX
+            + "\\s*(\\S*)");
     //@@author
 
     //@@author nabijonzzz
     /**
-     * Matches {@code t/NAME} at the start of a word, capturing the name (which may be empty).
+     * Matches {@code t/NAME} at the start of a word, allowing whitespace after {@code t/}.
+     * Captures the name, which may be empty.
      */
-    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX + "(\\S*)");
+    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX
+            + "\\s*(\\S*)");
 
     /**
      * Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty).
