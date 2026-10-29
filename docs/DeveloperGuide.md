@@ -58,12 +58,12 @@ On macOS, use `sdk use java 25.0.3.fx-zulu` if switching Java versions with SDKM
 3. Confirm that `java -version` reports Java 25 and that the IDE's Gradle JVM uses Java 25.
 4. Run the following commands from the repository root.
 
-| Task | Windows PowerShell | macOS / Linux |
-| --- | --- | --- |
-| Run from source | `.\gradlew.bat run` | `./gradlew run` |
-| Run automated tests | `.\gradlew.bat test` | `./gradlew test` |
-| Run tests and Checkstyle | `.\gradlew.bat check` | `./gradlew check` |
-| Package the application | `.\gradlew.bat shadowJar` | `./gradlew shadowJar` |
+| Task                     | Windows PowerShell        | macOS / Linux         |
+|--------------------------|---------------------------|-----------------------|
+| Run from source          | `.\gradlew.bat run`       | `./gradlew run`       |
+| Run automated tests      | `.\gradlew.bat test`      | `./gradlew test`      |
+| Run tests and Checkstyle | `.\gradlew.bat check`     | `./gradlew check`     |
+| Package the application  | `.\gradlew.bat shadowJar` | `./gradlew shadowJar` |
 
 Run the packaged application using `java -jar build/libs/finnus.jar`. Enter `help` to view commands and `exit` to quit.
 The application entry point is `finnus.FinNUS`.
@@ -83,17 +83,17 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 *Figure 1. FinNUS architecture and component dependencies. [PlantUML source](diagrams/ArchitectureDiagram.puml).*
 
-| Component | Main classes / package | Responsibility |
-| --- | --- | --- |
-| Application | `finnus.FinNUS`, `finnus.Setup` | Restore state, guide first-run setup, run commands, detect changes, save pending state, and handle shutdown. |
-| UI | `finnus.ui.Ui` | Read console input and display messages, errors, and command results. |
-| Parser | `finnus.parser.Parser` | Validate command syntax and construct a command. |
-| Commands | `finnus.command` | Execute operations through the shared `Command` abstraction. |
-| Ledger model | `TransactionList`, `Transaction`, `TransactionType` | Maintain transactions, opening balance, and balance calculation. |
-| Currency model | `CurrencyRates` | Maintain user-entered exchange rates relative to SGD. |
-| Category model | `CategoryList` | Maintain predefined and custom spending categories for withdrawals. |
-| Storage | `Storage`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult` | Encode, persist, validate, and recover financial state. |
-| Expected errors | `FinNusException` | Carry command failure messages to the application's error handler. |
+| Component       | Main classes / package                                                  | Responsibility                                                                                               |
+|-----------------|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| Application     | `finnus.FinNUS`, `finnus.Setup`                                         | Restore state, guide first-run setup, run commands, detect changes, save pending state, and handle shutdown. |
+| UI              | `finnus.ui.Ui`                                                          | Read console input and display messages, errors, and command results.                                        |
+| Parser          | `finnus.parser.Parser`                                                  | Validate command syntax and construct a command.                                                             |
+| Commands        | `finnus.command`                                                        | Execute operations through the shared `Command` abstraction.                                                 |
+| Ledger model    | `TransactionList`, `Transaction`, `TransactionType`                     | Maintain transactions, opening balance, and balance calculation.                                             |
+| Currency model  | `CurrencyRates`                                                         | Maintain user-entered exchange rates relative to SGD.                                                        |
+| Category model  | `CategoryList`                                                          | Maintain predefined and custom spending categories for withdrawals.                                          |
+| Storage         | `Storage`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult` | Encode, persist, validate, and recover financial state.                                                      |
+| Expected errors | `FinNusException`                                                       | Carry command failure messages to the application's error handler.                                           |
 
 ### Application lifecycle
 
@@ -202,7 +202,7 @@ exactly in binary floating point. A raw `BigDecimal` in every command would pres
 but each command would have to repeat sign operations, rounding, and output rules. `Money`
 centralizes those rules while still using `BigDecimal` for exact arithmetic. The tradeoff is an
 extra class and method calls instead of operators; in return, the balance and transaction
-display use the same monetary behavior. `MoneyTest` checks exact repeated addition,
+display use the same monetary behaviour. `MoneyTest` checks exact repeated addition,
 immutability after negation, rounding only for display, signed sub-cent output, and equality
 across different decimal scales.
 <!-- @@author -->
@@ -472,7 +472,7 @@ Because the sum is recalculated whenever `balance` is invoked, deleting a transa
 opening balance is reflected in the next `balance` result.
 
 `Money` wraps `BigDecimal`, so addition keeps decimal values exact. `Money#format()` rounds only
-the displayed result to two decimal places using `HALF_UP` and adds the dollar sign. Thus the
+the displayed result to two decimal places using `HALF_UP` and adds the dollar sign. Thus, the
 calculation retains precision if a stored amount has more than two decimal places. Such amounts
 are covered by the balance command tests, even though ordinary user input is limited to cents.
 Negative balances are allowed and displayed with a minus sign when their rounded value is
@@ -648,7 +648,7 @@ and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
 it copies that previous state into `finnus.txt.bak` before atomically replacing the main file. The backup therefore holds
 the previous saved state, not a copy of the new snapshot. A damaged main file or backup is preserved in a uniquely named
-`.corrupt-*` recovery copy before a save replaces it. Temporary-file cleanup is attempted whether saving succeeds or fails.
+`.corrupt-*` recovery copy before a save replaces it. Temporary-file clean-up is attempted whether saving succeeds or fails.
 
 #### Loading and recovery
 
@@ -662,16 +662,16 @@ protect data that could not be inspected.
 *Figure 10. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
-| Situation | Recovered state and diagnostics | Saving and file protection |
-| --- | --- | --- |
-| Main file missing; backup absent or damaged | Request first-run setup. | Create a setup-pending main file. If initialization fails, setup can continue with saving disabled. An unsupported or unreadable backup follows the disabled-saving rules below. |
-| Main file records pending setup | Return an empty snapshot and request opening-balance confirmation. | Resume setup; save the confirmed balance afterwards if saving is allowed. A setup-pending backup can also restart this process. |
-| Main file contains some invalid rows | Recover valid rows and warn that balances may be incomplete. Unknown withdrawal categories become `Others` with a warning. | Allow saving, but preserve the damaged main file before replacement. Do not fall back to the backup for partial recovery. |
-| Main file missing, unrecoverable, or invalid UTF-8; backup is clean | Restore the backup snapshot and display a recovery warning. | Allow saving. Preserve any damaged main-file bytes before replacement and retain the clean backup rather than rotating a damaged main over it. |
-| Damaged main file; backup is missing or damaged | Return an empty snapshot with corruption warnings. | Allow saving, but retain the damaged main file until a save preserves and replaces it. An unsupported or unreadable backup follows the disabled-saving rules below. |
-| Unsupported numbered format in the main file or a backup being considered | Return an empty snapshot with a format warning. | Disable saving for the session; leave incompatible files unchanged. |
-| Other I/O failure while reading the main file or a backup being considered | Return an empty snapshot with a read warning. | Disable saving for the session; leave unreadable files unchanged. |
-| Save fails | Keep the current ledger in memory and display an automatic-save warning. | Retain pending changes for retry. Failed atomic replacement leaves its target unchanged; backup rotation may already have completed. |
+| Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
+|----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Main file missing; backup absent or damaged                                | Request first-run setup.                                                                                                   | Create a setup-pending main file. If initialization fails, setup can continue with saving disabled. An unsupported or unreadable backup follows the disabled-saving rules below. |
+| Main file records pending setup                                            | Return an empty snapshot and request opening-balance confirmation.                                                         | Resume setup; save the confirmed balance afterwards if saving is allowed. A setup-pending backup can also restart this process.                                                  |
+| Main file contains some invalid rows                                       | Recover valid rows and warn that balances may be incomplete. Unknown withdrawal categories become `Others` with a warning. | Allow saving, but preserve the damaged main file before replacement. Do not fall back to the backup for partial recovery.                                                        |
+| Main file missing, unrecoverable, or invalid UTF-8; backup is clean        | Restore the backup snapshot and display a recovery warning.                                                                | Allow saving. Preserve any damaged main-file bytes before replacement and retain the clean backup rather than rotating a damaged main over it.                                   |
+| Damaged main file; backup is missing or damaged                            | Return an empty snapshot with corruption warnings.                                                                         | Allow saving, but retain the damaged main file until a save preserves and replaces it. An unsupported or unreadable backup follows the disabled-saving rules below.              |
+| Unsupported numbered format in the main file or a backup being considered  | Return an empty snapshot with a format warning.                                                                            | Disable saving for the session; leave incompatible files unchanged.                                                                                                              |
+| Other I/O failure while reading the main file or a backup being considered | Return an empty snapshot with a read warning.                                                                              | Disable saving for the session; leave unreadable files unchanged.                                                                                                                |
+| Save fails                                                                 | Keep the current ledger in memory and display an automatic-save warning.                                                   | Retain pending changes for retry. Failed atomic replacement leaves its target unchanged; backup rotation may already have completed.                                             |
 
 #### Design considerations
 
@@ -686,13 +686,13 @@ reports the failure and retains pending changes instead of falling back to a non
 
 ### Validation and error handling
 
-| Boundary | Responsibility |
-| --- | --- |
-| Parser | Validate required arguments, numeric formats, limits, currency codes, and positive indices. |
-| Command execution | Check current state, such as whether a deletion index or category exists. |
-| Model | Assert internal invariants; validate external input before it reaches assertion-based constructors. |
-| Storage decoding | Validate records, skip invalid rows, check compatibility, and collect recovery warnings. |
-| Application | Display expected errors, retain unsaved changes, and communicate save failures. |
+| Boundary          | Responsibility                                                                                      |
+|-------------------|-----------------------------------------------------------------------------------------------------|
+| Parser            | Validate required arguments, numeric formats, limits, currency codes, and positive indices.         |
+| Command execution | Check current state, such as whether a deletion index or category exists.                           |
+| Model             | Assert internal invariants; validate external input before it reaches assertion-based constructors. |
+| Storage decoding  | Validate records, skip invalid rows, check compatibility, and collect recovery warnings.            |
+| Application       | Display expected errors, retain unsaved changes, and communicate save failures.                     |
 
 For example, `withdraw 4.50` reaches `Parser#parseWithdraw()`, which rejects the missing description with a
 `FinNusException`. No command is returned or executed, so the ledger is unchanged. `FinNUS#run()` catches the exception,
@@ -727,8 +727,8 @@ Duplicate this subsection for any other feature that warrants a detailed explana
 - [README](../README.md): project overview and contributor setup information.
 - [Build configuration](../build.gradle): Java toolchain, dependencies, packaging, and checks.
 
-Editable PlantUML files are in [`docs/diagrams`](diagrams/), and the guide displays their exported PNGs from
-[`docs/images`](images/). Each figure caption links to its source. After changing a diagram, regenerate its PNG with
+Editable PlantUML files are in `docs/diagrams`, and the guide displays their exported PNGs from
+`docs/images`. Each figure caption links to its source. After changing a diagram, regenerate its PNG with
 PlantUML and check that the source and displayed image agree.
 
 Keep diagrams consistent with the code. Explain relationships, number figures, and link images to their editable sources.
@@ -780,16 +780,16 @@ are included in this release.]
 The stories below describe product goals; some features are not implemented. Confirm release priorities and acceptance
 criteria with the team.
 
-| ID | As a/an... | I want to... | So that... |
-| --- | --- | --- | --- |
-| US-01 | active user | edit the display currency | I can change the currency used for display |
-| US-02 | lazy user | set the day my allowance arrives | the app knows my budgeting cycle |
-| US-03 | habitual user | view all transactions | I can review my spending history |
-| US-04 | international student | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD |
-| US-05 | forgetful user | categorise my spending | I can later see where my money went |
-| US-06 | disciplined user | list this cycle's spending | I can check that nothing is missing |
-| US-07 | power user | see my balance through visual charts | I can see my financial status clearly |
-| US-08 | forward-planning student | see how many days remain until my next allowance | I can pace my spending |
+| ID    | As a/an...               | I want to...                                                            | So that...                                 |
+|-------|--------------------------|-------------------------------------------------------------------------|--------------------------------------------|
+| US-01 | active user              | edit the display currency                                               | I can change the currency used for display |
+| US-02 | lazy user                | set the day my allowance arrives                                        | the app knows my budgeting cycle           |
+| US-03 | habitual user            | view all transactions                                                   | I can review my spending history           |
+| US-04 | international student    | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD             |
+| US-05 | forgetful user           | categorise my spending                                                  | I can later see where my money went        |
+| US-06 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
+| US-07 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
+| US-08 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
 
 [Add acceptance criteria for each story selected for implementation.]
 <!-- @@author -->
@@ -841,13 +841,13 @@ criteria with the team.
 The following proposed quality requirements are derived from the product goals. Confirm their targets with the team
 before treating them as release commitments.
 
-| ID | Quality | Proposed requirement | How to verify |
-| --- | --- | --- | --- |
+| ID     | Quality            | Proposed requirement                                                                                                                                                                                                                                    | How to verify                                                                                                                    |
+|--------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | NFR-01 | Financial accuracy | Monetary calculations must use decimal arithmetic. Displayed SGD balances must equal the opening balance plus deposits minus withdrawals, to the cent. Converted allowances must use the rate recorded for that deposit and a documented rounding rule. | Test decimal edge cases, repeated additions, deposits in foreign currencies, and balance totals against hand-calculated results. |
-| NFR-02 | Data integrity | A rejected command must leave the ledger unchanged. A completed state change must either be saved or clearly reported as unsaved. | Exercise invalid input and simulated storage failures; compare ledger state before and after. |
-| NFR-03 | Persistence | The opening balance, transactions, and exchange rates must be available after restarting the application. | Create sample ledger data, exit, restart using the same data folder, and compare restored values. |
-| NFR-04 | Usability | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command. | Manually test documented commands, malformed inputs, and recovery with a following valid command. |
-| NFR-05 | Compatibility | The application must run with Java 25 on the operating systems supported by the project. | Build and run the automated checks on Windows, macOS, and Linux CI environments. |
+| NFR-02 | Data integrity     | A rejected command must leave the ledger unchanged. A completed state change must either be saved or clearly reported as unsaved.                                                                                                                       | Exercise invalid input and simulated storage failures; compare ledger state before and after.                                    |
+| NFR-03 | Persistence        | The opening balance, transactions, and exchange rates must be available after restarting the application.                                                                                                                                               | Create sample ledger data, exit, restart using the same data folder, and compare restored values.                                |
+| NFR-04 | Usability          | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command.                                                                                                      | Manually test documented commands, malformed inputs, and recovery with a following valid command.                                |
+| NFR-05 | Compatibility      | The application must run with Java 25 on the operating systems supported by the project.                                                                                                                                                                | Build and run the automated checks on Windows, macOS, and Linux CI environments.                                                 |
 
 [Confirm the supported operating systems and rounding policy with the team.]
 <!-- @@author -->
@@ -857,15 +857,15 @@ before treating them as release commitments.
 <!-- @@author naieel04 -->
 ## Glossary
 
-| Term | Meaning |
-| --- | --- |
-| CLI | Command-line interface accepting text commands. |
-| Ledger | Transactions, opening balance, exchange rates, and custom spending categories held by FinNUS. |
-| Opening balance | Funds held before recording transactions; separate from transaction history. |
-| Base currency | SGD, used for transaction amounts and balances. |
-| Exchange rate | Foreign-currency units equivalent to one SGD. |
-| Snapshot | An immutable value copy of financial state for persistence and change detection. |
-| Recent-list index | A one-based position counting from the newest transaction. |
+| Term              | Meaning                                                                                       |
+|-------------------|-----------------------------------------------------------------------------------------------|
+| CLI               | Command-line interface accepting text commands.                                               |
+| Ledger            | Transactions, opening balance, exchange rates, and custom spending categories held by FinNUS. |
+| Opening balance   | Funds held before recording transactions; separate from transaction history.                  |
+| Base currency     | SGD, used for transaction amounts and balances.                                               |
+| Exchange rate     | Foreign-currency units equivalent to one SGD.                                                 |
+| Snapshot          | An immutable value copy of financial state for persistence and change detection.              |
+| Recent-list index | A one-based position counting from the newest transaction.                                    |
 <!-- @@author -->
 
 ---
@@ -896,25 +896,25 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 ### Functional scenarios
 
-| ID | Preconditions | Steps / input | Expected result |
-| --- | --- | --- | --- |
-| MT-01 | Fresh folder | Launch, enter opening balance `100`, confirm with `yes`, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here] |
-| MT-02 | First-run setup completed with opening balance SGD 100 | Enter sample commands, then `balance`. | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here] |
-| MT-03 | Sample ledger | Enter `recent 2`, `delete 1`, then `balance`. | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here] |
-| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`. | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
-| MT-05 | Sample ledger | Enter `rate JPY 120`, then `rate`. | JPY changes to 120 without a duplicate entry. [Insert exact output here] |
-| MT-06 | Saved sample ledger | Exit, restart, then enter `balance`, `recent 2`, and `rate`. | Opening balance, transactions, and rate are restored. [Insert exact output here] |
+| ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
+|-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
+| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
+| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
+| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
+| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry. [Insert exact output here]                                    |
+| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored. [Insert exact output here]                            |
 
 ### Storage and recovery scenarios
 
 Use disposable test copies and stop the application before editing fixture files.
 
-| ID | Fixture / failure | Procedure and expected result to complete |
-| --- | --- | --- |
-| MT-07 | One corrupt row | [Insert file contents, launch steps, warning, recovered records, and resulting balance here] |
-| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here] |
-| MT-09 | Unsupported version | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here] |
-| MT-10 | Save failure | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
+| ID    | Fixture / failure                   | Procedure and expected result to complete                                                           |
+|-------|-------------------------------------|-----------------------------------------------------------------------------------------------------|
+| MT-07 | One corrupt row                     | [Insert file contents, launch steps, warning, recovered records, and resulting balance here]        |
+| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here]                       |
+| MT-09 | Unsupported version                 | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here]                |
+| MT-10 | Save failure                        | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
 
 [Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
 <!-- @@author -->
@@ -926,9 +926,9 @@ Use disposable test copies and stop the application before editing fixture files
 
 Keep approved future work separate from implemented behaviour. Remove this section if outside the release scope.
 
-| Enhancement | User need | Proposed design and affected components | Target release |
-| --- | --- | --- | --- |
-| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here] | [Insert release here] |
+| Enhancement               | User need          | Proposed design and affected components | Target release        |
+|---------------------------|--------------------|-----------------------------------------|-----------------------|
+| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here]    | [Insert release here] |
 
 [Insert UML diagram of a proposed feature here, if applicable]
 <!-- @@author -->
