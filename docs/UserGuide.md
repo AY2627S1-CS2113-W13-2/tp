@@ -286,6 +286,35 @@ Here is a list of the recent 2 transaction(s):
 
 ```
 
+<!-- @@author nabijonzzz -->
+### Finding transactions: `find`
+Lists the transactions whose description contains a keyword, so you can find a past transaction without scrolling
+through all of them.
+
+Format: `find KEYWORD`
+
+* The search is not case-sensitive, and matches part of a word, e.g. `lun` matches `Lunch`.
+* `KEYWORD` can be more than one word. The whole phrase is searched, e.g. `find chicken rice`.
+* Only descriptions are searched, not amounts or categories.
+* Results are shown from the most recent. Each one has the same number as in `recent`, so you can remove it straight
+  away with `delete`.
+
+Examples:
+
+* `find lunch`
+* `find chicken rice`
+
+Expected output for `find lunch`:
+```
+____________________________________________________________
+Found 2 transaction(s) matching "lunch":
+1. [Withdrawal] -$12.00 (Lunch with friends) #Food
+3. [Withdrawal] -$4.50 (Lunch) #Food
+Use the number with delete to remove a transaction.
+____________________________________________________________
+```
+<!-- @@author -->
+
 ### Deleting a transaction: `delete`
 Deletes a transaction permanently.
 
@@ -359,6 +388,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]`
 * View balance: `balance`
 * View recent transactions: `recent [NUMBER]`
+* Find transactions by description: `find KEYWORD`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category add NAME`

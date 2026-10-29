@@ -25,6 +25,7 @@ import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
 import finnus.command.RateCommand;
@@ -42,16 +43,18 @@ class ParserTest {
     /**
      * Independent user inputs and expected types ensure every enum entry has parser coverage.
      */
-    private static final Map<CommandWord, CommandExample> COMMAND_EXAMPLES = Map.of(
-            CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class),
-            CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class),
-            CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class),
-            CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class),
-            CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class),
-            CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class),
-            CommandWord.CATEGORY, new CommandExample("category list", CategoryCommand.class),
-            CommandWord.HELP, new CommandExample("help", HelpCommand.class),
-            CommandWord.EXIT, new CommandExample("exit", ExitCommand.class));
+    // Map.ofEntries has no limit on the number of entries, unlike Map.of (at most 10).
+    private static final Map<CommandWord, CommandExample> COMMAND_EXAMPLES = Map.ofEntries(
+            Map.entry(CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class)),
+            Map.entry(CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class)),
+            Map.entry(CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class)),
+            Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
+            Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
+            Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
+            Map.entry(CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class)),
+            Map.entry(CommandWord.CATEGORY, new CommandExample("category list", CategoryCommand.class)),
+            Map.entry(CommandWord.HELP, new CommandExample("help", HelpCommand.class)),
+            Map.entry(CommandWord.EXIT, new CommandExample("exit", ExitCommand.class)));
 
     /**
      * Pairs literal user input with the concrete command the parser must produce.
@@ -92,13 +95,14 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE", "CATEGORY"})
+    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE", "CATEGORY", "FIND"})
     public void parse_invalidArguments_reportsRegisteredUsage(CommandWord command) {
         Map<CommandWord, String> invalidInputs = Map.of(
                 CommandWord.DEPOSIT, "deposit",
                 CommandWord.WITHDRAW, "withdraw 1",
                 CommandWord.RATE, "rate JPY",
-                CommandWord.CATEGORY, "category remove Gym");
+                CommandWord.CATEGORY, "category remove Gym",
+                CommandWord.FIND, "find   ");
         FinNusException exception = assertThrows(FinNusException.class,
                 () -> Parser.parse(invalidInputs.get(command)));
         assertTrue(exception.getMessage().contains("Format: " + command.getUsage()));
@@ -411,4 +415,16 @@ class ParserTest {
     }
     //@@author
 
+    //@@author nabijonzzz
+    @Test
+    public void parse_findWithPhrase_returnsFindCommand() throws FinNusException {
+        assertInstanceOf(FindCommand.class, Parser.parse("find chicken rice"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"find", "find   ", "FIND"})
+    public void parse_findWithoutKeyword_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+    //@@author
 }

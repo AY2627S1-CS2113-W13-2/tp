@@ -15,6 +15,7 @@ import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
 import finnus.command.ExitCommand;
+import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
 import finnus.command.RateCommand;
@@ -106,6 +107,8 @@ public class Parser {
             new HelpCommand();
         case RECENT ->
             parseRecent(arguments);
+        case FIND ->
+            parseFind(arguments);
         case BALANCE ->
             new BalanceCommand();
         case EXIT ->
@@ -146,6 +149,22 @@ public class Parser {
         }
         return new DeleteCommand(index);
     }
+
+    //@@author nabijonzzz
+    /**
+     * Parses {@code find KEYWORD}. Everything after the command word is the keyword,
+     * so a phrase such as {@code find chicken rice} is searched as a whole.
+     *
+     * @throws FinNusException If no keyword is given.
+     */
+    private static Command parseFind(String arguments) throws FinNusException {
+        if (arguments.isBlank()) {
+            throw new FinNusException("Missing keyword to search for, e.g. " + CommandWord.FIND.getWord()
+                    + " lunch.\nFormat: " + CommandWord.FIND.getUsage());
+        }
+        return new FindCommand(arguments.trim());
+    }
+    //@@author
 
     /**
      * Returns RecentTransactionCommand instance
