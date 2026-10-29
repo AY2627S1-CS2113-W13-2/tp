@@ -58,7 +58,10 @@ class ParserDateTest {
     @ValueSource(strings = {"withdraw 4.50 d/Lunch on/", "withdraw 4.50 d/Lunch on/2026-10-20 on/2026-10-21",
         "withdraw 4.50 d/Lunch on/2026-2-3", "withdraw 4.50 d/Lunch on/2026-02-30",
         "withdraw 4.50 d/Lunch on/30-10-2026",
-        "withdraw 4.50 d/Lunch on/yesterday", "withdraw 4.50 d/Lunch on/2026-10-31", "deposit 500 on/2027-01-01"})
+        "withdraw 4.50 d/Lunch on/yesterday", "withdraw 4.50 d/Lunch on/2026-10-31", "deposit 500 on/2027-01-01",
+        "withdraw 4.50 d/Lunch on/-2026-01-01", "withdraw 4.50 d/Lunch on/+2026-01-01",
+        "withdraw 4.50 d/Lunch on/0001-01-01", "withdraw 4.50 d/Lunch on/1999-12-31",
+        "withdraw 4.50 d/Lunch on/02026-01-01", "withdraw 4.50 d/Lunch on/2026-1-01"})
     public void parse_invalidDate_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input, TODAY));
     }
@@ -88,5 +91,26 @@ class ParserDateTest {
         Parser.parse(input, TODAY).execute(transactions, new Ui());
         assertEquals(1, transactions.size());
         return transactions.get(0);
+    }
+
+    @Test
+    public void parse_earliestAllowedDate_isAccepted() throws FinNusException {
+        assertEquals(Optional.of(LocalDate.of(2000, 1, 1)),
+                runAndGetTransaction("withdraw 4.50 d/Lunch on/2000-01-01").getDate());
+    }
+
+    @Test
+    public void parse_signedYear_isRejectedInsteadOfShownAsAnotherYear() {
+        // LocalDate.parse alone accepts "-2026-01-01", which was then shown as [1 Jan 2027].
+        FinNusException e = assertThrows(FinNusException.class,
+                () -> Parser.parse("withdraw 4.50 d/Lunch on/-2026-01-01", TODAY));
+        assertTrue(e.getMessage().contains("not a valid date"));
+    }
+
+    @Test
+    public void parse_dateBefore2000_explainsWhy() {
+        FinNusException e = assertThrows(FinNusException.class,
+                () -> Parser.parse("withdraw 4.50 d/Lunch on/1999-12-31", TODAY));
+        assertTrue(e.getMessage().contains("too early"));
     }
 }

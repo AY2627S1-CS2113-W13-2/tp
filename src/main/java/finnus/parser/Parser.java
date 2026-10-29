@@ -62,6 +62,18 @@ public class Parser {
      * Prefix that marks the date of a transaction, e.g. {@code on/2026-10-30}.
      */
     public static final String DATE_PREFIX = "on/";
+
+    /**
+     * The earliest date a transaction can have. FinNUS tracks a student's current spending, so
+     * anything earlier is almost certainly a typo, e.g. 0001-01-01.
+     */
+    public static final LocalDate EARLIEST_DATE = LocalDate.of(2000, 1, 1);
+
+    /**
+     * Exactly {@code YYYY-MM-DD}. Checked before parsing because {@code LocalDate.parse} also accepts
+     * signed years such as {@code -2026-01-01} and {@code +2026-01-01}.
+     */
+    public static final String DATE_FORMAT_REGEX = "\\d{4}-\\d{2}-\\d{2}";
     //@@author
 
     //@@author chancheese
@@ -431,7 +443,7 @@ public class Parser {
      * @param today The date to use if no {@code on/} is given, and the latest date allowed.
      * @return The date (today if none was given) and the remaining arguments.
      * @throws FinNusException If {@code on/} is given more than once, has no date, is not a real
-     *     date in {@code YYYY-MM-DD} format, or is in the future.
+     *     date in {@code YYYY-MM-DD} format, is before {@link #EARLIEST_DATE}, or is in the future.
      */
     static DateAndRest extractDate(String arguments, LocalDate today) throws FinNusException {
         String[] dateAndRest = extractPrefixedValue(arguments, DATE_PATTERN,
@@ -440,13 +452,21 @@ public class Parser {
         if (dateAndRest[0] == null) {
             return new DateAndRest(today, arguments);
         }
+        String invalidDateMessage = "'" + dateAndRest[0] + "' is not a valid date. Use YYYY-MM-DD, e.g. "
+                + DATE_EXAMPLE + ".";
+        if (!dateAndRest[0].matches(DATE_FORMAT_REGEX)) {
+            throw new FinNusException(invalidDateMessage);
+        }
         LocalDate date;
         try {
             // The default ISO format is strict, so it also rejects dates that do not exist, e.g. 2026-02-30.
             date = LocalDate.parse(dateAndRest[0]);
         } catch (DateTimeParseException e) {
-            throw new FinNusException("'" + dateAndRest[0] + "' is not a valid date. Use YYYY-MM-DD, e.g. "
-                    + DATE_EXAMPLE + ".");
+            throw new FinNusException(invalidDateMessage);
+        }
+        if (date.isBefore(EARLIEST_DATE)) {
+            throw new FinNusException("The date " + date + " is too early. Transactions can only be recorded from "
+                    + EARLIEST_DATE + " onwards.");
         }
         if (date.isAfter(today)) {
             throw new FinNusException("The date " + date + " is in the future. Transactions can only be "

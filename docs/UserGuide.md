@@ -261,6 +261,7 @@ record a transaction you forgot to enter earlier.
 Format: `deposit AMOUNT [d/DESCRIPTION] on/DATE` or `withdraw AMOUNT d/DESCRIPTION on/DATE`
 
 * `DATE` must be in `YYYY-MM-DD` format, e.g. `2026-10-20`, and must be a real date (`2026-02-30` is rejected).
+* `DATE` must be on or after `2000-01-01`.
 * `DATE` cannot be in the future, since you can only record money that has already moved.
 * `on/DATE` can be given anywhere after the command word, but only once. It works together with `c/` and `t/`.
 * `recent` still lists transactions in the order you entered them, so an earlier date does not change the numbers

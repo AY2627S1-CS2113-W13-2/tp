@@ -71,7 +71,10 @@ class LedgerCodecDateTest {
     @ValueSource(strings = {"TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-02-30",
         "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|20-10-2026", "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|today",
         "TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Food|2026-13-01",
-        "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20|extra"})
+        "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20|extra",
+        "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|-2026-01-01",
+        "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|+2026-01-01",
+        "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|0001-01-01", "TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|1999-12-31"})
     public void decode_invalidDate_skipsRowWithWarning(String badRow) {
         String text = "FINNUS|1\nOPENING|0\nTRANSACTION|DEPOSIT|2||\n" + badRow + "\n";
 

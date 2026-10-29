@@ -625,7 +625,9 @@ the basis for features that look at spending over a period, such as a budget cyc
    passes `LocalDate.now()`, while tests pass a fixed date so they never depend on the real date.
 2. `Parser#extractDate()` removes `on/2026-10-20` with the same `extractPrefixedValue()` helper used for `c/` and
    `t/`, and checks the date. `LocalDate.parse()` uses the strict ISO format, so it rejects both badly formatted
-   text (`2026-2-3`) and dates that do not exist (`2026-02-30`). A date after `today` is rejected too.
+   text (`2026-2-3`) and dates that do not exist (`2026-02-30`). Before that, the text must match
+   `\d{4}-\d{2}-\d{2}` exactly, because `LocalDate.parse()` alone also accepts signed years such as
+   `-2026-01-01`. Dates before `Parser.EARLIEST_DATE` (2000-01-01) or after `today` are rejected too.
 3. If no `on/` is given, `today` is used.
 4. The date is passed through `WithdrawCommand` (or `DepositCommand` / `ForeignTransactionCommand`) to the new
    `Transaction`.
@@ -645,7 +647,8 @@ each count still means exactly one format, so older save files keep loading:
 | 6 | with category and date | 9 | with category and date |
 
 Transactions loaded from rows without a date have a `null` date and are shown without one. A row with an invalid
-date is skipped with a warning, like other damaged rows.
+date is skipped with a warning, like other damaged rows. Loading uses the same format and earliest-date rules as
+the parser, so a hand-edited file cannot load a date that a command would reject.
 
 #### Design considerations
 

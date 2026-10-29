@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 import finnus.category.CategoryList;
 import finnus.currency.ForeignAmount;
 import finnus.money.Money;
+import finnus.parser.Parser;
 import finnus.storage.LedgerSnapshot.StoredTransaction;
 import finnus.transaction.TransactionType;
 
@@ -279,16 +280,26 @@ public class LedgerCodec {
 
     /**
      * Parses a saved date in ISO format (e.g. 2026-10-30); an empty field means the date is unknown.
+     * Uses the same rules as the parser, so a hand-edited file cannot load a date that a command
+     * would reject, such as {@code -2026-01-01} or {@code 0001-01-01}.
      */
     private LocalDate parseDate(String text) {
         if (text.isEmpty()) {
             return null;
         }
+        if (!text.matches(Parser.DATE_FORMAT_REGEX)) {
+            throw new IllegalArgumentException("Invalid date");
+        }
+        LocalDate date;
         try {
-            return LocalDate.parse(text);
+            date = LocalDate.parse(text);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Invalid date");
         }
+        if (date.isBefore(Parser.EARLIEST_DATE)) {
+            throw new IllegalArgumentException("Date is before " + Parser.EARLIEST_DATE);
+        }
+        return date;
     }
 
     /**
