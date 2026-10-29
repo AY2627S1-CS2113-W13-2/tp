@@ -1,0 +1,76 @@
+@startuml SetupSequenceDiagram
+actor User
+participant ":FinNUS" as FinNUS
+participant "setup:Setup" as Setup
+participant "ui:Ui" as Ui
+participant "<<class>>\nParser" as Parser
+participant "logger:Logger" as Logger
+participant "transactions:TransactionList" as Ledger
+
+FinNUS -> Setup: run(ui, transactions)
+activate Setup
+Setup -> Ui: showMessage(first-time setup instructions)
+Ui --> User: setup instructions
+loop until opening balance is confirmed or input ends
+    Setup -> Ui: readCommand("Opening balance (SGD): ")
+    Ui --> User: opening balance prompt
+    User --> Ui: amount input
+    Ui --> Setup: input
+    alt input ended before amount
+        Setup -> Logger: fine("setup ended before balance was entered")
+        Setup --> FinNUS: false
+    else amount entered
+        Setup -> Parser: parseNonNegativeAmount(input.trim(), "AMOUNT")
+        alt invalid amount
+            Parser --> Setup: throws FinNusException
+            Setup -> Logger: fine("rejected invalid opening balance")
+            Setup -> Ui: showError(error message)
+            Ui --> User: amount error
+        else valid amount
+            Parser --> Setup: Money amount
+            Setup -> Setup: confirmBalance(ui, amount)
+            activate Setup
+            loop until yes, no, or input ends
+                Setup -> Ui: readCommand("Confirm opening balance ...? [yes/no]: ")
+                Ui --> User: confirmation prompt
+                User --> Ui: confirmation input
+                Ui --> Setup: answer
+                alt answer is yes or y
+                    Setup --> Setup: Optional(CONFIRMED)
+                else answer is no or n
+                    Setup -> Logger: fine("user requested another balance entry")
+                    Setup --> Setup: Optional(NOT_CONFIRMED)
+                else unrecognized answer
+                    Setup -> Ui: showError("Please answer yes or no.")
+                    Ui --> User: confirmation error
+                else input ended
+                    Setup -> Logger: fine("setup ended before balance was confirmed")
+                    Setup --> Setup: Optional.empty()
+                end
+            end
+            deactivate Setup
+            alt confirmation is empty
+                Setup --> FinNUS: false
+            else confirmation is NOT_CONFIRMED
+                note right of Setup: The ledger remains unchanged.
+                Setup -> Setup: continue to opening balance prompt
+            else confirmation is CONFIRMED
+                create "command:OpeningBalanceCommand" as Opening
+                Setup -> Opening: new OpeningBalanceCommand(amount)
+                Setup -> Opening: execute(transactions, ui)
+                activate Opening
+                Opening -> Ledger: setOpeningBalance(amount)
+                Ledger --> Opening: return
+                deactivate Opening
+                Setup -> Ledger: getOpeningBalance()
+                Ledger --> Setup: stored amount
+                Setup -> Setup: assert stored amount equals amount
+                Setup -> Logger: info("first-run opening balance confirmed")
+                Setup --> FinNUS: true
+            end
+        end
+    end
+end
+deactivate Setup
+note over Setup, Ledger: Opening balance is set only after explicit confirmation.
+@enduml

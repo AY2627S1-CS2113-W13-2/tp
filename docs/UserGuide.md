@@ -6,8 +6,8 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 ## Quick Start
 
-1. Ensure that Java 25 or later is installed on your computer.
-   - Mac users: Ensure you have the precise JDK version prescribed here.
+1. Ensure that JDK 25 is installed on your computer.
+   - On macOS with SDKMAN, select the project version with `sdk use java 25.0.3.fx-zulu`.
 2. Download the latest `finnus.jar` file from here.
 3. Copy the file to the folder you want to use as the home folder for your FinNUS.
 4. Open a terminal, `cd` to the folder containing the JAR file, and run the application using the following command:
@@ -22,10 +22,14 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 ## Saving and recovering your data
 
-FinNUS automatically saves transactions, opening balance, and exchange rates whenever a command changes them.
-The save file is `finnus.txt`.
+FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
+file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
 
-If a data row is corrupt, FinNUS skips it and reports a warning, the recovered ledger may be incomplete.
+On a first run with no existing ledger or backup, FinNUS creates a pending setup file and asks for an opening balance.
+The balance is saved only after you confirm it. If you exit or input ends before confirmation, the pending setup state
+remains and FinNUS asks you to complete setup the next time you run it.
+
+If a data row is corrupt, FinNUS skips it and reports a warning; the recovered ledger may be incomplete.
 If the main file is unusable, FinNUS tries its backup. If neither can be recovered, it starts with an empty ledger in memory and leaves the original file untouched until data changes.
 
 ## Features 
@@ -102,7 +106,11 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 * Enter the amount in SGD. It follows the same rules as for `deposit`, except that `0` is also allowed.
 * Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
 * The opening balance is not a transaction, so it does not show up in `recent` and cannot be removed with `delete`.
-* Setup only happens once. Afterwards, `opening` is not a command.
+* The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
+* If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
+  run FinNUS.
+* After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
+  skip, and then normal commands begin. Afterwards, `opening` is not a command.
 
 Example of first-run setup, entering `1200.50` and then `yes`:
 ```
@@ -430,7 +438,7 @@ ____________________________________________________________
 <!-- @@author -->
 
 ### Viewing recent transactions: `recent`
-Shows the user's most recent tranactions, ordered by recency where the newest transaction is shown first.
+Shows the user's most recent transactions, ordered by recency with the newest transaction first.
 
 Format: `recent [NUMBER]`
 
@@ -445,6 +453,7 @@ Examples:
 
 Example output for `recent 2`:
 ```text
+____________________________________________________________
 Here is a list of the recent 2 transaction(s):
 1. [30 Oct 2026] [Deposit] +$30.50
 2. [29 Oct 2026] [Withdrawal] -$30.00 (Lunch) #Food
@@ -513,21 +522,24 @@ Expected output:
 ```text
 ____________________________________________________________
 Available commands:
-+-----------+---------------------+-------------------------------------------------------------------+
-| Command   | Description         | Syntax                                                            |
-+-----------+---------------------+-------------------------------------------------------------------+
-| deposit   | Record income       | deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]             |
-| withdraw  | Record spending     | withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE] |
-| recent    | Recent activity     | recent [NUMBER]                                                   |
-| find      | Search descriptions | find KEYWORD                                                      |
-| delete    | Delete a record     | delete INDEX                                                      |
-| balance   | Current balance     | balance                                                           |
-| allowance | Monthly allowance   | allowance [DAY [a/AMOUNT] [c/CURRENCY]] or off                    |
-| rate      | Manage FX rates     | rate [CURRENCY RATE]                                              |
-| category  | Manage categories   | category add NAME or list                                         |
-| help      | List commands       | help                                                              |
-| exit      | Close FinNUS        | exit                                                              |
-+-----------+---------------------+-------------------------------------------------------------------+
++--------------+----------------------+----------------------------------------+
+| Command      | Description          | Syntax                                 |
++--------------+----------------------+----------------------------------------+
+| deposit      | Record income        | deposit AMOUNT [d/DESCRIPTION]         |
+|              |                      | [c/CURRENCY] [on/DATE]                 |
+| withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |
+|              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |
+| recent       | Recent activity      | recent [NUMBER]                        |
+| find         | Search descriptions  | find KEYWORD                           |
+| delete       | Delete a record      | delete INDEX                           |
+| balance      | Current balance      | balance                                |
+| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
+|              |                      | [c/CURRENCY]] or off                   |
+| rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
+| category     | Manage categories    | category add NAME or list              |
+| help         | List commands        | help                                   |
+| exit         | Close FinNUS         | exit                                   |
++--------------+----------------------+----------------------------------------+
 
 [] means optional.
 ____________________________________________________________
