@@ -70,8 +70,6 @@ public class Parser {
      */
     private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX + "(\\S*)");
 
-    private static final String CATEGORY_LIST = "list";
-    private static final String CATEGORY_ADD = "add";
     //@@author
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
@@ -385,24 +383,13 @@ public class Parser {
     }
 
     /**
-     * Parses {@code category list} or {@code category add NAME}.
+     * Parses {@code category} (list categories) or {@code category NAME} (add a category).
      */
     private static Command parseCategory(String arguments) throws FinNusException {
-        String[] parts = arguments.split("\\s+", 2);
-        String subCommand = parts[0].toLowerCase(Locale.ROOT);
-        if (subCommand.equals(CATEGORY_LIST)) {
+        if (arguments.isBlank()) {
             return new CategoryCommand();
         }
-        if (!subCommand.equals(CATEGORY_ADD)) {
-            throw new FinNusException("Use " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_ADD
-                    + " NAME or " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_LIST
-                    + ".\nFormat: " + CommandWord.CATEGORY.getUsage());
-        }
-        String name = parts.length > 1 ? parts[1].trim() : "";
-        if (name.isEmpty()) {
-            throw new FinNusException("Missing category name, e.g. " + CommandWord.CATEGORY.getWord() + " "
-                    + CATEGORY_ADD + " Gym.");
-        }
+        String name = arguments.trim();
         checkCategoryName(name);
         return new CategoryCommand(name);
     }

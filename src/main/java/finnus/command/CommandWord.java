@@ -16,7 +16,7 @@ public enum CommandWord {
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
-    CATEGORY("category", "Manage categories", "add NAME or list"),
+    CATEGORY("category", "Manage categories", "[NAME]"),
     HELP("help", "List commands", ""),
     EXIT("exit", "Close FinNUS", "");
 

@@ -65,6 +65,7 @@ class CommandWordTest {
     @Test
     public void getUsage_commandsWithAndWithoutArguments_returnsFullSyntax() {
         assertEquals("deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]", CommandWord.DEPOSIT.getUsage());
+        assertEquals("category [NAME]", CommandWord.CATEGORY.getUsage());
         assertEquals("help", CommandWord.HELP.getUsage());
     }
 }

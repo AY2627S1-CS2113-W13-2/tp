@@ -549,7 +549,7 @@ match its amount and rate is skipped, since the file must have been edited by ha
 ### Categorising spending
 
 Every withdrawal belongs to exactly one category, given with `t/CATEGORY` (e.g. `withdraw 4.50 d/Lunch t/food`).
-Users can also add their own categories with `category add NAME` and see them with `category list`.
+Users can add their own categories with `category NAME` and list all categories with `category`.
 
 #### Classes involved
 
@@ -557,7 +557,7 @@ Users can also add their own categories with `category add NAME` and see them wi
   a category ignoring case, and returns it in the spelling it was created with.
 * `TransactionList` owns the `CategoryList`, in the same way it owns `CurrencyRates`.
 * `Transaction` has a `category` field: the category name for a withdrawal, and `null` for a deposit.
-* `CategoryCommand` handles both `category add NAME` and `category list`.
+* `CategoryCommand` handles both `category NAME` and `category`.
 
 #### How a categorised withdrawal is processed
 
@@ -603,7 +603,7 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
 
 **Aspect: how to handle unknown categories**
 
-* **Alternative 1 (current choice):** reject them, and require `category add NAME` to create a new one.
+* **Alternative 1 (current choice):** reject them, and require `category NAME` to create a new one.
   * Pros: a typo such as `t/fod` cannot silently create a new category and split the user's spending.
   * Cons: using a new category takes one extra command.
 * **Alternative 2:** create a new category automatically.
