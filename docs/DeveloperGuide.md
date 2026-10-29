@@ -276,25 +276,38 @@ message to the user, so invalid input never stops the app.
 
 <!-- @@author -->
 
-<!-- @@author chancheese -->
-### Setting the opening balance
+<!-- @@author lololol8484 -->
+### First-run setup
 
-The opening balance is the money the user had before they started using FinNUS. It is set once,
-during first-run setup, when no save file exists yet.
+The opening balance is the money the user had before they started using FinNUS. The setup flow
+collects and confirms this value once, before normal commands become available.
 
 #### How it works
 
-1. `FinNUS` sees that setup has not been completed and runs `Setup#run()`, which asks for the
-   opening balance in SGD.
-2. `Setup` checks the input with `Parser#parseNonNegativeAmount()`, which uses the same rules as
-   deposits except that 0 is allowed. Invalid input shows an error and asks again.
-3. `Setup` asks the user to confirm the amount with `yes` or `no`. Answering `no` asks for the
-   amount again.
-4. Once confirmed, `OpeningBalanceCommand#execute()` stores the amount with
-   `TransactionList#setOpeningBalance()`, and the ledger is saved.
+1. `FinNUS#restoreSession()` checks `LoadResult#setupRequired()`. `FileStorage` requires setup
+   when there is no existing ledger or when it loads a `SETUP_PENDING` marker.
+2. `FinNUS` runs `Setup#run()` before showing the normal welcome message. `Setup` prompts for an
+   opening balance in SGD and parses it with `Parser#parseNonNegativeAmount()`, which permits
+   zero. Invalid amounts show an error and return to the amount prompt.
+3. `Setup` asks the user to confirm the amount with `yes` or `y`. Invalid confirmation answers
+   repeat the confirmation prompt; `no` or `n` returns to the amount prompt.
+4. The ledger is not changed while the user is entering or reviewing an amount. Only after
+   confirmation does `Setup` execute `OpeningBalanceCommand`.
+5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
+   without saving the unconfirmed amount. The pending marker remains, so setup is offered again
+   on the next run. After successful setup, `FinNUS` saves the ledger and later runs skip setup.
 
 `opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
-treated as an unknown command.
+treated as an unknown command. `SetupTest` covers valid and invalid amounts, confirmation,
+re-entry, and input ending before confirmation.
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+### Applying the confirmed opening balance
+
+`OpeningBalanceCommand#execute()` stores the confirmed amount with
+`TransactionList#setOpeningBalance()`. This command was implemented separately from the setup
+flow.
 
 The opening balance is a separate field in `TransactionList`, not a `Transaction`.
 `getBalance()` uses it as the starting value when adding up all transactions:
@@ -316,6 +329,38 @@ return transactions.stream()
 * **Alternative 2:** a special first `DEPOSIT` transaction.
     * Pros: no extra field.
     * Cons: it would look like real income in the history and could be deleted by accident.
+<!-- @@author -->
+
+<!-- @@author lololol8484 -->
+### Deleting a transaction
+
+The `delete INDEX` command removes a transaction using the one-based index shown by `recent`
+and `find`. Index 1 refers to the newest transaction. The opening balance is not a transaction
+and cannot be deleted.
+
+#### How it works
+
+1. `Parser#parse()` dispatches `delete` to `parseDelete()`. The parser requires a positive
+   integer index and returns a `DeleteCommand`.
+2. `DeleteCommand#execute()` checks that the index is within the transaction count. It converts
+   the newest-first index to the ledger's zero-based, oldest-first index using
+   `transactions.size() - index`.
+3. `TransactionList#delete()` removes and returns the selected transaction. The command logs
+   the deletion and displays the deleted transaction through `Ui`.
+4. `FinNUS` compares ledger snapshots before and after command execution. If the ledger changed,
+   it attempts to save the updated snapshot.
+
+An invalid or out-of-range index raises `FinNusException`; the main loop displays the error and
+continues without changing the ledger. `DeleteCommandTest` and `ParserTest` cover command
+validation and deletion behavior.
+
+#### Design considerations
+
+The transaction list remains in insertion order, oldest first. `delete` translates the
+newest-first index displayed to the user instead of rearranging stored transactions. This keeps
+adding a transaction as a simple append while making deletion indices consistent with `recent`
+and `find`.
+<!-- @@author -->
 
 ### Setting exchange rates
 
