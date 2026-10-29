@@ -560,6 +560,14 @@ Users can also add their own categories with `category add NAME` and see them wi
 * `Transaction` has a `category` field: the category name for a withdrawal, and `null` for a deposit.
 * `CategoryCommand` handles both `category add NAME` and `category list`.
 
+The class diagram below shows how these classes are related. Only the members relevant to categories are shown.
+
+![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
+
+`TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
+it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
+is only checked at that point.
+
 #### How a categorised withdrawal is processed
 
 Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
@@ -572,6 +580,9 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
    exist, `resolve()` would throw a `FinNusException` listing the valid categories.
 4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
    `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
+
+The sequence diagram in [How a dated withdrawal is processed](#how-a-dated-withdrawal-is-processed) shows these
+steps for a withdrawal that also has a date.
 
 `c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
 the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
@@ -631,6 +642,16 @@ the basis for features that look at spending over a period, such as a budget cyc
 3. If no `on/` is given, `today` is used.
 4. The date is passed through `WithdrawCommand` (or `DepositCommand` / `ForeignTransactionCommand`) to the new
    `Transaction`.
+
+The sequence diagram below shows the whole flow for `withdraw 4.50 d/Lunch t/food on/2026-10-20`, including how
+the category from [Categorising spending](#categorising-spending) is resolved. Logging, output and amount
+validation are left out.
+
+![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
+
+The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
+description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
+becomes `Food` when `CategoryList#resolve()` runs during `execute()`.
 
 #### Saving dates
 
