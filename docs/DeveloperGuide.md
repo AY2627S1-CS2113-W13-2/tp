@@ -1,11 +1,122 @@
-# Developer Guide
+# FinNUS Developer Guide
 
+FinNUS is a command-line personal finance tracker. This guide explains how to set up, understand, extend, and test it.
+
+**Release:** [Insert release version here]
+
+**Last reviewed:** [Insert date and corresponding commit or tag here]
+
+> Template instructions: Replace every `[Insert ... here]` prompt. Class names and commands below reflect the current
+> repository; confirm requirements and design rationale with the team. Label future features as proposed. Replace UML
+> placeholders with diagram images, captions, and links to their editable sources.
+
+## Table of contents
+
+- [Acknowledgements](#acknowledgements)
+- [Setting up and getting started](#setting-up-and-getting-started)
+- [Design](#design)
+- [Implementation](#implementation)
+- [Documentation, logging, testing, and DevOps](#documentation-logging-testing-and-devops)
+- [Product scope](#product-scope)
+- [User stories](#user-stories)
+- [Use cases](#use-cases)
+- [Non-functional requirements](#non-functional-requirements)
+- [Glossary](#glossary)
+- [Instructions for manual testing](#instructions-for-manual-testing)
+- [Planned enhancements](#planned-enhancements)
+
+<!-- @@author naieel04 -->
 ## Acknowledgements
 
-{list here sources of all reused/adapted ideas, code, documentation, and third-party libraries -- include links to the original source as well}
+The following peer guides informed this template's organisation:
+- [CS2113 project template](https://github.com/NUS-CS2113-AY2627-S1/tp): provides the starter structure and conventions
+  for projects in the CS2113 module.
+- [Address Book Level 3](https://se-education.org/addressbook-level3/): reference for code quality, project structure,
+  and developer-guide organisation.
+- [Gradle](https://gradle.org/): builds the project and runs automated checks and tests.
+- [JUnit 5](https://junit.org/junit5/): supports automated unit and integration tests.
+<!-- @@author -->
 
-## Design & implementation
+---
 
+<!-- @@author naieel04 -->
+## Setting up and getting started
+
+### Prerequisites
+
+- JDK **25**, configured for both the IDE project SDK and Gradle JVM.
+- Git and a Java-compatible IDE, such as IntelliJ IDEA.
+- Internet access for the initial build to download Gradle and dependencies.
+
+On macOS, use `sdk use java 25.0.3.fx-zulu` if switching Java versions with SDKMAN.
+
+### Importing, building, and running
+
+1. Clone the repository: [W13-2 Repo](https://github.com/AY2627S1-CS2113-W13-2/tp/)  .
+2. Open the repository root containing `build.gradle` and import it as a Gradle project.
+3. Confirm that `java -version` reports Java 25 and that the IDE's Gradle JVM uses Java 25.
+4. Run the following commands from the repository root.
+
+| Task | Windows PowerShell | macOS / Linux |
+| --- | --- | --- |
+| Run from source | `.\gradlew.bat run` | `./gradlew run` |
+| Run automated tests | `.\gradlew.bat test` | `./gradlew test` |
+| Run tests and Checkstyle | `.\gradlew.bat check` | `./gradlew check` |
+| Package the application | `.\gradlew.bat shadowJar` | `./gradlew shadowJar` |
+
+Run the packaged application using `java -jar build/libs/finnus.jar`. Enter `help` to view commands and `exit` to quit.
+The application entry point is `finnus.FinNUS`.
+<!-- @@author -->
+
+---
+
+## Design
+
+<!-- @@author naieel04 -->
+### Architecture
+
+`FinNUS` coordinates startup, command execution, and persistence. The parser produces command objects, which read or
+modify the ledger and display results through the UI. Storage loads and saves complete ledger snapshots.
+
+[Insert UML diagram of app architecture here]
+
+[Insert figure caption explaining dependencies, arrow notation, and omitted details here]
+
+| Component | Main classes / package | Responsibility |
+| --- | --- | --- |
+| Application | `finnus.FinNUS` | Restore state, run commands, detect changes, save pending state, and handle shutdown. |
+| UI | `finnus.ui.Ui` | Read console input and display messages, errors, and command results. |
+| Parser | `finnus.parser.Parser` | Validate command syntax and construct a command. |
+| Commands | `finnus.command` | Execute operations through the shared `Command` abstraction. |
+| Ledger model | `TransactionList`, `Transaction`, `TransactionType` | Maintain transactions, opening balance, and balance calculation. |
+| Currency model | `CurrencyRates` | Maintain user-entered exchange rates relative to SGD. |
+| Category model | `CategoryList` | Maintain predefined and custom spending categories for withdrawals. |
+| Storage | `Storage`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult` | Encode, persist, validate, and recover financial state. |
+| Expected errors | `FinNusException` | Carry command failure messages to the application's error handler. |
+
+### Application lifecycle
+
+1. `FinNUS` loads a `LoadResult` through `Storage` and reconstructs the ledger.
+2. `Ui` reads a line; `Parser.parse()` validates it and returns a `Command`.
+3. The command executes against `TransactionList` and displays its result through `Ui`.
+4. `FinNUS` compares ledger snapshots to detect changes and attempts to save pending changes.
+5. `exit` or end of input ends the loop; pending changes are retried before shutdown.
+
+[Insert UML sequence diagram of a successful command from user input to automatic save here]
+
+[Insert explanation of blank input, FinNusException handling, shutdown, and unsaved changes here]
+
+### UI, parser, and commands
+
+`CommandWord` defines names, descriptions, and usage strings shared by the parser and help output. Concrete commands
+extend `Command` and implement `execute(TransactionList, Ui)`.
+
+[Insert UML class diagram of Command, its subclasses, Parser, CommandWord, and Ui here]
+
+[Insert explanation of parsing responsibilities versus execution responsibilities, with one example here]
+<!-- @@author -->
+
+<!-- @@author nkyjStar -->
 ### Representing money
 
 `Money` is the shared value type for monetary amounts. The parser creates it from user input,
@@ -34,7 +145,7 @@ transaction's stored amount. A deposit's `Transaction#getSignedAmount()` returns
 The following sequence shows an example usage of `Money`. It uses object names rather than one generic `Money` lifeline. The two
 inputs and the nonzero sum are distinct objects:
 
-![Sequence diagram for invoking Money methods](images\MoneySequenceDiagram.png)
+![Sequence diagram for invoking Money methods](images/MoneySequenceDiagram.png)
 
 `Money` does not require every value to be positive or below `Money.MAX_AMOUNT`.
 `Parser#parseAmount()` enforces those rules for user-entered transaction amounts, while
@@ -70,7 +181,30 @@ extra class and method calls instead of operators; in return, the balance and tr
 display use the same monetary behavior. `MoneyTest` checks exact repeated addition,
 immutability after negation, rounding only for display, signed sub-cent output, and equality
 across different decimal scales.
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
+### Storage
+
+`Storage` defines the persistence interface. `FileStorage` handles files, while `LedgerCodec` converts between text
+records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, and whether saving is allowed.
+
+- The main file is `finnus.txt`, beside the packaged JAR or in the working directory during development.
+- The previous-state backup is `finnus.txt.bak`.
+- The current text format starts with `FINNUS|1` and stores opening balance, rates, and transactions.
+- Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
+  value is checked against those details during loading so later rate changes do not alter past transactions.
+- Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
+- Saving uses temporary files and atomic replacement; loading can recover valid rows or a clean backup.
+
+[Insert UML class diagram of the storage interface, implementation, codec, snapshot, and load result here]
+
+[Insert sample save-file records and explain fields, validation, and format compatibility here]
+<!-- @@author -->
+
+## Implementation
+
+<!-- @@author Nabijon Nazarov -->
 ### Adding a deposit or withdrawal
 
 The `deposit` and `withdraw` commands record money coming in and going out. Each one creates a
@@ -122,24 +256,27 @@ message to the user, so invalid input never stops the app.
 **Aspect: how amounts are stored**
 
 * **Alternative 1 (current choice):** `Money`, which wraps a `BigDecimal`.
-  * Pros: stores decimal amounts exactly, so the balance never drifts, and keeps formatting in one place.
-  * Cons: more verbose, e.g. `a.add(b)` instead of `a + b`, and `compareTo()` instead of `<`.
+    * Pros: stores decimal amounts exactly, so the balance never drifts, and keeps formatting in one place.
+    * Cons: more verbose, e.g. `a.add(b)` instead of `a + b`, and `compareTo()` instead of `<`.
 * **Alternative 2:** `double`.
-  * Pros: simpler arithmetic.
-  * Cons: most decimal values cannot be stored exactly (e.g. `0.1 + 0.2` gives
-    `0.30000000000000004`), so balances would become slightly wrong over many transactions.
+    * Pros: simpler arithmetic.
+    * Cons: most decimal values cannot be stored exactly (e.g. `0.1 + 0.2` gives
+      `0.30000000000000004`), so balances would become slightly wrong over many transactions.
 
 **Aspect: whether a withdrawal needs a description**
 
 * **Alternative 1 (current choice):** a description is required for `withdraw` but optional for
   `deposit`.
-  * Pros: users always know what they spent money on, which is the main purpose of tracking
-    expenses. Most deposits are regular allowances, so a description adds little.
-  * Cons: a withdrawal takes slightly longer to type.
+    * Pros: users always know what they spent money on, which is the main purpose of tracking
+      expenses. Most deposits are regular allowances, so a description adds little.
+    * Cons: a withdrawal takes slightly longer to type.
 * **Alternative 2:** the description is optional for both.
-  * Pros: faster to type.
-  * Cons: the transaction history becomes hard to understand later.
+    * Pros: faster to type.
+    * Cons: the transaction history becomes hard to understand later.
 
+<!-- @@author -->
+
+<!-- @@author chancheese -->
 ### Setting the opening balance
 
 The opening balance is the money the user had before they started using FinNUS. It is set once,
@@ -173,12 +310,12 @@ return transactions.stream()
 **Aspect: how the opening balance is stored**
 
 * **Alternative 1 (current choice):** a separate field in `TransactionList`.
-  * Pros: it never appears in `recent`, cannot be removed by `delete`, and is not counted as
-    income.
-  * Cons: storage has to save it separately from the transactions.
+    * Pros: it never appears in `recent`, cannot be removed by `delete`, and is not counted as
+      income.
+    * Cons: storage has to save it separately from the transactions.
 * **Alternative 2:** a special first `DEPOSIT` transaction.
-  * Pros: no extra field.
-  * Cons: it would look like real income in the history and could be deleted by accident.
+    * Pros: no extra field.
+    * Cons: it would look like real income in the history and could be deleted by accident.
 
 ### Setting exchange rates
 
@@ -203,12 +340,15 @@ to SGD. `rate JPY 110` sets 1 SGD = 110 JPY, and `rate` on its own lists all rat
 **Aspect: where exchange rates come from**
 
 * **Alternative 1 (current choice):** the user types each rate in.
-  * Pros: works offline and gives the same result every time, which makes it easy to test.
-  * Cons: rates have to be updated by hand.
+    * Pros: works offline and gives the same result every time, which makes it easy to test.
+    * Cons: rates have to be updated by hand.
 * **Alternative 2:** fetch live rates from an online API.
-  * Pros: always up to date.
-  * Cons: needs internet access, and tests would give different results from day to day.
+    * Pros: always up to date.
+    * Cons: needs internet access, and tests would give different results from day to day.
 
+<!-- @@author -->
+
+<!-- @@author nkyjStar -->
 ### Viewing recent transactions
 
 The `recent [NUMBER]` command lets a user inspect the latest recorded activity without changing
@@ -237,7 +377,7 @@ For an empty ledger, the command instead displays `Your list of transactions is 
 
 This sequence shows the normal path for `recent 2`:
 
-![Sequence diagram of recent command](images\RecentCommandSequenceDiagram.png)
+![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
 The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
 Java decides when its memory is actually reclaimed.
@@ -332,7 +472,7 @@ nonzero.
 
 The sequence below follows the calculation and display of one `balance` request:
 
-![Sequence diagram of a balance command](images\BalanceSequenceDiagram.png)
+![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
 The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
 Java decides when its memory is actually reclaimed.
@@ -345,6 +485,8 @@ withdrawal, deletion and opening-balance update would have to maintain the cache
 For this small ledger, the simpler calculation avoids that coordination. Both `recent` and
 `balance` leave the ledger unchanged, so neither creates a new change to save. The application
 may still retry a save that failed after an earlier command.
+<!-- @@author -->
+
 <!-- @@author chancheese -->
 ### Recording transactions in foreign currencies
 
@@ -383,26 +525,25 @@ match its amount and rate is skipped, since the file must have been edited by ha
 
 * **Alternative 1 (current choice):** once, when the transaction is added, and the rate used is
   saved with it.
-  * Pros: changing a rate later never changes past transactions or the balance.
-  * Cons: each foreign transaction saves three extra values in the save file: the currency code,
-    the original amount and the rate.
+    * Pros: changing a rate later never changes past transactions or the balance.
+    * Cons: each foreign transaction saves three extra values in the save file: the currency code,
+      the original amount and the rate.
 * **Alternative 2:** every time the balance is calculated, using the current rate.
-  * Pros: nothing extra to store.
-  * Cons: setting a new rate would silently change past spending and the balance.
+    * Pros: nothing extra to store.
+    * Cons: setting a new rate would silently change past spending and the balance.
 
 **Aspect: which command handles foreign amounts**
 
 * **Alternative 1 (current choice):** a separate `ForeignTransactionCommand`.
-  * Pros: the rates are in `TransactionList`, which only a command can reach when it runs, so
-    conversion and its errors stay in one place. `DepositCommand` and `WithdrawCommand` are
-    unchanged.
-  * Cons: one more class, and the confirmation message is built in two places.
+    * Pros: the rates are in `TransactionList`, which only a command can reach when it runs, so
+      conversion and its errors stay in one place. `DepositCommand` and `WithdrawCommand` are
+      unchanged.
+    * Cons: one more class, and the confirmation message is built in two places.
 * **Alternative 2:** add an optional currency to `DepositCommand` and `WithdrawCommand`.
-  * Pros: fewer classes.
-  * Cons: both commands would need the same conversion code, and their `execute()` would start
-    throwing an exception that every existing caller has to handle.
+    * Pros: fewer classes.
+    * Cons: both commands would need the same conversion code, and their `execute()` would start
+      throwing an exception that every existing caller has to handle.
 <!-- @@author -->
-
 
 <!-- @@author nabijonzzz -->
 ### Categorising spending
@@ -470,30 +611,246 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
   * Cons: typos create unwanted categories that the user cannot remove.
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
+### Automatic saving and recovery
+
+**Key classes:** `FinNUS`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult`
+
+[Insert explanation of snapshot change detection, pending changes, save retries, and previous-state backups here]
+
+[Insert UML sequence diagram of saving changed financial state here]
+
+[Insert UML activity diagram of loading, partial recovery, backup recovery, and disabled saving here]
+
+[Insert recovery table for missing files, corrupt rows, unusable files, unsupported versions, read failures, and save failures here]
+
+For each recovery case, specify recovered state, warnings, whether saving is allowed, and how originals are preserved.
+
+**Design consideration:** [Insert rationale and tradeoffs for snapshot-based text storage and atomic replacement here]
+
+### Validation and error handling
+
+| Boundary | What to explain |
+| --- | --- |
+| Parser | Required arguments, numeric formats, limits, currency codes, and positive indices. |
+| Command execution | Checks depending on current state, such as whether a deletion index exists. |
+| Model | Internal invariants and assertions; distinguish these from external-input validation. |
+| Storage decoding | Record validation, skipped rows, compatibility checks, and recovery warnings. |
+| Application | Handling expected errors, retaining unsaved changes, and communicating save failures. |
+
+[Insert invalid-command walkthrough identifying where the error originates and how it reaches the user here]
+
+### Additional feature template
+
+Duplicate this subsection for any other feature that warrants a detailed explanation.
+
+**Feature and status:** [Insert feature name and implemented or proposed status here]
+
+**Commands and classes:** [Insert commands and responsible classes here]
+
+**Mechanism and walkthrough:** [Insert algorithm, state changes, and concrete example here]
+
+[Insert UML diagram of this feature here]
+
+**Design considerations:** [Insert chosen approach, alternatives, rationale, and tradeoffs here]
+
+**Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
+## Documentation, logging, testing, and DevOps
+
+### Documentation and diagrams
+
+- [User Guide](UserGuide.md): command syntax and user-facing behaviour.
+- [README](../README.md): project overview and contributor setup information.
+- [Build configuration](../build.gradle): Java toolchain, dependencies, packaging, and checks.
+
+[Insert agreed locations for editable UML sources and exported images here]
+
+Keep diagrams consistent with the code. Explain relationships, number figures, and link images to their editable sources.
+
+### Logging
+
+`FinNUS.main()` configures `java.util.logging` to append diagnostics to `finnus.log` in the working directory. If the log
+file cannot be created, logging is disabled. Command arguments and failed input can currently appear in diagnostics.
+
+[Insert logging levels, example diagnostics, and the team's policy for financial information in logs here]
+
+### Automated testing and continuous integration
+
+Tests are in `src/test/java/finnus`, including parser, command, model, storage, and persistence integration tests.
+Run `check` using the setup table above. GitHub Actions runs checks with Java 25 on Windows, macOS, and Linux.
+
+[Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
 ## Product scope
+
 ### Target user profile
 
-{Describe the target user profile}
+FinNUS targets tech-savvy university students managing a tight monthly budget. This includes international students
+handling foreign-currency allowances and local students managing daily campus expenses. The intended user is comfortable
+with a command-line interface.
 
 ### Value proposition
 
-{Describe the value proposition: what problem does it solve?}
+FinNUS provides a streamlined desktop CLI to help students understand how much they can safely spend each day. It aims
+to make allowance and campus-expense tracking straightforward, including for students dealing with foreign currency.
 
-## User Stories
+### Release scope
 
-|Version| As a ... | I want to ... | So that I can ...|
-|--------|----------|---------------|------------------|
-|v1.0|new user|see usage instructions|refer to them when I forget how to use the application|
-|v2.0|user|find a to-do item by name|locate a to-do without having to go through the entire list|
+[Insert features included in this release and explicit exclusions here]
 
-## Non-Functional Requirements
+[Insert confirmation of whether daily spending allowances or foreign-currency transaction conversion are planned here]
+<!-- @@author -->
 
-{Give non-functional requirements}
+<!-- @@author naieel04 -->
+## User stories
 
+The stories below are based on the supplied requirements image. Confirm their acceptance criteria with the team.
+
+| ID | As a/an... | I want to... | So that... |
+| --- | --- | --- | --- |
+| US-01 | active user | edit the display currency | I can change the currency used for display |
+| US-02 | lazy user | set the day my allowance arrives | the app knows my budgeting cycle |
+| US-03 | habitual user | view all transactions | I can review my spending history |
+| US-04 | international student | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD |
+| US-05 | forgetful user | categorise my spending | I can later see where my money went |
+| US-06 | disciplined user | list this cycle's spending | I can check that nothing is missing |
+| US-07 | power user | see my balance through visual charts | I can see my financial status clearly |
+| US-08 | forward-planning student | see how many days remain until my next allowance | I can pace my spending |
+
+[Add acceptance criteria for each story selected for implementation.]
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
+## Use cases
+
+### UC-01: Record a foreign-currency allowance
+
+**Actor:** FinNUS user
+
+**Related story:** US-04 (record an incoming allowance)
+
+**Preconditions:** FinNUS is running and an exchange rate has been set for the allowance currency.
+
+**Postconditions:** The allowance is stored as an SGD transaction with its original currency amount and rate; the updated ledger is saved.
+
+**Main success scenario:**
+
+1. The user enters `deposit 1100 d/Allowance c/JPY`.
+2. FinNUS validates the amount and currency, converts JPY to SGD using the configured rate, and records the transaction.
+3. FinNUS displays the SGD value and rate used, then saves the ledger.
+
+**Extensions:**
+
+- **2a. No JPY rate is set or the input is invalid:** FinNUS displays an error and leaves the ledger unchanged.
+- **3a. Saving fails:** FinNUS reports that the change remains in memory and retries on a later command or before exit.
+
+### UC-02: Review transaction history
+
+**Actor:** FinNUS user
+
+**Related story:** US-03
+
+**Preconditions:** At least one transaction has been recorded.
+
+**Main success scenario:** The user enters `recent 2`. FinNUS displays up to two transactions, newest first, with descriptions and indices that can be used by `delete`.
+
+**Extension:** If the ledger is empty, FinNUS displays an empty-list message.
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
+## Non-functional requirements
+
+The images describe product goals rather than formal quality constraints. The following are proposed non-functional
+requirements inferred from those goals. Confirm the targets with the team before treating them as release commitments.
+
+| ID | Quality | Proposed requirement | How to verify |
+| --- | --- | --- | --- |
+| NFR-01 | Financial accuracy | Monetary calculations must use decimal arithmetic. Displayed SGD balances must equal the opening balance plus deposits minus withdrawals, to the cent. Converted allowances must use the rate recorded for that deposit and a documented rounding rule. | Test decimal edge cases, repeated additions, deposits in foreign currencies, and balance totals against hand-calculated results. |
+| NFR-02 | Data integrity | A rejected command must leave the ledger unchanged. A completed state change must either be saved or clearly reported as unsaved. | Exercise invalid input and simulated storage failures; compare ledger state before and after. |
+| NFR-03 | Persistence | The opening balance, transactions, and exchange rates must be available after restarting the application. | Create sample ledger data, exit, restart using the same data folder, and compare restored values. |
+| NFR-04 | Usability | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command. | Manually test documented commands, malformed inputs, and recovery with a following valid command. |
+| NFR-05 | Compatibility | The application must run with Java 25 on the operating systems supported by the project. | Build and run the automated checks on Windows, macOS, and Linux CI environments. |
+
+[Confirm the supported operating systems and rounding policy with the team.]
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
 ## Glossary
 
-* *glossary item* - Definition
+| Term | Meaning |
+| --- | --- |
+| CLI | Command-line interface accepting text commands. |
+| Ledger | Transactions, opening balance, and exchange rates held by FinNUS. |
+| Opening balance | Funds held before recording transactions; separate from transaction history. |
+| Base currency | SGD, used for transaction amounts and balances. |
+| Exchange rate | Foreign-currency units equivalent to one SGD. |
+| Snapshot | An immutable value copy of financial state for persistence and change detection. |
+| Recent-list index | A one-based position counting from the newest transaction. |
+| [Insert term here] | [Insert definition here] |
+<!-- @@author -->
 
+<!-- @@author naieel04 -->
 ## Instructions for manual testing
 
-{Give instructions on how to do a manual product testing e.g., how to load sample data to be used for testing}
+Complete and execute these draft scenarios for the target release. Record observed results separately from expectations;
+do not mark a case as passed until it has been run.
+
+### Test environment and sample data
+
+1. Use Java 25 and build the JAR with `shadowJar`.
+2. Copy `build/libs/finnus.jar` into a separate, empty test folder and run `java -jar finnus.jar` there.
+3. For each independent scenario, use a fresh folder unless it explicitly tests restart or recovery.
+4. Record: [Insert operating system, Java version, release, tester, and date here].
+
+On first launch, enter `100` as the opening balance and confirm it with `yes`. Then create the sample ledger with:
+
+```text
+deposit 50 d/Allowance
+withdraw 4.50 d/Lunch
+rate JPY 110
+```
+
+The expected balance is **SGD 145.50**, with two transactions and one exchange rate. The newest transaction is the
+withdrawal. Restarting in the same folder does not reset the saved ledger.
+
+### Functional scenarios
+
+| ID | Preconditions | Steps / input | Expected result |
+| --- | --- | --- | --- |
+| MT-01 | Fresh folder | Launch, enter `help`, then `exit`. | Welcome and help appear; the process exits. [Insert exact output here] |
+| MT-02 | First-run setup completed with opening balance SGD 100 | Enter sample commands, then `balance`. | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here] |
+| MT-03 | Sample ledger | Enter `recent 2`, `delete 1`, then `balance`. | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here] |
+| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`. | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
+| MT-05 | Sample ledger | Enter `rate JPY 120`, then `rate`. | JPY changes to 120 without a duplicate entry. [Insert exact output here] |
+| MT-06 | Saved sample ledger | Exit, restart, then enter `balance`, `recent 2`, and `rate`. | Opening balance, transactions, and rate are restored. [Insert exact output here] |
+
+### Storage and recovery scenarios
+
+Use disposable test copies and stop the application before editing fixture files.
+
+| ID | Fixture / failure | Procedure and expected result to complete |
+| --- | --- | --- |
+| MT-07 | One corrupt row | [Insert file contents, launch steps, warning, recovered records, and resulting balance here] |
+| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here] |
+| MT-09 | Unsupported version | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here] |
+| MT-10 | Save failure | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
+
+[Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
+## Planned enhancements
+
+Keep approved future work separate from implemented behaviour. Remove this section if outside the release scope.
+
+| Enhancement | User need | Proposed design and affected components | Target release |
+| --- | --- | --- | --- |
+| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here] | [Insert release here] |
+
+[Insert UML diagram of a proposed feature here, if applicable]
+<!-- @@author -->

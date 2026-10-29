@@ -22,8 +22,10 @@ import finnus.money.Money;
  * Checks recovery decisions and preservation of damaged files before later saves.
  */
 class StorageRecoveryTest {
+    //@@author naieel04
     @TempDir
     Path directory;
+    //@@author
 
     @Test
     public void load_missingFile_createsPendingSetupFile() throws IOException {
@@ -37,6 +39,7 @@ class StorageRecoveryTest {
         assertTrue(new FileStorage(path).load().setupRequired());
     }
 
+    //@@author naieel04
     @Test
     public void load_partialFile_preservesOriginalBeforeSaving() throws IOException {
         Path path = directory.resolve("finnus.txt");
@@ -63,6 +66,7 @@ class StorageRecoveryTest {
         assertTrue(loaded.warnings().stream().anyMatch(message -> message.contains("exit without changing")));
         assertEquals(damaged, Files.readString(path));
     }
+    //@@author
 
     @Test
     public void load_corruptMain_usesValidBackupWithoutReplacingIt() throws IOException {
@@ -86,6 +90,7 @@ class StorageRecoveryTest {
         assertFalse(Files.exists(path));
     }
 
+    //@@author naieel04
     @Test
     public void load_invalidUtf8_preservesOriginalBytes() throws IOException {
         Path path = directory.resolve("finnus.txt");
@@ -156,4 +161,5 @@ class StorageRecoveryTest {
             return files.filter(file -> file.getFileName().toString().contains(".corrupt-")).toList();
         }
     }
+    //@@author
 }

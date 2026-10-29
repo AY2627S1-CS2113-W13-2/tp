@@ -21,6 +21,7 @@ import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /**
  * Checks exact serialization, independent format examples and row recovery.
  */
@@ -36,13 +37,17 @@ class LedgerCodecTest {
     @Test
     public void encode_completeLedger_preservesValuesAndDescriptions() {
         List<StoredTransaction> transactions = List.of(
+                //@@author
                 new StoredTransaction(TransactionType.DEPOSIT, Money.of("500.00"), "Allowance"),
                 new StoredTransaction(TransactionType.WITHDRAWAL, Money.of("0.005"), "|\t\n\u5348\u9910\r\n"),
                 new StoredTransaction(TransactionType.DEPOSIT, Money.of("1"), ""));
         LedgerSnapshot snapshot = new LedgerSnapshot(Money.of("12.30"), transactions,
+                //@@author naieel04
                 Map.of("JPY", new BigDecimal("110.00"), "MYR", new BigDecimal("3.450000")));
         String encoded = codec.encode(snapshot);
+        //@@author
         assertTrue(encoded.contains("TRANSACTION|DEPOSIT|500.00|QWxsb3dhbmNl|\n"));
+        //@@author naieel04
         assertTrue(encoded.indexOf("RATE|JPY") < encoded.indexOf("RATE|MYR"));
         assertEquals(snapshot, codec.decode(encoded).snapshot());
         assertEquals(Status.CLEAN, codec.decode(encoded).status());
@@ -72,7 +77,9 @@ class LedgerCodecTest {
         String text = "FINNUS|1\n" + badOpening + "\nTRANSACTION|DEPOSIT|2|\n";
         LedgerCodec.DecodeResult result = codec.decode(text);
         assertEquals(Status.PARTIAL, result.status());
+        //@@author
         assertEquals(Money.ZERO, result.snapshot().openingBalance());
+        //@@author naieel04
         assertEquals(1, result.snapshot().transactions().size());
         assertTrue(result.warnings().getFirst().startsWith("Skipped row 2:"));
         assertTrue(result.warnings().getFirst().contains("exceed"));
@@ -89,7 +96,9 @@ class LedgerCodecTest {
                 TRANSACTION|DEPOSIT|1|
                 TRANSACTION|DEPOSIT|1|
                 """);
+        //@@author
         assertEquals(Money.of("10"), result.snapshot().openingBalance());
+        //@@author naieel04
         assertEquals(new BigDecimal("110"), result.snapshot().rates().get("JPY"));
         assertEquals(2, result.snapshot().transactions().size());
         assertEquals(2, result.warnings().size());
@@ -99,7 +108,9 @@ class LedgerCodecTest {
     public void decode_missingOpening_recoversTransactionsAndWarns() {
         LedgerCodec.DecodeResult result = codec.decode("FINNUS|1\nTRANSACTION|DEPOSIT|1|\n");
         assertEquals(Status.PARTIAL, result.status());
+        //@@author
         assertEquals(Money.ZERO, result.snapshot().openingBalance());
+        //@@author naieel04
         assertTrue(result.warnings().getFirst().contains("Balances may be incomplete"));
     }
 
@@ -123,15 +134,21 @@ class LedgerCodecTest {
     @Test
     public void capture_mutatedLedger_doesNotAlterSnapshot() {
         TransactionList ledger = new TransactionList();
+        //@@author
         ledger.add(new Transaction(TransactionType.DEPOSIT, Money.of(1), ""));
+        //@@author naieel04
         ledger.getRates().setRate("JPY", BigDecimal.TEN);
         LedgerSnapshot snapshot = LedgerSnapshot.capture(ledger);
         ledger.delete(0);
         ledger.getRates().setRate("JPY", BigDecimal.ONE);
+        //@@author
         ledger.setOpeningBalance(Money.of(10));
+        //@@author naieel04
         assertEquals(1, snapshot.transactions().size());
         assertEquals(BigDecimal.TEN, snapshot.rates().get("JPY"));
+        //@@author
         assertEquals(Money.ZERO, snapshot.openingBalance());
+        //@@author naieel04
         assertEquals(snapshot, LedgerSnapshot.capture(snapshot.toTransactionList()));
         assertThrows(UnsupportedOperationException.class, () -> snapshot.rates().put("USD", BigDecimal.ONE));
     }
@@ -139,11 +156,15 @@ class LedgerCodecTest {
     @Test
     public void storedTransaction_amountExceedsMaxAmount_throwsException() {
         assertThrows(IllegalArgumentException.class, () ->
+                //@@author
                 new StoredTransaction(TransactionType.DEPOSIT, Money.of("1000000.01"), ""));
+        //@@author naieel04
         assertThrows(IllegalArgumentException.class, () ->
+                //@@author
                 new StoredTransaction(TransactionType.WITHDRAWAL, Money.of("99999999999"), "desc"));
     }
 
+    //@@author naieel04
     @Test
     public void validateRate_rateExceedsMaxRate_throwsException() {
         assertThrows(IllegalArgumentException.class, () ->
@@ -155,10 +176,15 @@ class LedgerCodecTest {
     @Test
     public void validateOpeningBalance_amountExceedsMaxAmount_throwsException() {
         assertThrows(IllegalArgumentException.class, () ->
+                //@@author
                 LedgerSnapshot.validateOpeningBalance(Money.of("1000000.01")));
+        //@@author naieel04
         assertThrows(IllegalArgumentException.class, () ->
+                //@@author
                 LedgerSnapshot.validateOpeningBalance(Money.of("99999999999")));
+        //@@author naieel04
         assertThrows(IllegalArgumentException.class, () ->
+                //@@author
                 new LedgerSnapshot(Money.of("1000000.01"), List.of(), Map.of()));
     }
 
