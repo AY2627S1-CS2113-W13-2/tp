@@ -1,0 +1,70 @@
+@startuml
+' Sequence diagram for "withdraw 4.50 d/Lunch t/food on/2026-10-20".
+' Logging, console output, amount validation and saving are left out to focus on the objects involved.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+participant ":FinNUS" as FinNUS
+participant "<<class>>\nParser" as Parser
+participant ":WithdrawCommand" as Command
+participant ":TransactionList" as TransactionList
+participant ":CategoryList" as CategoryList
+participant "t:Transaction" as Transaction
+
+activate FinNUS
+FinNUS -> Parser : parse("withdraw 4.50 d/Lunch\nt/food on/2026-10-20", today)
+activate Parser
+
+Parser -> Parser : extractCategory(...)
+activate Parser
+Parser --> Parser : "food"
+deactivate Parser
+
+Parser -> Parser : extractDate(..., today)
+activate Parser
+Parser --> Parser : 2026-10-20
+deactivate Parser
+
+create Command
+Parser -> Command : new(4.50, "Lunch", "food", 2026-10-20)
+activate Command
+Command --> Parser
+deactivate Command
+
+Parser --> FinNUS : command
+deactivate Parser
+
+FinNUS -> Command : execute(transactions, ui)
+activate Command
+
+Command -> TransactionList : getCategories()
+activate TransactionList
+TransactionList --> Command : categories
+deactivate TransactionList
+
+Command -> CategoryList : resolve("food")
+activate CategoryList
+CategoryList --> Command : "Food"
+deactivate CategoryList
+
+note right of CategoryList
+  If the category does not exist,
+  resolve() throws a FinNusException
+  and no transaction is added.
+end note
+
+create Transaction
+Command -> Transaction : new(WITHDRAWAL, 4.50, "Lunch", "Food", 2026-10-20)
+activate Transaction
+Transaction --> Command
+deactivate Transaction
+
+Command -> TransactionList : add(t)
+activate TransactionList
+TransactionList --> Command
+deactivate TransactionList
+
+Command --> FinNUS
+deactivate Command
+@enduml
