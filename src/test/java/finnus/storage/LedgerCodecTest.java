@@ -42,7 +42,7 @@ class LedgerCodecTest {
         LedgerSnapshot snapshot = new LedgerSnapshot(Money.of("12.30"), transactions,
                 Map.of("JPY", new BigDecimal("110.00"), "MYR", new BigDecimal("3.450000")));
         String encoded = codec.encode(snapshot);
-        assertTrue(encoded.contains("TRANSACTION|DEPOSIT|500.00|QWxsb3dhbmNl|\n"));
+        assertTrue(encoded.contains("TRANSACTION|DEPOSIT|500.00|QWxsb3dhbmNl||\n"));
         assertTrue(encoded.indexOf("RATE|JPY") < encoded.indexOf("RATE|MYR"));
         assertEquals(snapshot, codec.decode(encoded).snapshot());
         assertEquals(Status.CLEAN, codec.decode(encoded).status());
@@ -171,7 +171,7 @@ class LedgerCodecTest {
 
         String encoded = codec.encode(snapshot);
 
-        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110.00|Others\n"));
+        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110.00|Others|\n"));
         assertEquals(snapshot, codec.decode(encoded).snapshot());
         assertEquals(Status.CLEAN, codec.decode(encoded).status());
     }
@@ -207,7 +207,7 @@ class LedgerCodecTest {
         String encoded = codec.encode(snapshot);
 
         assertTrue(encoded.contains("CATEGORY|Gym\n"));
-        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food\n"));
+        assertTrue(encoded.contains("TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|\n"));
         assertEquals(snapshot, codec.decode(encoded).snapshot());
         assertEquals(Status.CLEAN, codec.decode(encoded).status());
     }

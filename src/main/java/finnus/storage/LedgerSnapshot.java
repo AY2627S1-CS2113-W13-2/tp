@@ -1,6 +1,7 @@
 package finnus.storage;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +85,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
      * A transaction value independent of the mutable ledger and console formatting.
      */
     public record StoredTransaction(TransactionType type, Money amount, String description,
-                                    ForeignAmount foreignAmount, String category) {
+                                    ForeignAmount foreignAmount, String category, LocalDate date) {
         /**
          * Validates external values before they reach assertion-based domain constructors.
          */
@@ -126,6 +127,14 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             this(type, amount, description, foreignAmount,
                     type == TransactionType.WITHDRAWAL ? CategoryList.DEFAULT_CATEGORY : null);
         }
+
+        /**
+         * Creates a stored transaction without a date, as saved before dates were recorded.
+         */
+        public StoredTransaction(TransactionType type, Money amount, String description,
+                ForeignAmount foreignAmount, String category) {
+            this(type, amount, description, foreignAmount, category, null);
+        }
         //@@author
 
         //@@author chancheese
@@ -152,7 +161,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         List<StoredTransaction> records = ledger.getAll().stream()
                 .map(transaction -> new StoredTransaction(transaction.getType(), transaction.getAmount(),
                         transaction.getDescription(), transaction.getForeignAmount().orElse(null),
-                        transaction.getCategory().orElse(null)))
+                        transaction.getCategory().orElse(null), transaction.getDate().orElse(null)))
                 .toList();
         return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll(),
                 ledger.getCategories().getCustom());
@@ -171,11 +180,12 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
             //@@author chancheese
             if (record.foreignAmount() != null) {
                 ledger.add(new Transaction(record.type(), record.foreignAmount(), record.description(),
-                        record.category()));
+                        record.category(), record.date()));
                 continue;
             }
             //@@author
-            ledger.add(new Transaction(record.type(), record.amount(), record.description(), record.category()));
+            ledger.add(new Transaction(record.type(), record.amount(), record.description(), record.category(),
+                    record.date()));
         }
         rates.forEach(ledger.getRates()::setRate);
         return ledger;

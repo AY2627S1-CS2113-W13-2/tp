@@ -2,6 +2,7 @@
 package finnus.command;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.logging.Logger;
 
 import finnus.currency.ForeignAmount;
@@ -30,6 +31,8 @@ public class ForeignTransactionCommand extends Command {
     //@@author nabijonzzz
     /** The category name as typed after {@code t/}, or null to use the default category. */
     private final String categoryName;
+    /** The day of the transaction, or null if unknown. */
+    private final LocalDate date;
     //@@author chancheese
 
     /**
@@ -58,6 +61,18 @@ public class ForeignTransactionCommand extends Command {
      */
     public ForeignTransactionCommand(TransactionType type, BigDecimal amount, String currencyCode,
             String description, String categoryName) {
+        this(type, amount, currencyCode, description, categoryName, null);
+    }
+
+    /**
+     * Creates the command with a date.
+     *
+     * @param categoryName The category typed after {@code t/} for a withdrawal, or null for
+     *     the default category. Must be null for a deposit.
+     * @param date The day of the transaction, or null if unknown.
+     */
+    public ForeignTransactionCommand(TransactionType type, BigDecimal amount, String currencyCode,
+            String description, String categoryName, LocalDate date) {
         //@@author chancheese
         assert type != null : "Transaction type must not be null";
         assert amount != null && amount.signum() > 0 : "Foreign amount must be positive";
@@ -71,6 +86,7 @@ public class ForeignTransactionCommand extends Command {
         //@@author nabijonzzz
         assert type == TransactionType.WITHDRAWAL || categoryName == null : "A deposit must not have a category";
         this.categoryName = categoryName;
+        this.date = date;
         //@@author chancheese
     }
 
@@ -89,7 +105,7 @@ public class ForeignTransactionCommand extends Command {
                 ? transactions.getCategories().resolve(categoryName) : null;
         //@@author chancheese
         ForeignAmount foreignAmount = transactions.getRates().convert(amount, currencyCode);
-        Transaction transaction = new Transaction(type, foreignAmount, description, category);
+        Transaction transaction = new Transaction(type, foreignAmount, description, category, date);
         transactions.add(transaction);
         logger.info("Added " + transaction + " at rate " + foreignAmount.rate().toPlainString()
                 + ", total transactions: " + transactions.size());
