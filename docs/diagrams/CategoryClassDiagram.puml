@@ -1,0 +1,57 @@
+@startuml
+' Classes involved in categorising spending.
+' Only the members relevant to categories and dates are shown.
+!pragma layout smetana
+hide circle
+hide empty members
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+abstract class Command {
+  {abstract} +execute(transactions, ui)
+}
+
+class WithdrawCommand {
+  -categoryName : String
+  -date : LocalDate
+}
+
+class CategoryCommand {
+  -nameToAdd : String
+}
+
+class TransactionList {
+  +add(transaction)
+  +getCategories() : CategoryList
+}
+
+class CategoryList {
+  {static} +DEFAULT_CATEGORY : String
+  {static} +PREDEFINED : List<String>
+  -customCategories : List<String>
+  {static} +isValidName(name) : boolean
+  +find(name) : Optional<String>
+  +resolve(name) : String
+  +add(name)
+}
+
+class Transaction {
+  -description : String
+  -category : String
+  -date : LocalDate
+}
+
+Command <|-- WithdrawCommand
+Command <|-- CategoryCommand
+TransactionList *--> "1" CategoryList : categories
+TransactionList *--> "*" Transaction : transactions
+WithdrawCommand ..> CategoryList
+CategoryCommand ..> CategoryList
+WithdrawCommand ..> Transaction
+
+note right of Transaction
+  category is null for a deposit;
+  date is null for transactions
+  saved before dates existed.
+end note
+@enduml

@@ -86,14 +86,18 @@ public class Parser {
 
     //@@author chancheese
     /**
-     * Matches {@code c/CODE} at the start of a word, capturing the code (which may be empty).
+     * Matches {@code c/CODE} at the start of a word, allowing whitespace after {@code c/}.
+     * Captures the code, which may be empty.
      */
-    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX + "(\\S*)");
+    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX
+            + "\\s*(\\S*)");
 
     /**
-     * Matches {@code a/AMOUNT} at the start of a word, capturing the amount (which may be empty).
+     * Matches {@code a/AMOUNT} at the start of a word, allowing whitespace after {@code a/} like
+     * {@code c/} and {@code t/}. Captures the amount, which may be empty.
      */
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(?<!\\S)" + AMOUNT_PREFIX + "(\\S*)");
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(?<!\\S)" + AMOUNT_PREFIX
+            + "\\s*(\\S*)");
 
     /** Turns off the allowance, as in {@code allowance off}. */
     private static final String ALLOWANCE_OFF = "off";
@@ -101,9 +105,11 @@ public class Parser {
 
     //@@author nabijonzzz
     /**
-     * Matches {@code t/NAME} at the start of a word, capturing the name (which may be empty).
+     * Matches {@code t/NAME} at the start of a word, allowing whitespace after {@code t/}.
+     * Captures the name, which may be empty.
      */
-    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX + "(\\S*)");
+    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX
+            + "\\s*(\\S*)");
 
     /**
      * Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty).

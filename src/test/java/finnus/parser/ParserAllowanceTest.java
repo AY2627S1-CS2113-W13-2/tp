@@ -39,7 +39,8 @@ class ParserAllowanceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"allowance 5 a/500", "allowance a/500 5", "ALLOWANCE 5 a/500 c/sgd"})
+    @ValueSource(strings = {"allowance 5 a/500", "allowance a/500 5", "ALLOWANCE 5 a/500 c/sgd", "allowance 5 a/ 500",
+        "allowance 5   a/   500   c/ SGD"})
     public void parse_sgdAmountAnyOrder_setsAmount(String input) throws FinNusException {
         Allowance allowance = runAndGetAllowance(input);
 
@@ -48,9 +49,10 @@ class ParserAllowanceTest {
         assertEquals(null, allowance.currencyCode());
     }
 
-    @Test
-    public void parse_foreignAmount_setsCurrency() throws FinNusException {
-        Allowance allowance = runAndGetAllowance("allowance 5 c/jpy a/60000");
+    @ParameterizedTest
+    @ValueSource(strings = {"allowance 5 c/jpy a/60000", "allowance 5 a/ 60000 c/ JPY"})
+    public void parse_foreignAmount_setsCurrency(String input) throws FinNusException {
+        Allowance allowance = runAndGetAllowance(input);
 
         assertEquals(new BigDecimal("60000"), allowance.amount());
         assertEquals("JPY", allowance.currencyCode());
@@ -70,7 +72,8 @@ class ParserAllowanceTest {
     @ValueSource(strings = {"allowance 0", "allowance 32", "allowance -5", "allowance 5.5", "allowance five",
         "allowance 99999999999", "allowance 5 6", "allowance a/500", "allowance 5 a/", "allowance 5 a/0",
         "allowance 5 a/abc", "allowance 5 a/1000001", "allowance 5 a/500 a/600", "allowance 5 c/JPY",
-        "allowance 5 a/500 c/JYP", "allowance off now"})
+        "allowance 5 a/500 c/JYP", "allowance off now", "allowance a/ 5", "allowance 5 a/ c/JPY",
+        "allowance 5 a/500 a/ 600"})
     public void parse_invalidAllowance_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input, TODAY));
     }
