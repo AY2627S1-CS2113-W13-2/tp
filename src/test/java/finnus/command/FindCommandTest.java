@@ -89,4 +89,25 @@ class FindCommandTest {
         }
         return output.toString();
     }
+
+    @Test
+    public void containsIgnoreCase_textWhoseLowercaseChangesLength_stillMatches() {
+        // "İ" lowercases to "i" plus a combining dot, which broke toLowerCase().contains().
+        assertTrue(FindCommand.containsIgnoreCase("\u0130stanbul trip", "istanbul"));
+        assertTrue(FindCommand.containsIgnoreCase("Trip to \u0130stanbul", "ISTANBUL"));
+    }
+
+    @Test
+    public void containsIgnoreCase_greekFinalSigma_matches() {
+        // Capital sigma has two lowercase forms: "σ" and the final form "ς".
+        assertTrue(FindCommand.containsIgnoreCase("\u039a\u0391\u03a6\u0395\u03a3", "\u03ba\u03b1\u03c6\u03b5\u03c2"));
+        assertTrue(FindCommand.containsIgnoreCase("\u039a\u0391\u03a6\u0395\u03a3", "\u03ba\u03b1\u03c6\u03b5\u03c3"));
+    }
+
+    @Test
+    public void containsIgnoreCase_keywordLongerThanTextOrAbsent_returnsFalse() {
+        assertFalse(FindCommand.containsIgnoreCase("Bus", "Bus fare"));
+        assertFalse(FindCommand.containsIgnoreCase("Lunch", "dinner"));
+        assertTrue(FindCommand.containsIgnoreCase("Lunch", "LUNCH"));
+    }
 }
