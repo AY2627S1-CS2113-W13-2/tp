@@ -36,20 +36,34 @@ class HelpCommandTest {
                 "____________________________________________________________",
                 "Available commands:",
                 //@@author nabijonzzz
-                "+----------+---------------------+---------------------------------------------------------+",
-                "| Command  | Description         | Syntax                                                  |",
-                "+----------+---------------------+---------------------------------------------------------+",
-                "| deposit  | Record income       | deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]             |",
-                "| withdraw | Record spending     | withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] |",
-                "| recent   | Recent activity     | recent [NUMBER]                                         |",
-                "| find     | Search descriptions | find KEYWORD                                            |",
-                "| delete   | Delete a record     | delete INDEX                                            |",
-                "| balance  | Current balance     | balance                                                 |",
-                "| rate     | Manage FX rates     | rate [CURRENCY RATE]                                    |",
-                "| category | Manage categories   | category add NAME or list                               |",
-                "| help     | List commands       | help                                                    |",
-                "| exit     | Close FinNUS        | exit                                                    |",
-                "+----------+---------------------+---------------------------------------------------------+",
+                "+----------+---------------------+----------------"
+                        + "---------------------------------------------------+",
+                "| Command  | Description         | Syntax         "
+                        + "                                                   |",
+                "+----------+---------------------+----------------"
+                        + "---------------------------------------------------+",
+                "| deposit  | Record income       | deposit AMOUNT "
+                        + "[d/DESCRIPTION] [c/CURRENCY] [on/DATE]             |",
+                "| withdraw | Record spending     | withdraw AMOUNT"
+                        + " d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE] |",
+                "| recent   | Recent activity     | recent [NUMBER]"
+                        + "                                                   |",
+                "| find     | Search descriptions | find KEYWORD   "
+                        + "                                                   |",
+                "| delete   | Delete a record     | delete INDEX   "
+                        + "                                                   |",
+                "| balance  | Current balance     | balance        "
+                        + "                                                   |",
+                "| rate     | Manage FX rates     | rate [CURRENCY "
+                        + "RATE]                                              |",
+                "| category | Manage categories   | category add NA"
+                        + "ME or list                                         |",
+                "| help     | List commands       | help           "
+                        + "                                                   |",
+                "| exit     | Close FinNUS        | exit           "
+                        + "                                                   |",
+                "+----------+---------------------+----------------"
+                        + "---------------------------------------------------+",
                 //@@author naieel04
                 "",
                 "[] means optional.",

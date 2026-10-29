@@ -30,15 +30,21 @@ If the main file is unusable, FinNUS tries its backup. If neither can be recover
 
 ## Features 
 
+<!-- @@author nabijonzzz -->
+Every transaction records the day it happened, shown at the start, e.g. `[30 Oct 2026]`. The examples below assume
+that today is 30 Oct 2026.
+<!-- @@author -->
+
 ### Adding a deposit: `deposit`
 Records money you receive, such as your monthly allowance, and adds it to your balance.
 
-Format: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
+Format: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]`
 
 * `AMOUNT` is in SGD (unless `c/CURRENCY` is given) and must be a positive number with at most 2 decimal places, e.g. `500`, `12.5` or `4.50`.
 * `AMOUNT` must not be more than `1000000`. Do not include `$` or commas.
 * `DESCRIPTION` is optional. Everything after `d/` is taken as the description.
 * `AMOUNT` and `d/DESCRIPTION` can be given in either order.
+* `DATE` is optional and defaults to today. See [Recording the date of a transaction](#recording-the-date-of-a-transaction-on).
 * To record an amount in another currency, add `c/CURRENCY`. See [Recording an amount in another currency](#recording-an-amount-in-another-currency-c).
 
 Examples:
@@ -51,7 +57,7 @@ Expected output for `deposit 500 d/Monthly Allowance`:
 ```
 ____________________________________________________________
 Deposit added:
-  [Deposit] +$500.00 (Monthly Allowance)
+  [30 Oct 2026] [Deposit] +$500.00 (Monthly Allowance)
 You now have 1 transaction(s).
 ____________________________________________________________
 ```
@@ -59,11 +65,12 @@ ____________________________________________________________
 ### Adding a withdrawal: `withdraw`
 Records money you spend and removes it from your balance.
 
-Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]`
+Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]`
 
 * `AMOUNT` follows the same rules as for `deposit`.
 * `DESCRIPTION` is required, so you always know what the money was spent on.
 * `AMOUNT` and `d/DESCRIPTION` can be given in either order.
+* `DATE` is optional and defaults to today. See [Recording the date of a transaction](#recording-the-date-of-a-transaction-on).
 * `CATEGORY` is optional. If you leave it out, the spending is recorded under `Others`.
   See [Categorising your spending](#categorising-your-spending-t-and-category).
 
@@ -76,7 +83,7 @@ Expected output for `withdraw 4.50 d/Lunch`:
 ```
 ____________________________________________________________
 Withdrawal added:
-  [Withdrawal] -$4.50 (Lunch) #Others
+  [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others
 You now have 2 transaction(s).
 ____________________________________________________________
 ```
@@ -85,7 +92,7 @@ Example of an invalid command, `withdraw 4.50` (no description):
 ```
 ____________________________________________________________
 Error: A withdrawal needs a description so you know what you spent on.
-Format: withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]
+Format: withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]
 ____________________________________________________________
 ```
 
@@ -173,7 +180,7 @@ Expected output for `withdraw 1100 d/Ramen c/JPY` after `rate JPY 110`:
 ```
 ____________________________________________________________
 Withdrawal added:
-  [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others
+  [30 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Others
 Converted at 1 SGD = 110 JPY.
 You now have 1 transaction(s).
 ____________________________________________________________
@@ -212,7 +219,7 @@ Expected output for `withdraw 4.50 d/Chicken rice t/food`:
 ```
 ____________________________________________________________
 Withdrawal added:
-  [Withdrawal] -$4.50 (Chicken rice) #Food
+  [30 Oct 2026] [Withdrawal] -$4.50 (Chicken rice) #Food
 You now have 1 transaction(s).
 ____________________________________________________________
 ```
@@ -242,6 +249,45 @@ ____________________________________________________________
 Categories:
   Predefined: Food, Transport, Housing, Bills, Shopping, Entertainment, Education, Health, Others
   Custom: Gym
+____________________________________________________________
+```
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
+### Recording the date of a transaction: `on/`
+Every deposit and withdrawal records the day it happened. It is today by default, but you can add `on/DATE` to
+record a transaction you forgot to enter earlier.
+
+Format: `deposit AMOUNT [d/DESCRIPTION] on/DATE` or `withdraw AMOUNT d/DESCRIPTION on/DATE`
+
+* `DATE` must be in `YYYY-MM-DD` format, e.g. `2026-10-20`, and must be a real date (`2026-02-30` is rejected).
+* `DATE` must be on or after `2000-01-01`.
+* `DATE` cannot be in the future, since you can only record money that has already moved.
+* `on/DATE` can be given anywhere after the command word, but only once. It works together with `c/` and `t/`.
+* `recent` still lists transactions in the order you entered them, so an earlier date does not change the numbers
+  used by `delete`.
+* Transactions saved by older versions of FinNUS have no date, and are shown without one.
+* Because `on/` marks the date, a word starting with `on/` cannot be used inside a description.
+
+Examples:
+
+* `withdraw 4.50 d/Lunch on/2026-10-20`
+* `deposit 500 d/Allowance on/2026-10-01`
+* `withdraw 1100 c/JPY d/Ramen t/food on/2026-10-25`
+
+Expected output for `withdraw 4.50 d/Lunch on/2026-10-20`:
+```
+____________________________________________________________
+Withdrawal added:
+  [20 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others
+You now have 1 transaction(s).
+____________________________________________________________
+```
+
+Example of an invalid command, `withdraw 4.50 d/Lunch on/2026-11-01` (a future date):
+```
+____________________________________________________________
+Error: The date 2026-11-01 is in the future. Transactions can only be recorded for today or earlier.
 ____________________________________________________________
 ```
 <!-- @@author -->
@@ -281,8 +327,8 @@ Examples:
 Example output for `recent 2`:
 ```text
 Here is a list of the recent 2 transaction(s):
-1. [Deposit] +$30.50
-2. [Withdrawal] -$30.00 (Lunch) #Food
+1. [30 Oct 2026] [Deposit] +$30.50
+2. [29 Oct 2026] [Withdrawal] -$30.00 (Lunch) #Food
 
 ```
 
@@ -308,8 +354,8 @@ Expected output for `find lunch`:
 ```
 ____________________________________________________________
 Found 2 transaction(s) matching "lunch":
-1. [Withdrawal] -$12.00 (Lunch with friends) #Food
-3. [Withdrawal] -$4.50 (Lunch) #Food
+1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food
+3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food
 Use the number with delete to remove a transaction.
 ____________________________________________________________
 ```
@@ -329,7 +375,7 @@ Example:
 
 Example output for `delete 3`:
 ```text
-Transaction deleted: [Withdrawal] -$30.00 (BBQ) #Food
+Transaction deleted: [27 Oct 2026] [Withdrawal] -$30.00 (BBQ) #Food
 
 ```
 
@@ -384,8 +430,8 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 
 ## Command Summary
 
-* Add a deposit: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY]`
-* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY]`
+* Add a deposit: `deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]`
+* Add a withdrawal: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]`
 * View balance: `balance`
 * View recent transactions: `recent [NUMBER]`
 * Find transactions by description: `find KEYWORD`

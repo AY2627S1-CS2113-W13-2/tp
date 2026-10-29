@@ -36,8 +36,13 @@ class PersistenceIntegrationTest {
         ScriptedUi second = new ScriptedUi("balance", "recent", "rate", "deposit 1", "delete 2", "exit");
         new FinNUS(second, new FileStorage(path)).run();
         assertTrue(second.output().contains("$145.50"));
-        assertTrue(second.output().contains("1. [Withdrawal] -$4.50 (Lunch)"));
-        assertTrue(second.output().contains("2. [Deposit] +$50.00 (Allowance)"));
+        //@@author nabijonzzz
+        // Each transaction now starts with the day it was recorded, e.g. [30 Oct 2026], which must survive a restart.
+        String datePrefix = "\\[\\d{1,2} [A-Z][a-z]{2} \\d{4}\\] ";
+        assertTrue(second.output().matches("(?s).*1\\. " + datePrefix + "\\[Withdrawal\\] -\\$4\\.50 \\(Lunch\\).*"));
+        assertTrue(second.output().matches("(?s).*2\\. " + datePrefix
+                + "\\[Deposit\\] \\+\\$50\\.00 \\(Allowance\\).*"));
+        //@@author
         assertTrue(second.output().contains("1 SGD = 110 JPY"));
         LedgerSnapshot restored = new FileStorage(path).load().snapshot();
         assertEquals(Money.of("151.00"), restored.toTransactionList().getBalance());
