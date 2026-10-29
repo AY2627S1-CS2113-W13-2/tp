@@ -81,10 +81,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Main components and dependencies of FinNUS](images/ArchitectureDiagram.png)
 
-*Figure 1. FinNUS architecture. Dashed arrows show selected dependencies.
-Setup belongs to the application component; money, rates, and categories are grouped under the ledger model.
-Internal classes and secondary dependencies are omitted. [PlantUML source](diagrams/ArchitectureDiagram.puml).*
-
+*Figure 1. FinNUS architecture and component dependencies. [PlantUML source](diagrams/ArchitectureDiagram.puml).*
 
 | Component | Main classes / package | Responsibility |
 | --- | --- | --- |
@@ -121,11 +118,14 @@ changes. If that attempt fails or saving is disabled, FinNUS warns that unsaved 
 `CommandWord` defines names, descriptions, and usage strings shared by the parser and help output. Concrete commands
 extend `Command` and implement `execute(TransactionList, Ui)`.
 
-The class diagram below shows the static relationships between the `Command` hierarchy, the ledger model (`TransactionList`, `Transaction`), and the monetary value object (`Money`). Parser and Ui classes are omitted to highlight command execution and domain modeling:
+The class diagram shows how `DepositCommand` and `BalanceCommand` extend `Command` and use `TransactionList`.
+`DepositCommand` represents commands that add transactions; `BalanceCommand` represents commands that read ledger state.
+Other subclasses, private members, and parser and UI relationships are omitted.
 
 ![Class diagram of Command and Model structure](images/CommandClassDiagram.png)
 
-*Figure 3. Command and ledger model relationships. Parser and UI interactions are omitted.
+*Figure 3. Representative commands and ledger relationships. Hollow triangles show inheritance, solid arrows show
+stored references, and dashed arrows show dependencies. Immutable `Money` values can be shared.
 [PlantUML source](diagrams/CommandClassDiagram.puml).*
 
 #### Parsing vs execution responsibilities
@@ -225,9 +225,7 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
-*Figure 5. Storage responsibilities and state transfer. The hollow triangle indicates interface implementation;
-solid arrows show stored references and dashed arrows show dependencies. Private members and utility types are omitted.
-[PlantUML source](diagrams/StorageClassDiagram.puml).*
+*Figure 5. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
 
 A complete save file can contain the following records:
 
