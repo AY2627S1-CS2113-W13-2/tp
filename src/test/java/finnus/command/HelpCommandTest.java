@@ -36,34 +36,36 @@ class HelpCommandTest {
                 "____________________________________________________________",
                 "Available commands:",
                 //@@author nabijonzzz
-                "+----------+---------------------+----------------"
-                        + "---------------------------------------------------+",
-                "| Command  | Description         | Syntax         "
-                        + "                                                   |",
-                "+----------+---------------------+----------------"
-                        + "---------------------------------------------------+",
-                "| deposit  | Record income       | deposit AMOUNT "
-                        + "[d/DESCRIPTION] [c/CURRENCY] [on/DATE]             |",
-                "| withdraw | Record spending     | withdraw AMOUNT"
-                        + " d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE] |",
-                "| recent   | Recent activity     | recent [NUMBER]"
-                        + "                                                   |",
-                "| find     | Search descriptions | find KEYWORD   "
-                        + "                                                   |",
-                "| delete   | Delete a record     | delete INDEX   "
-                        + "                                                   |",
-                "| balance  | Current balance     | balance        "
-                        + "                                                   |",
-                "| rate     | Manage FX rates     | rate [CURRENCY "
-                        + "RATE]                                              |",
-                "| category | Manage categories   | category add NA"
-                        + "ME or list                                         |",
-                "| help     | List commands       | help           "
-                        + "                                                   |",
-                "| exit     | Close FinNUS        | exit           "
-                        + "                                                   |",
-                "+----------+---------------------+----------------"
-                        + "---------------------------------------------------+",
+                "+-----------+---------------------+-----------------"
+                        + "--------------------------------------------------+",
+                "| Command   | Description         | Syntax          "
+                        + "                                                  |",
+                "+-----------+---------------------+-----------------"
+                        + "--------------------------------------------------+",
+                "| deposit   | Record income       | deposit AMOUNT ["
+                        + "d/DESCRIPTION] [c/CURRENCY] [on/DATE]             |",
+                "| withdraw  | Record spending     | withdraw AMOUNT "
+                        + "d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE] |",
+                "| recent    | Recent activity     | recent [NUMBER] "
+                        + "                                                  |",
+                "| find      | Search descriptions | find KEYWORD    "
+                        + "                                                  |",
+                "| delete    | Delete a record     | delete INDEX    "
+                        + "                                                  |",
+                "| balance   | Current balance     | balance         "
+                        + "                                                  |",
+                "| allowance | Monthly allowance   | allowance [DAY ["
+                        + "a/AMOUNT] [c/CURRENCY]] or off                    |",
+                "| rate      | Manage FX rates     | rate [CURRENCY R"
+                        + "ATE]                                              |",
+                "| category  | Manage categories   | category add NAM"
+                        + "E or list                                         |",
+                "| help      | List commands       | help            "
+                        + "                                                  |",
+                "| exit      | Close FinNUS        | exit            "
+                        + "                                                  |",
+                "+-----------+---------------------+-----------------"
+                        + "--------------------------------------------------+",
                 //@@author naieel04
                 "",
                 "[] means optional.",
