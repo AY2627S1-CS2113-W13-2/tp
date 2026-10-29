@@ -395,6 +395,48 @@ insertion order would need to account for that choice. `getRecentTransactions()`
 read-only view so callers can display entries without directly editing the ledger. The command
 only formats data; it does not add, remove or change transactions.
 
+<!-- @@author nabijonzzz -->
+### Finding transactions
+
+`find KEYWORD` lists the transactions whose description contains `KEYWORD`, ignoring case.
+
+The parser treats everything after the command word as the keyword, so `find chicken rice` searches for the
+whole phrase, and returns a `FindCommand`. A missing keyword is rejected with the usual `FinNusException`.
+
+`FindCommand#execute()` goes through the `TransactionList` from the newest transaction to the oldest, and keeps the
+ones whose description contains the keyword. Each result is numbered with the same index that `recent` shows and
+`delete` expects. For a transaction at position `i` in the list (oldest first, starting from 0), that index is
+`size - i`. For example, with 4 transactions, the newest one (position 3) has index 1:
+
+```
+find lunch
+1. [Withdrawal] -$12.00 (Lunch with friends) #Food    <- position 3, index 4 - 3 = 1
+3. [Withdrawal] -$4.50 (Lunch) #Food                  <- position 1, index 4 - 1 = 3
+```
+
+The command only reads the list, so searching never changes any transaction.
+
+#### Design considerations
+
+**Aspect: how results are numbered**
+
+* **Alternative 1 (current choice):** use the same index as `recent`.
+  * Pros: the user can run `delete 3` straight after `find`, without looking the transaction up again.
+  * Cons: the numbers are not consecutive (e.g. 1 and 3), which may look odd at first.
+* **Alternative 2:** number the results 1, 2, 3, ...
+  * Pros: looks neater.
+  * Cons: these numbers would not work with `delete`, which could make the user delete the wrong transaction.
+
+**Aspect: what is searched**
+
+* **Alternative 1 (current choice):** the description only.
+  * Pros: simple and predictable; a keyword such as `5` will not match every amount containing a 5.
+  * Cons: cannot search by category or amount. This can be added later as separate options.
+* **Alternative 2:** the whole displayed text of each transaction.
+  * Pros: one search covers description, amount and category.
+  * Cons: many unexpected matches, e.g. `food` would match every `#Food` withdrawal.
+<!-- @@author -->
+
 ### Viewing the current balance
 
 The `balance` command displays the current balance in SGD, including the opening balance and every
