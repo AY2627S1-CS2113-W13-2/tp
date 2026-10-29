@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import finnus.money.Money;
 
+//@@author naieel04
 /**
  * Exercises real filesystem writes and deterministic failures in an isolated directory.
  */
@@ -107,12 +108,15 @@ class FileStorageTest {
     }
 
     private LedgerSnapshot withOpening(String amount) {
+        //@@author
         return new LedgerSnapshot(Money.of(amount), List.of(), Map.of());
     }
 
+    //@@author naieel04
     private void assertNoTemporaryFiles(Path folder) throws IOException {
         try (var files = Files.list(folder)) {
             assertFalse(files.anyMatch(file -> file.getFileName().toString().endsWith(".tmp")));
         }
     }
 }
+//@@author
