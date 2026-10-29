@@ -124,9 +124,7 @@ Other subclasses, private members, and parser and UI relationships are omitted.
 
 ![Class diagram of Command and Model structure](images/CommandClassDiagram.png)
 
-*Figure 3. Representative commands and ledger relationships. Hollow triangles show inheritance, solid arrows show
-stored references, and dashed arrows show dependencies. Immutable `Money` values can be shared.
-[PlantUML source](diagrams/CommandClassDiagram.puml).*
+*Figure 3. Command and ledger model relationships. [PlantUML source](diagrams/CommandClassDiagram.puml).*
 
 #### Parsing vs execution responsibilities
 
