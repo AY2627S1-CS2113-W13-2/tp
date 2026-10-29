@@ -1,101 +1,39 @@
 @startuml CommandClassDiagram
-' Meaningful relationships between Command hierarchy, TransactionList, Transaction and Money.
-' UI and Parser interactions are omitted to emphasize domain command execution.
+' Representative command inheritance and ledger references.
+' Logical groups are shown, not the full Java package structure.
 hide circle
+hide empty members
 skinparam classAttributeIconSize 0
 
-package "finnus.command" {
+package "Commands" {
     abstract class Command {
-        + {abstract} execute(transactions: TransactionList, ui: Ui): void
-        + isExit(): boolean
+        + {abstract} execute(...): void
     }
 
-    class DepositCommand {
-        - amount: Money
-        - description: String
-        + execute(transactions: TransactionList, ui: Ui): void
-    }
-
-    class WithdrawCommand {
-        - amount: Money
-        - description: String
-        - category: String
-        + execute(transactions: TransactionList, ui: Ui): void
-    }
-
-    class BalanceCommand {
-        + execute(transactions: TransactionList, ui: Ui): void
-    }
-
-    class RecentTransactionCommand {
-        - count: int
-        + execute(transactions: TransactionList, ui: Ui): void
-    }
-
-    class DeleteCommand {
-        - index: int
-        + execute(transactions: TransactionList, ui: Ui): void
-    }
-
-    class ForeignTransactionCommand {
-        - type: TransactionType
-        - foreignAmount: ForeignAmount
-        + execute(transactions: TransactionList, ui: Ui): void
-    }
+    class BalanceCommand
+    class DepositCommand
 }
 
-package "finnus.transaction" {
-    class TransactionList {
-        - transactions: List<Transaction>
-        - openingBalance: Money
-        + add(transaction: Transaction): void
-        + delete(index: int): Transaction
-        + getBalance(): Money
-        + getRecentTransactions(count: int): List<Transaction>
-    }
-
-    class Transaction {
-        - type: TransactionType
-        - amount: Money
-        - description: String
-        - category: String
-        + getSignedAmount(): Money
-        + getAmount(): Money
-    }
-
-    enum TransactionType <<enumeration>> {
-        DEPOSIT
-        WITHDRAWAL
-    }
+package "Ledger model" {
+    class TransactionList
+    class Transaction
+    class Money
 }
 
-package "finnus.money" {
-    class Money <<value object>> {
-        - value: BigDecimal
-        + {static} of(value: BigDecimal): Money
-        + add(other: Money): Money
-        + negate(): Money
-        + format(): String
-    }
-}
-
-' Inheritance
-Command <|-- DepositCommand
-Command <|-- WithdrawCommand
 Command <|-- BalanceCommand
-Command <|-- RecentTransactionCommand
-Command <|-- DeleteCommand
-Command <|-- ForeignTransactionCommand
+Command <|-- DepositCommand
+Command .right.> TransactionList: uses
+DepositCommand .right.> Transaction: creates
 
-' Dependencies & Associations
-Command ..> TransactionList : executes on >
-DepositCommand ..> Transaction : creates >
-WithdrawCommand ..> Transaction : creates >
-ForeignTransactionCommand ..> Transaction : creates >
+' Keep the transaction-creating command nearest the ledger model.
+BalanceCommand -[hidden]right-> DepositCommand
 
-TransactionList "1" o-- "*" Transaction : contains >
-TransactionList "1" *-- "1" Money : openingBalance >
-Transaction "1" *-- "1" Money : amount >
-Transaction --> "1" TransactionType : type >
+TransactionList --> "0..*" Transaction: transactions
+TransactionList --> "1" Money: openingBalance
+Transaction --> "1" Money: amount
 
+note bottom of BalanceCommand
+    Other command subclasses
+    and private members are omitted.
+end note
 @enduml
