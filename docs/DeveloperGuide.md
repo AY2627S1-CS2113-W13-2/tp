@@ -4,9 +4,7 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 
 **Release:** [Release Page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases)
 
-> Template instructions: Replace every `[Insert ... here]` prompt. Class names and commands below reflect the current
-> repository; confirm requirements and design rationale with the team. Label future features as proposed. Replace UML
-> placeholders with diagram images, captions, and links to their editable sources.
+> Draft status: Some sections still contain prompts for team decisions or release-specific details.
 
 ---
 
@@ -30,7 +28,8 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 <!-- @@author naieel04 -->
 ## Acknowledgements
 
-The following peer guides informed this template's organisation:
+The following resources support the project and this guide:
+
 - [CS2113 project template](https://github.com/NUS-CS2113-AY2627-S1/tp): provides the starter structure and conventions
   for projects in the CS2113 module.
 - [Address Book Level 3](https://se-education.org/addressbook-level3/): reference for code quality, project structure,
@@ -54,7 +53,7 @@ On macOS, use `sdk use java 25.0.3.fx-zulu` if switching Java versions with SDKM
 
 ### Importing, building, and running
 
-1. Clone the repository: [W13-2 Repo](https://github.com/AY2627S1-CS2113-W13-2/tp/)  .
+1. Clone the repository: [W13-2 Repo](https://github.com/AY2627S1-CS2113-W13-2/tp/).
 2. Open the repository root containing `build.gradle` and import it as a Gradle project.
 3. Confirm that `java -version` reports Java 25 and that the IDE's Gradle JVM uses Java 25.
 4. Run the following commands from the repository root.
@@ -80,13 +79,16 @@ The application entry point is `finnus.FinNUS`.
 `FinNUS` coordinates startup, command execution, and persistence. The parser produces command objects, which read or
 modify the ledger and display results through the UI. Storage loads and saves complete ledger snapshots.
 
-[Insert UML diagram of app architecture here]
+![Main components and dependencies of FinNUS](images/ArchitectureDiagram.png)
 
-[Insert figure caption explaining dependencies, arrow notation, and omitted details here]
+*Figure 1. FinNUS architecture. Dashed arrows show selected dependencies.
+Setup belongs to the application component; money, rates, and categories are grouped under the ledger model.
+Internal classes and secondary dependencies are omitted. [PlantUML source](diagrams/ArchitectureDiagram.puml).*
+
 
 | Component | Main classes / package | Responsibility |
 | --- | --- | --- |
-| Application | `finnus.FinNUS` | Restore state, run commands, detect changes, save pending state, and handle shutdown. |
+| Application | `finnus.FinNUS`, `finnus.Setup` | Restore state, guide first-run setup, run commands, detect changes, save pending state, and handle shutdown. |
 | UI | `finnus.ui.Ui` | Read console input and display messages, errors, and command results. |
 | Parser | `finnus.parser.Parser` | Validate command syntax and construct a command. |
 | Commands | `finnus.command` | Execute operations through the shared `Command` abstraction. |
@@ -104,18 +106,37 @@ modify the ledger and display results through the UI. Storage loads and saves co
 4. `FinNUS` compares ledger snapshots to detect changes and attempts to save pending changes.
 5. `exit` or end of input ends the loop; pending changes are retried before shutdown.
 
-[Insert UML sequence diagram of a successful command from user input to automatic save here]
+![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-[Insert explanation of blank input, FinNusException handling, shutdown, and unsaved changes here]
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 9's saving sequence.
+Transaction construction and snapshot internals are omitted.
+[PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
+
+Blank input is ignored. If parsing or execution throws a `FinNusException`, the main loop displays its message through
+`Ui#showError()` and continues accepting commands. Both `exit` and end of input trigger a final attempt to save pending
+changes. If that attempt fails or saving is disabled, FinNUS warns that unsaved changes will be lost after exit.
 
 ### UI, parser, and commands
 
 `CommandWord` defines names, descriptions, and usage strings shared by the parser and help output. Concrete commands
 extend `Command` and implement `execute(TransactionList, Ui)`.
 
-[Insert UML class diagram of Command, its subclasses, Parser, CommandWord, and Ui here]
+The class diagram below shows the static relationships between the `Command` hierarchy, the ledger model (`TransactionList`, `Transaction`), and the monetary value object (`Money`). Parser and Ui classes are omitted to highlight command execution and domain modeling:
 
-[Insert explanation of parsing responsibilities versus execution responsibilities, with one example here]
+![Class diagram of Command and Model structure](images/CommandClassDiagram.png)
+
+*Figure 3. Command and ledger model relationships. Parser and UI interactions are omitted.
+[PlantUML source](diagrams/CommandClassDiagram.puml).*
+
+#### Parsing vs execution responsibilities
+
+1. **Separation of concerns:** `Parser` is responsible solely for syntax validation, prefix extraction (`d/`, `c/`, `t/`), and format verification. It converts raw string tokens into validated values (such as `Money` or currency codes) and constructs concrete, immutable `Command` objects.
+2. **Stateless command execution:** Commands encapsulate user intent but do not retain long-lived references to application state. Instead, `Command#execute(TransactionList, Ui)` receives the working `TransactionList` as an argument when executed by the main loop.
+3. **Domain mutation example (`DepositCommand`):**
+   - The user inputs `deposit 50 d/Allowance`.
+   - `Parser#parseDeposit()` verifies that `50` is a valid positive monetary value at or below `Money.MAX_AMOUNT`, extracts the optional description, and constructs a `DepositCommand(amount, description)`.
+   - When `DepositCommand#execute(transactions, ui)` runs, it creates a new immutable `Transaction(TransactionType.DEPOSIT, amount, description)` and invokes `transactions.add(transaction)`.
+   - `TransactionList` stores the new `Transaction` in entry order. The `Money` value object remains shared and immutable across calculations such as `TransactionList#getBalance()`.
 <!-- @@author -->
 
 <!-- @@author nkyjStar -->
@@ -148,6 +169,9 @@ The following sequence shows an example usage of `Money`. It uses object names r
 inputs and the nonzero sum are distinct objects:
 
 ![Sequence diagram for invoking Money methods](images/MoneySequenceDiagram.png)
+
+*Figure 4. Exact addition, display rounding, and preservation of the original monetary value.
+[PlantUML source](diagrams/MoneySequenceDiagram.puml).*
 
 `Money` does not require every value to be positive or below `Money.MAX_AMOUNT`.
 `Parser#parseAmount()` enforces those rules for user-entered transaction amounts, while
@@ -193,15 +217,38 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 - The main file is `finnus.txt`, beside the packaged JAR or in the working directory during development.
 - The previous-state backup is `finnus.txt.bak`.
-- The current text format starts with `FINNUS|1` and stores opening balance, rates, and transactions.
+- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, and transactions.
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
 - Saving uses temporary files and atomic replacement; loading can recover valid rows or a clean backup.
 
-[Insert UML class diagram of the storage interface, implementation, codec, snapshot, and load result here]
+![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
-[Insert sample save-file records and explain fields, validation, and format compatibility here]
+*Figure 5. Storage responsibilities and state transfer. The hollow triangle indicates interface implementation;
+solid arrows show stored references and dashed arrows show dependencies. Private members and utility types are omitted.
+[PlantUML source](diagrams/StorageClassDiagram.puml).*
+
+A complete save file can contain the following records:
+
+```text
+FINNUS|1
+OPENING|100
+RATE|JPY|110
+CATEGORY|Meals
+TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
+TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
+```
+
+`OPENING` stores the starting SGD balance. `RATE` stores foreign-currency units per SGD, and `CATEGORY` declares a custom
+category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
+and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
+Foreign transactions place their currency code, original amount, and recorded rate before the category field.
+
+Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
+seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
+and categories before restoring the ledger. Unsupported numbered format versions disable saving; malformed rows can be
+skipped with warnings, as described in [Automatic saving and recovery](#automatic-saving-and-recovery).
 <!-- @@author -->
 
 ---
@@ -383,8 +430,11 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
-Java decides when its memory is actually reclaimed.
+*Figure 6. Retrieving and displaying up to two recent transactions.
+[PlantUML source](diagrams/RecentSequenceDiagram.puml).*
+
+An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
+Java deletion or guarantee immediate collection.
 
 For example, if TransactionList contains a deposit followed by a withdrawal, `recent 2` prints the
 withdrawal as `1.` and the deposit as `2.`. The displayed numbers are positions in the current
@@ -436,8 +486,11 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-The `destroy` marker denotes the end of the command object's useful lifetime in this flow.
-Java decides when its memory is actually reclaimed.
+*Figure 7. Calculating and displaying the current balance.
+[PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
+
+An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
+Java deletion or guarantee immediate collection.
 
 #### Design considerations
 
@@ -463,6 +516,9 @@ Logging, console output, input validation and saving the ledger afterwards are l
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
+*Figure 8. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+[PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
+
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
    split into amount and description exactly as before. `c/SGD` counts as no currency.
 2. If a currency was given, `parseForeignAmount()` checks the amount and the parser returns a
@@ -476,10 +532,11 @@ Logging, console output, input validation and saving the ledger afterwards are l
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 
-In the save file, a foreign transaction has three extra fields: the currency code, the amount as
-typed and the rate, e.g. `TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110`. SGD-only rows keep
-the old format, so existing save files still load. When loading, a row whose SGD amount does not
-match its amount and rate is skipped, since the file must have been edited by hand.
+In the save file, a foreign transaction includes the currency code, the amount as typed, and the
+rate before its final category field, e.g. `TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Others`.
+Both SGD and foreign rows now include the category field; older rows without it still load.
+When loading, a row whose SGD amount does not match its original amount and rate is skipped
+because the record is inconsistent.
 
 #### Design considerations
 
@@ -578,29 +635,73 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
 
 **Key classes:** `FinNUS`, `FileStorage`, `LedgerCodec`, `LedgerSnapshot`, `LoadResult`
 
-[Insert explanation of snapshot change detection, pending changes, save retries, and previous-state backups here]
+`FinNUS#executeCommand()` captures a `LedgerSnapshot` before a command runs and compares it with a snapshot captured
+after the command returns. A difference marks the session as having pending changes. Snapshots include the opening
+balance, transactions, exchange rates, and custom categories, so changes to any of these can trigger a save.
 
-[Insert UML sequence diagram of saving changed financial state here]
+After a successful non-exit command, `savePendingChanges()` attempts to save the current snapshot if changes are pending
+and saving is allowed. A successful save clears the pending flag. An `IOException` leaves the flag set and displays an
+error, allowing a later successful command or shutdown to retry. A read-only command such as `balance` can therefore
+retry an earlier failed save even though it creates no new change itself.
 
-[Insert UML activity diagram of loading, partial recovery, backup recovery, and disabled saving here]
+![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-[Insert recovery table for missing files, corrupt rows, unusable files, unsupported versions, read failures, and save failures here]
+*Figure 9. One successful automatic save. File operations are summarised; failure handling is described in the notes
+and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
-For each recovery case, specify recovered state, warnings, whether saving is allowed, and how originals are preserved.
+`FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
+it copies that previous state into `finnus.txt.bak` before atomically replacing the main file. The backup therefore holds
+the previous saved state, not a copy of the new snapshot. A damaged main file or backup is preserved in a uniquely named
+`.corrupt-*` recovery copy before a save replaces it. Temporary-file cleanup is attempted whether saving succeeds or fails.
 
-**Design consideration:** [Insert rationale and tradeoffs for snapshot-based text storage and atomic replacement here]
+#### Loading and recovery
+
+Loading returns a `LoadResult` containing the recovered snapshot, warnings, saving permission, and whether setup is
+required. A partially valid main file contributes its valid rows directly; the backup is considered only when the main
+file is missing or unrecoverable. Invalid UTF-8 counts as damaged data, whereas other read failures disable saving to
+protect data that could not be inspected.
+
+![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
+
+*Figure 10. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
+
+| Situation | Recovered state and diagnostics | Saving and file protection |
+| --- | --- | --- |
+| Main file missing; backup absent or damaged | Request first-run setup. | Create a setup-pending main file. If initialization fails, setup can continue with saving disabled. An unsupported or unreadable backup follows the disabled-saving rules below. |
+| Main file records pending setup | Return an empty snapshot and request opening-balance confirmation. | Resume setup; save the confirmed balance afterwards if saving is allowed. A setup-pending backup can also restart this process. |
+| Main file contains some invalid rows | Recover valid rows and warn that balances may be incomplete. Unknown withdrawal categories become `Others` with a warning. | Allow saving, but preserve the damaged main file before replacement. Do not fall back to the backup for partial recovery. |
+| Main file missing, unrecoverable, or invalid UTF-8; backup is clean | Restore the backup snapshot and display a recovery warning. | Allow saving. Preserve any damaged main-file bytes before replacement and retain the clean backup rather than rotating a damaged main over it. |
+| Damaged main file; backup is missing or damaged | Return an empty snapshot with corruption warnings. | Allow saving, but retain the damaged main file until a save preserves and replaces it. An unsupported or unreadable backup follows the disabled-saving rules below. |
+| Unsupported numbered format in the main file or a backup being considered | Return an empty snapshot with a format warning. | Disable saving for the session; leave incompatible files unchanged. |
+| Other I/O failure while reading the main file or a backup being considered | Return an empty snapshot with a read warning. | Disable saving for the session; leave unreadable files unchanged. |
+| Save fails | Keep the current ledger in memory and display an automatic-save warning. | Retain pending changes for retry. Failed atomic replacement leaves its target unchanged; backup rotation may already have completed. |
+
+#### Design considerations
+
+Immutable snapshots provide one representation for change detection and persistence, keeping save decisions out of
+individual commands. Versioned text is inspectable and supports recovery of valid rows, but the codec must validate every
+external value and preserve compatibility. Capturing and encoding the complete ledger also takes time proportional to
+its size. An incremental change log could reduce repeated work, at the cost of more complex replay and recovery logic.
+
+Temporary files and atomic replacement avoid truncating the main file while writing a new snapshot. This approach needs
+additional disk space and filesystem support for atomic moves. If replacement is unsupported or fails, the application
+reports the failure and retains pending changes instead of falling back to a non-atomic overwrite.
 
 ### Validation and error handling
 
-| Boundary | What to explain |
+| Boundary | Responsibility |
 | --- | --- |
-| Parser | Required arguments, numeric formats, limits, currency codes, and positive indices. |
-| Command execution | Checks depending on current state, such as whether a deletion index exists. |
-| Model | Internal invariants and assertions; distinguish these from external-input validation. |
-| Storage decoding | Record validation, skipped rows, compatibility checks, and recovery warnings. |
-| Application | Handling expected errors, retaining unsaved changes, and communicating save failures. |
+| Parser | Validate required arguments, numeric formats, limits, currency codes, and positive indices. |
+| Command execution | Check current state, such as whether a deletion index or category exists. |
+| Model | Assert internal invariants; validate external input before it reaches assertion-based constructors. |
+| Storage decoding | Validate records, skip invalid rows, check compatibility, and collect recovery warnings. |
+| Application | Display expected errors, retain unsaved changes, and communicate save failures. |
 
-[Insert invalid-command walkthrough identifying where the error originates and how it reaches the user here]
+For example, `withdraw 4.50` reaches `Parser#parseWithdraw()`, which rejects the missing description with a
+`FinNusException`. No command is returned or executed, so the ledger is unchanged. `FinNUS#run()` catches the exception,
+passes its message to `Ui#showError()`, and reads the next command. Any changes still pending from an earlier command
+remain available for a later save attempt.
 
 ### Additional feature template
 
@@ -630,7 +731,9 @@ Duplicate this subsection for any other feature that warrants a detailed explana
 - [README](../README.md): project overview and contributor setup information.
 - [Build configuration](../build.gradle): Java toolchain, dependencies, packaging, and checks.
 
-[Insert agreed locations for editable UML sources and exported images here]
+Editable PlantUML files are in [`docs/diagrams`](diagrams/), and the guide displays their exported PNGs from
+[`docs/images`](images/). Each figure caption links to its source. After changing a diagram, regenerate its PNG with
+PlantUML and check that the source and displayed image agree.
 
 Keep diagrams consistent with the code. Explain relationships, number figures, and link images to their editable sources.
 
@@ -669,7 +772,8 @@ to make allowance and campus-expense tracking straightforward, including for stu
 
 [Insert features included in this release and explicit exclusions here]
 
-[Insert confirmation of whether daily spending allowances or foreign-currency transaction conversion are planned here]
+Foreign-currency transaction conversion is implemented. [Confirm whether allowance-cycle and daily-budget features
+are included in this release.]
 <!-- @@author -->
 
 ---
@@ -677,7 +781,8 @@ to make allowance and campus-expense tracking straightforward, including for stu
 <!-- @@author naieel04 -->
 ## User stories
 
-The stories below are based on the supplied requirements image. Confirm their acceptance criteria with the team.
+The stories below describe product goals; some features are not implemented. Confirm release priorities and acceptance
+criteria with the team.
 
 | ID | As a/an... | I want to... | So that... |
 | --- | --- | --- | --- |
@@ -737,8 +842,8 @@ The stories below are based on the supplied requirements image. Confirm their ac
 <!-- @@author naieel04 -->
 ## Non-functional requirements
 
-The images describe product goals rather than formal quality constraints. The following are proposed non-functional
-requirements inferred from those goals. Confirm the targets with the team before treating them as release commitments.
+The following proposed quality requirements are derived from the product goals. Confirm their targets with the team
+before treating them as release commitments.
 
 | ID | Quality | Proposed requirement | How to verify |
 | --- | --- | --- | --- |
@@ -759,13 +864,12 @@ requirements inferred from those goals. Confirm the targets with the team before
 | Term | Meaning |
 | --- | --- |
 | CLI | Command-line interface accepting text commands. |
-| Ledger | Transactions, opening balance, and exchange rates held by FinNUS. |
+| Ledger | Transactions, opening balance, exchange rates, and custom spending categories held by FinNUS. |
 | Opening balance | Funds held before recording transactions; separate from transaction history. |
 | Base currency | SGD, used for transaction amounts and balances. |
 | Exchange rate | Foreign-currency units equivalent to one SGD. |
 | Snapshot | An immutable value copy of financial state for persistence and change detection. |
 | Recent-list index | A one-based position counting from the newest transaction. |
-| [Insert term here] | [Insert definition here] |
 <!-- @@author -->
 
 ---
@@ -798,7 +902,7 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID | Preconditions | Steps / input | Expected result |
 | --- | --- | --- | --- |
-| MT-01 | Fresh folder | Launch, enter `help`, then `exit`. | Welcome and help appear; the process exits. [Insert exact output here] |
+| MT-01 | Fresh folder | Launch, enter opening balance `100`, confirm with `yes`, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here] |
 | MT-02 | First-run setup completed with opening balance SGD 100 | Enter sample commands, then `balance`. | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here] |
 | MT-03 | Sample ledger | Enter `recent 2`, `delete 1`, then `balance`. | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here] |
 | MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`. | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
