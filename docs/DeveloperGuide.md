@@ -8,6 +8,8 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 > repository; confirm requirements and design rationale with the team. Label future features as proposed. Replace UML
 > placeholders with diagram images, captions, and links to their editable sources.
 
+---
+
 ## Table of contents
 
 - [Acknowledgements](#acknowledgements)
@@ -22,6 +24,8 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 - [Glossary](#glossary)
 - [Instructions for manual testing](#instructions-for-manual-testing)
 - [Planned enhancements](#planned-enhancements)
+
+---
 
 <!-- @@author naieel04 -->
 ## Acknowledgements
@@ -199,6 +203,8 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 [Insert sample save-file records and explain fields, validation, and format compatibility here]
 <!-- @@author -->
+
+---
 
 ## Implementation
 
@@ -613,6 +619,8 @@ Duplicate this subsection for any other feature that warrants a detailed explana
 **Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Documentation, logging, testing, and DevOps
 
@@ -641,6 +649,8 @@ Run `check` using the setup table above. GitHub Actions runs checks with Java 25
 [Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Product scope
 
@@ -662,6 +672,8 @@ to make allowance and campus-expense tracking straightforward, including for stu
 [Insert confirmation of whether daily spending allowances or foreign-currency transaction conversion are planned here]
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## User stories
 
@@ -680,6 +692,8 @@ The stories below are based on the supplied requirements image. Confirm their ac
 
 [Add acceptance criteria for each story selected for implementation.]
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Use cases
@@ -718,6 +732,8 @@ The stories below are based on the supplied requirements image. Confirm their ac
 **Extension:** If the ledger is empty, FinNUS displays an empty-list message.
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Non-functional requirements
 
@@ -735,6 +751,8 @@ requirements inferred from those goals. Confirm the targets with the team before
 [Confirm the supported operating systems and rounding policy with the team.]
 <!-- @@author -->
 
+---
+
 <!-- @@author naieel04 -->
 ## Glossary
 
@@ -749,6 +767,8 @@ requirements inferred from those goals. Confirm the targets with the team before
 | Recent-list index | A one-based position counting from the newest transaction. |
 | [Insert term here] | [Insert definition here] |
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Instructions for manual testing
@@ -798,6 +818,8 @@ Use disposable test copies and stop the application before editing fixture files
 
 [Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
 <!-- @@author -->
+
+---
 
 <!-- @@author naieel04 -->
 ## Planned enhancements
