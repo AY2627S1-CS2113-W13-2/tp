@@ -100,6 +100,21 @@ class HelpCommandTest {
     }
 
     @Test
+    public void wrap_wordsAtColumnWidth_wrapsBetweenWords() {
+        assertEquals(List.of("alpha", "beta"), HelpCommand.wrap("alpha beta", 5));
+    }
+
+    @Test
+    public void wrap_exactWidthToken_staysOnOneLine() {
+        assertEquals(List.of("abcdefgh"), HelpCommand.wrap("abcdefgh", 8));
+    }
+
+    @Test
+    public void wrap_emptyText_returnsNoLines() {
+        assertEquals(List.of(), HelpCommand.wrap("", 8));
+    }
+
+    @Test
     public void execute_help_preservesExistingTransactions() {
         TransactionList transactions = new TransactionList();
         //@@author nkyjStar
