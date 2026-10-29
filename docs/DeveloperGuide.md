@@ -2,9 +2,7 @@
 
 FinNUS is a command-line personal finance tracker. This guide explains how to set up, understand, extend, and test it.
 
-**Release:** [Insert release version here]
-
-**Last reviewed:** [Insert date and corresponding commit or tag here]
+**Release:** [Release Page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases)
 
 > Template instructions: Replace every `[Insert ... here]` prompt. Class names and commands below reflect the current
 > repository; confirm requirements and design rationale with the team. Label future features as proposed. Replace UML
