@@ -1,20 +1,36 @@
 @startuml MoneySequenceDiagram
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
 actor Caller
 participant "first:Money" as First
 participant "second:Money" as Second
 participant "<<class>>\nMoney" as MoneyClass
 
-note over First, Second: first = 10.005; second = 0.10
-Caller -> First: add(second)
-First -> MoneyClass: of(10.105)
+note over First, Second : first = 10.005; second = 0.10
+Caller -> First : add(second)
+activate First
+First -> MoneyClass : of(10.105)
+activate MoneyClass
 create "sum:Money" as Sum
-MoneyClass -> Sum: new Money(10.105)
-Sum --> MoneyClass: sum
-MoneyClass --> First: sum
-First --> Caller: sum
-Caller -> Sum: format()
-Sum --> Caller: "$10.11"
+MoneyClass -> Sum : new Money(10.105)
+activate Sum
+Sum --> MoneyClass : sum
+deactivate Sum
+MoneyClass --> First : sum
+deactivate MoneyClass
+First --> Caller : sum
+deactivate First
+
+Caller -> Sum : format()
+activate Sum
+Sum --> Caller : "$10.11"
+deactivate Sum
 destroy Sum
-Caller -> First: toPlainString()
-First --> Caller: "10.005" (unchanged)
+
+Caller -> First : toPlainString()
+activate First
+First --> Caller : "10.005" (unchanged)
+deactivate First
 @enduml
