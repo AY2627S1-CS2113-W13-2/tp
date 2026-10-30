@@ -500,12 +500,12 @@ only formats data; it does not add, remove or change transactions.
 <!-- @@author nkyjStar -->
 ### Viewing paginated transaction history
 
-`history [n/NUMBER] [p/PAGE]` opens a newest-first view of the full ledger. The parser accepts
-the two optional fields in either order, rejects duplicates, and creates a `HistoryCommand`.
+`history [n/NUMBER] [p/PAGE]` opens a newest-first view of all recorded transactions. The parser
+accepts the two optional fields in either order, rejects duplicates, and creates a `HistoryCommand`.
 Both fields use `HistoryCommand#parsePositiveNumber()`: malformed or non-positive text is rejected
 as invalid, while a positive number above `Integer.MAX_VALUE` is reported as out of range. Its
-defaults are five transactions per page and page 1. A page size larger than the ledger is valid;
-page 1 then displays all available entries. `HistoryCommand#execute()` checks that the
+defaults are five transactions per page and page 1. A page size larger than the transaction
+count is valid; page 1 then displays all available entries. `HistoryCommand#execute()` checks that the
 requested page exists before the application enters history mode, so an invalid initial page
 leaves normal commands available.
 
@@ -513,7 +513,7 @@ leaves normal commands available.
 sends every non-blank line to `HistoryCommand#handleInput()` rather than the normal parser. That
 method switches on `next`, `prev`, and `stop`, then checks the `p/` and `n/` prefixes. All other
 commands, including `exit`, produce a mode-specific error. `stop` clears `historyView`. History
-navigation does not change the ledger, but the loop still retries any pending save after a
+navigation does not modify `TransactionList`, but the loop still retries any pending save after a
 successful input. The command logs successful navigation at `FINE`. Internal state assumptions
 use assertions, while invalid user input produces `FinNusException`.
 
@@ -531,13 +531,15 @@ untouched. Displayed transaction numbers are global newest-first indices, so the
 number because `n/NUMBER` preserves the first visible transaction even when that position is
 not aligned to a page boundary. `next` and `prev` move by the new page size from that position;
 `p/PAGE` returns to boundaries counted from the newest transaction. Out-of-range navigation
-keeps the current position. An empty ledger allows page 1 and `stop`, and reports no transactions.
+keeps the current position. With no recorded transactions, page 1 shows an empty-list message
+and `stop` remains available.
 
-The class diagram shows the session reference and the read-only ledger access used for display:
+The class diagram shows the session reference and how history reads `TransactionList` for display:
 
 ![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
 
-*Figure 8. History command state and its application, parser, ledger, and UI relationships.
+*Figure 8. History command state and its application, parser, transaction list, and UI
+relationships.
 [PlantUML source](diagrams/HistoryClassDiagram.puml).*
 
 `HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
