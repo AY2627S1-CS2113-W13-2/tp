@@ -59,6 +59,7 @@ App -> History: handleInput("stop", transactions, ui)
 History -> Ui: showMessage(stop confirmation)
 Ui --> User: history closed
 History --> App: true
+destroy History
 App -> App: historyView = null
 
 note over App, Ledger
