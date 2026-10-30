@@ -549,6 +549,56 @@ Dashed dependencies represent method calls or construction, so they have no mult
 `HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
 resizing, invalid input, empty history, and the command restriction in the application loop.
 
+#### Design considerations
+
+**Aspect: how to present the full history**
+
+* **Alternative 1 (current choice):** show a page at a time, with a configurable page size and
+  navigation commands.
+  * Pros: each response stays readable as the transaction list grows, while every entry remains
+    reachable. The user can choose how much to see at once.
+  * Cons: reviewing distant entries takes more commands, and the command must keep track of the
+    current position.
+* **Alternative 2:** print the entire history in one response.
+  * Pros: simple to implement and easy to scan when there are few entries.
+  * Cons: a long history can flood the terminal and make a particular entry hard to find.
+
+**Aspect: which commands are available while viewing history**
+
+* **Alternative 1 (current choice):** accept only history controls until `stop`.
+  * Pros: inputs have one meaning in this mode, and the displayed positions remain stable because
+    transactions cannot be added or deleted during navigation.
+  * Cons: the user must leave the view even to run a read-only command such as `recent` or `balance`.
+* **Alternative 2:** allow normal commands alongside history controls.
+  * Pros: the user could check a balance or recent activity without leaving the view.
+  * Cons: command dispatch becomes more complex. A command that changes the transaction list could
+    shift the current page and its displayed indices, so the view would need a rule for refreshing
+    or resetting its position. Allowing only read-only commands would avoid that shift but still
+    require a separate rule for which normal commands are permitted.
+
+**Aspect: transaction display order**
+
+* **Alternative 1 (current choice):** display newest first, as `recent` does, while keeping
+  `TransactionList` in oldest-first insertion order.
+  * Pros: recent activity appears first. The global displayed indices match `recent` and `delete`,
+    and adding a transaction remains a simple append to the stored list.
+  * Cons: the displayed order differs from storage order, so history translates each displayed
+    position to a list index.
+* **Alternative 2:** display oldest first, matching storage order.
+  * Pros: follows the chronology of transactions and needs no reverse index lookup.
+  * Cons: a user must navigate toward the end to see recent activity, and the displayed indices
+    would differ from those used by `recent` and `delete`.
+
+**Aspect: what happens when the page size changes**
+
+* **Alternative 1 (current choice):** keep the first visible transaction at the top after `n/NUMBER`.
+  * Pros: the user keeps their place while adjusting how many entries are visible.
+  * Cons: the new view may start between page boundaries, so the heading shows a transaction range
+    rather than a page number; `p/PAGE` returns to boundaries for the new size.
+* **Alternative 2:** return to the first page after changing the size.
+  * Pros: page numbering stays straightforward.
+  * Cons: the user loses their place and may need to navigate back to the same transaction.
+
 <!-- @@author -->
 <!-- @@author nabijonzzz -->
 ### Finding transactions
