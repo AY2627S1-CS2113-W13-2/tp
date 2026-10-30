@@ -50,6 +50,9 @@ terminals.
 
 ### Review/Mentoring contributions
 
+Reviewed PRs: [#2](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/2), [#11](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/11), [#15](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/15), [#16](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/16), [#20](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/20), [#31](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/31), [#35](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/35), [#39](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/39), [#40](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/40), [#45](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/45), [#65](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/65), [#71](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/71), [#81](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/81), [#87](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/87), [#89](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/89), [#90](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/90)
+
+Examples: In [#71](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/71#discussion_r4410020156), identified missed Unicode search matches and suggested `regionMatches(true, ...)`. In [#11](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/11#discussion_r4203266440), suggested `BigDecimal` for monetary precision. In [#35](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/35#discussion_r4260591341), flagged inconsistent monetary formatting in logs and suggested `formatMoney()`.
 
 ### Contributions beyond the project team
 * Reviewed the Developer Guide of [ScheduleFlow PR](https://github.com/NUS-CS2113-AY2627-S1/tp/pull/29) [CS2113-T10-1]
