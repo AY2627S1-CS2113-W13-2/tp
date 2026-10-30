@@ -459,6 +459,35 @@ Here is a list of the recent 2 transaction(s):
 
 ```
 
+### Viewing transaction history: `history`
+Shows every transaction in pages, newest entry first. The numbers match `recent` and the indices used by `delete`.
+The opening balance is not a transaction and is not shown.
+
+Format: `history [n/NUMBER] [p/PAGE]`
+
+* `n/NUMBER` sets the number of transactions per page; the default is 5.
+* `p/PAGE` chooses the first page to show; the default is 1. Both fields are optional and can appear in either order.
+* Numbers must be positive whole numbers. A page beyond the available transactions is rejected.
+* While viewing history, only the following inputs are accepted:
+    * `next` shows the next page; `prev` shows the previous page.
+    * `p/PAGE` jumps to a page. Page 1 begins with the newest transaction.
+    * `n/NUMBER` changes the page size and keeps the current page's first transaction at the top. A later `p/PAGE`
+      jump uses page boundaries counted from transaction 1 at the new page size.
+    * `stop` leaves history mode. Use it before other commands, including `exit`.
+* At either end of the history, `next` or `prev` reports that there is no further page and keeps the current page.
+  An empty history shows an empty-list message; `stop` remains available.
+
+Example: `history n/2 p/2` with five transactions:
+
+```text
+____________________________________________________________
+Transaction history: 3-4 of 5 (2 per page):
+3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food
+4. [27 Oct 2026] [Deposit] +$30.50
+History controls: next, prev, p/PAGE, n/NUMBER, stop.
+____________________________________________________________
+```
+
 <!-- @@author nabijonzzz -->
 ### Finding transactions: `find`
 Lists the transactions whose description contains a keyword, so you can find a past transaction without scrolling
@@ -529,6 +558,7 @@ Available commands:
 | withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |
 |              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |
 | recent       | Recent activity      | recent [NUMBER]                        |
+| history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |
 | find         | Search descriptions  | find KEYWORD                           |
 | delete       | Delete a record      | delete INDEX                           |
 | balance      | Current balance      | balance                                |
@@ -576,6 +606,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * Set your monthly allowance: `allowance DAY [a/AMOUNT] [c/CURRENCY]`
 * View or stop your allowance: `allowance` or `allowance off`
 * View recent transactions: `recent [NUMBER]`
+* View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
 * Find transactions by description: `find KEYWORD`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`

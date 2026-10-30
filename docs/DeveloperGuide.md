@@ -496,6 +496,32 @@ insertion order would need to account for that choice. `getRecentTransactions()`
 read-only view so callers can display entries without directly editing the ledger. The command
 only formats data; it does not add, remove or change transactions.
 
+### Viewing paginated transaction history
+
+`history [n/NUMBER] [p/PAGE]` opens a newest-first view of the full ledger. The parser accepts
+the two optional fields in either order, rejects duplicates and non-positive values, and creates
+a `HistoryCommand`. Its defaults are five transactions per page and page 1. `HistoryCommand#execute()`
+checks that the requested page exists before the application enters history mode, so an invalid
+initial page leaves normal commands available.
+
+`FinNUS` retains the active `HistoryCommand` in `historyView`. While it is active, the main loop
+sends every non-blank line to `HistoryCommand#handleInput()` rather than the normal parser. That
+method accepts `next`, `prev`, `p/PAGE`, `n/NUMBER`, and `stop`; all other commands, including
+`exit`, produce a mode-specific error. `stop` clears `historyView`. History navigation does not
+change the ledger, but the loop still retries any pending save after a successful input.
+
+The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
+transactions from `TransactionList` using `size - 1 - index`, leaving the stored insertion order
+untouched. Displayed transaction numbers are global newest-first indices, so they agree with
+`recent` and `delete`. The heading shows the visible range and total count instead of a page
+number because `n/NUMBER` preserves the first visible transaction even when that position is
+not aligned to a page boundary. `next` and `prev` move by the new page size from that position;
+`p/PAGE` returns to boundaries counted from the newest transaction. Out-of-range navigation
+keeps the current position. An empty ledger allows page 1 and `stop`, and reports no transactions.
+
+`HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
+resizing, invalid input, empty history, and the command restriction in the application loop.
+
 <!-- @@author nabijonzzz -->
 ### Finding transactions
 
