@@ -128,7 +128,8 @@ class ParserTest {
 
     //@@author nkyjStar
     @ParameterizedTest
-    @ValueSource(strings = {"history n/0", "history p/-1", "history n/nope", "history p/2147483648",
+    @ValueSource(strings = {"history n/0", "history n/", "history p/", "history p/-1", "history n/nope",
+        "history p/2147483648",
         "history n/2 n/3", "history p/1 p/2", "history extra", "history n/2 p/1 extra"})
     public void parse_invalidHistoryArguments_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));

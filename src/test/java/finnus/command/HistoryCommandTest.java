@@ -64,6 +64,8 @@ class HistoryCommandTest {
         assertThrows(FinNusException.class, () -> history.handleInput("prev", transactions, ui));
         assertThrows(FinNusException.class, () -> history.handleInput("p/3", transactions, ui));
         assertThrows(FinNusException.class, () -> history.handleInput("n/0", transactions, ui));
+        assertThrows(FinNusException.class, () -> history.handleInput("n/", transactions, ui));
+        assertThrows(FinNusException.class, () -> history.handleInput("p/", transactions, ui));
         assertThrows(FinNusException.class, () -> history.handleInput("n/2147483648", transactions, ui));
         assertThrows(FinNusException.class, () -> history.handleInput("deposit 5", transactions, ui));
         history.handleInput("next", transactions, ui);
