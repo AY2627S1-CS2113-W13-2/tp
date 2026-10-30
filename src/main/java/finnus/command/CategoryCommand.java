@@ -11,8 +11,8 @@ import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
 /**
- * Adds a custom spending category, e.g. {@code category add Gym},
- * or lists all categories with {@code category list}.
+ * Lists all spending categories with {@code category}, or adds a custom category,
+ * e.g. {@code category Gym}.
  */
 public class CategoryCommand extends Command {
     private static final Logger logger = Logger.getLogger(CategoryCommand.class.getName());
@@ -69,7 +69,7 @@ public class CategoryCommand extends Command {
         lines.add("Categories:");
         lines.add("  Predefined: " + String.join(", ", CategoryList.PREDEFINED));
         lines.add(custom.isEmpty()
-                ? "  Custom: none yet. Add one with: category add NAME"
+                ? "  Custom: none yet. Add one with: category NAME"
                 : "  Custom: " + String.join(", ", custom));
         ui.showMessage(lines);
     }

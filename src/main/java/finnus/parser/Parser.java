@@ -9,7 +9,9 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
+import finnus.command.AllowanceCommand;
 import finnus.command.BalanceCommand;
 import finnus.command.CategoryCommand;
 import finnus.command.Command;
@@ -49,6 +51,12 @@ public class Parser {
      * Prefix that marks the currency of an amount, e.g. {@code c/JPY}.
      */
     public static final String CURRENCY_PREFIX = "c/";
+
+    /**
+     * Prefix that marks the amount of an allowance, e.g. {@code a/500}. A prefix is used so that
+     * the day and the amount cannot be swapped by mistake, e.g. {@code allowance 25 5}.
+     */
+    public static final String AMOUNT_PREFIX = "a/";
     //@@author
 
     //@@author nabijonzzz
@@ -78,26 +86,37 @@ public class Parser {
 
     //@@author chancheese
     /**
-     * Matches {@code c/CODE} at the start of a word, capturing the code (which may be empty).
+     * Matches {@code c/CODE} at the start of a word, allowing whitespace after {@code c/}.
+     * Captures the code, which may be empty.
      */
-    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX + "(\\S*)");
+    private static final Pattern CURRENCY_PATTERN = Pattern.compile("(?<!\\S)" + CURRENCY_PREFIX
+            + "\\s*(\\S*)");
+
+    /**
+     * Matches {@code a/AMOUNT} at the start of a word, allowing whitespace after {@code a/} like
+     * {@code c/} and {@code t/}. Captures the amount, which may be empty.
+     */
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(?<!\\S)" + AMOUNT_PREFIX
+            + "\\s*(\\S*)");
+
+    /** Turns off the allowance, as in {@code allowance off}. */
+    private static final String ALLOWANCE_OFF = "off";
     //@@author
 
     //@@author nabijonzzz
     /**
-     * Matches {@code t/NAME} at the start of a word, capturing the name (which may be empty).
+     * Matches {@code t/NAME} at the start of a word, allowing whitespace after {@code t/}.
+     * Captures the name, which may be empty.
      */
-    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX + "(\\S*)");
+    private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX
+            + "\\s*(\\S*)");
 
-    /**
-     * Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty).
-     */
-    private static final Pattern DATE_PATTERN = Pattern.compile("(?<!\\S)" + DATE_PREFIX + "(\\S*)");
+    /** Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty). */
+    private static final Pattern DATE_PATTERN = Pattern.compile("(?<!\\S)" + DATE_PREFIX + "\\s*(\\S*)");
 
-    // A date that is safely in the past, so copying the example never gives a "future date" error.
+    /** A date safely in the past, so the example remains valid on future runs. */
     private static final String DATE_EXAMPLE = DATE_PREFIX + "2026-01-15";
-    private static final String CATEGORY_LIST = "list";
-    private static final String CATEGORY_ADD = "add";
+
     //@@author
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
@@ -152,7 +171,11 @@ public class Parser {
         case FIND ->
             parseFind(arguments);
         case BALANCE ->
-            new BalanceCommand();
+            new BalanceCommand(today);
+        //@@author chancheese
+        case ALLOWANCE ->
+            parseAllowance(arguments, today);
+        //@@author
         case EXIT ->
             new ExitCommand();
         case DELETE ->
@@ -205,6 +228,70 @@ public class Parser {
                     + " lunch.\nFormat: " + CommandWord.FIND.getUsage());
         }
         return new FindCommand(arguments.trim());
+    }
+    //@@author
+
+    //@@author chancheese
+    /**
+     * Parses {@code allowance} (show the summary), {@code allowance off} (stop it), or
+     * {@code allowance DAY [a/AMOUNT] [c/CURRENCY]} (set it). Like {@code c/}, the
+     * {@code a/} part may appear anywhere after the command word.
+     *
+     * @throws FinNusException If the day, amount or currency is invalid, or {@code c/} is
+     *     given without an amount.
+     */
+    private static Command parseAllowance(String arguments, LocalDate today) throws FinNusException {
+        if (arguments.isEmpty()) {
+            return AllowanceCommand.show(today);
+        }
+        if (arguments.equalsIgnoreCase(ALLOWANCE_OFF)) {
+            return AllowanceCommand.stop(today);
+        }
+        String format = "\nFormat: " + CommandWord.ALLOWANCE.getUsage();
+        String[] currencyAndRest = extractCurrency(arguments);
+        String currencyCode = currencyAndRest[0];
+        String[] amountAndRest = extractPrefixedValue(currencyAndRest[1], AMOUNT_PATTERN,
+                "Give only one amount, e.g. " + AllowanceCommand.EXAMPLE + "." + format,
+                "Missing amount after " + AMOUNT_PREFIX + ", e.g. " + AllowanceCommand.EXAMPLE + "." + format);
+        String amountText = amountAndRest[0];
+        // c/SGD is treated like no currency, so only a real foreign currency needs a/.
+        if (currencyCode != null && amountText == null) {
+            throw new FinNusException("A currency needs an amount, e.g. allowance 5 a/60000 c/JPY." + format);
+        }
+        // Anything left besides the day, e.g. "5 d/x" or "5 A/500", is not part of the format.
+        if (amountAndRest[1].contains(" ")) {
+            throw new FinNusException("Give the day as one number, optionally with a/AMOUNT and c/CURRENCY, e.g. "
+                    + AllowanceCommand.EXAMPLE + "." + format);
+        }
+        int day = parseAllowanceDay(amountAndRest[1]);
+        if (amountText == null) {
+            return AllowanceCommand.set(day, null, null, today);
+        }
+        BigDecimal amount = currencyCode == null
+                ? parseAmount(amountText, CommandWord.ALLOWANCE.getUsage()).toBigDecimal()
+                : parseForeignAmount(amountText, CommandWord.ALLOWANCE.getUsage());
+        return AllowanceCommand.set(day, amount, currencyCode, today);
+    }
+
+    /**
+     * Converts text such as {@code "5"} into an allowance day from 1 to 31.
+     * Also used by first-run setup.
+     *
+     * @throws FinNusException If the text is not a whole number from 1 to 31.
+     */
+    public static int parseAllowanceDay(String text) throws FinNusException {
+        String day = text.trim();
+        if (day.isEmpty()) {
+            throw new FinNusException("Missing allowance day, e.g. " + AllowanceCommand.EXAMPLE + ".\nFormat: "
+                    + CommandWord.ALLOWANCE.getUsage());
+        }
+        // At most 2 digits, so a huge number cannot overflow Integer.parseInt.
+        if (!day.matches("\\d{1,2}") || Integer.parseInt(day) < Allowance.MIN_DAY
+                || Integer.parseInt(day) > Allowance.MAX_DAY) {
+            throw new FinNusException("'" + day + "' is not a valid allowance day. Use a whole number from "
+                    + Allowance.MIN_DAY + " to " + Allowance.MAX_DAY + ", e.g. 5.");
+        }
+        return Integer.parseInt(day);
     }
     //@@author
 
@@ -430,9 +517,7 @@ public class Parser {
         return nameAndRest;
     }
 
-    /**
-     * The date of a transaction together with the arguments left after removing {@code on/DATE}.
-     */
+    /** The date of a transaction and the arguments left after removing {@code on/DATE}. */
     record DateAndRest(LocalDate date, String rest) {
     }
 
@@ -476,24 +561,13 @@ public class Parser {
     }
 
     /**
-     * Parses {@code category list} or {@code category add NAME}.
+     * Parses {@code category} to list categories or {@code category NAME} to add one.
      */
     private static Command parseCategory(String arguments) throws FinNusException {
-        String[] parts = arguments.split("\\s+", 2);
-        String subCommand = parts[0].toLowerCase(Locale.ROOT);
-        if (subCommand.equals(CATEGORY_LIST)) {
+        if (arguments.isBlank()) {
             return new CategoryCommand();
         }
-        if (!subCommand.equals(CATEGORY_ADD)) {
-            throw new FinNusException("Use " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_ADD
-                    + " NAME or " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_LIST
-                    + ".\nFormat: " + CommandWord.CATEGORY.getUsage());
-        }
-        String name = parts.length > 1 ? parts[1].trim() : "";
-        if (name.isEmpty()) {
-            throw new FinNusException("Missing category name, e.g. " + CommandWord.CATEGORY.getWord() + " "
-                    + CATEGORY_ADD + " Gym.");
-        }
+        String name = arguments.trim();
         checkCategoryName(name);
         return new CategoryCommand(name);
     }
@@ -586,7 +660,7 @@ public class Parser {
      * @throws FinNusException If the text is missing, not a number, not
      *     positive, has more than 2 decimal places, or is unreasonably large.
      */
-    static Money parseAmount(String text, String format) throws FinNusException {
+    public static Money parseAmount(String text, String format) throws FinNusException {
         Money amount = parseNonNegativeAmount(text, format);
         if (amount.isZero()) {
             throw new FinNusException("Amount must be greater than 0.");

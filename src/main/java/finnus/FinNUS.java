@@ -1,6 +1,8 @@
 package finnus;
 
 import java.io.IOException;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -10,6 +12,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 import finnus.command.Command;
+import finnus.command.CreditAllowanceCommand;
 import finnus.exception.FinNusException;
 import finnus.parser.Parser;
 import finnus.storage.FileStorage;
@@ -30,6 +33,10 @@ public class FinNUS {
 
     private final Ui ui;
     private final Storage storage;
+    //@@author chancheese
+    /** Gives today's date; a fixed clock lets tests choose the day. */
+    private final Clock clock;
+    //@@author
     /** The mutable in-memory ledger restored at startup and updated by commands. */
     private TransactionList transactions;
     /** Tracks whether the current ledger differs from its last successful save. */
@@ -48,9 +55,24 @@ public class FinNUS {
      * Supplies independent UI and storage implementations for launchers and isolated tests.
      */
     public FinNUS(Ui ui, Storage storage) {
+        this(ui, storage, Clock.systemDefaultZone());
+    }
+
+    //@@author chancheese
+    /**
+     * Also supplies the clock, so tests can run on a fixed date.
+     */
+    public FinNUS(Ui ui, Storage storage, Clock clock) {
         this.ui = Objects.requireNonNull(ui);
         this.storage = Objects.requireNonNull(storage);
+        this.clock = Objects.requireNonNull(clock);
     }
+
+    /** Returns today's date according to the clock. */
+    private LocalDate today() {
+        return LocalDate.now(clock);
+    }
+    //@@author
 
     /**
      * Main entry-point for the FinNUS application.
@@ -128,25 +150,49 @@ public class FinNUS {
             ui.showMessage(loaded.warnings());
         }
         if (loaded.setupRequired()) {
-            if (!new Setup().run(ui, transactions)) {
+            if (!new Setup().run(ui, transactions, today())) {
                 return false;
             }
             hasUnsavedChanges = true;
             savePendingChanges();
         }
         ui.showWelcome();
+        //@@author chancheese
+        // Adds any allowance that arrived while FinNUS was closed, and warns if one cannot be added yet.
+        creditAllowance(true);
+        savePendingChanges();
+        //@@author
         return true;
     }
+
+    //@@author chancheese
+    /**
+     * Adds any allowance deposits that are due, and marks the ledger as changed if any were added.
+     *
+     * @param showsProblems Whether to warn about a due allowance that cannot be added yet.
+     */
+    private void creditAllowance(boolean showsProblems) {
+        LedgerSnapshot before = LedgerSnapshot.capture(transactions);
+        new CreditAllowanceCommand(today(), showsProblems).execute(transactions, ui);
+        hasUnsavedChanges |= !before.equals(LedgerSnapshot.capture(transactions));
+    }
+    //@@author
 
     /**
      * Detects actual changes without requiring every command to declare whether it writes data.
      */
     private boolean executeCommand(String input) throws FinNusException {
-        Command command = Parser.parse(input);
+        Command command = Parser.parse(input, today());
         assert command != null : "Parser must return a command";
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
         logger.fine("Executing " + command.getClass().getSimpleName());
         command.execute(transactions, ui);
+        //@@author chancheese
+        // A new rate or a date change during the session can make a waiting allowance addable.
+        if (!command.isExit()) {
+            new CreditAllowanceCommand(today(), false).execute(transactions, ui);
+        }
+        //@@author
         boolean changed = !before.equals(LedgerSnapshot.capture(transactions));
         hasUnsavedChanges |= changed;
         if (changed) {

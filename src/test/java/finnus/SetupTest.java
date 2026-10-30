@@ -3,13 +3,22 @@ package finnus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.Test;
 
+import finnus.allowance.Allowance;
 import finnus.money.Money;
 import finnus.transaction.TransactionList;
 
 /** Checks first-run opening balance entry and confirmation without creating transactions. */
 class SetupTest {
+    //@@author chancheese
+    private static final LocalDate TODAY = LocalDate.of(2026, 10, 29);
+    //@@author
+
     @Test
     public void run_confirmedAmount_setsOpeningBalanceWithoutTransaction() {
         TransactionList transactions = new TransactionList();
@@ -75,4 +84,58 @@ class SetupTest {
         assertEquals(Money.of("20"), transactions.getOpeningBalance());
         assertEquals(0, transactions.size());
     }
+
+    //@@author chancheese
+    @Test
+    public void run_allowanceDayAndAmount_setsAllowance() {
+        TransactionList transactions = new TransactionList();
+        ScriptedUi ui = new ScriptedUi("100", "yes", "5", "500");
+
+        assertTrue(new Setup().run(ui, transactions, TODAY));
+
+        assertEquals(new Allowance(5, new BigDecimal("500"), null, LocalDate.of(2026, 10, 5)),
+                transactions.getAllowance().orElseThrow());
+        assertTrue(ui.output().contains("Next allowance in 7 days (5 Nov 2026)."));
+        assertEquals(0, transactions.size(), "Setup must not add the allowance as a deposit straight away");
+    }
+
+    @Test
+    public void run_enterAtAllowanceDay_skipsAllowance() {
+        TransactionList transactions = new TransactionList();
+
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes", ""), transactions, TODAY));
+
+        assertTrue(transactions.getAllowance().isEmpty());
+    }
+
+    @Test
+    public void run_enterAtAllowanceAmount_onlyTracksDay() {
+        TransactionList transactions = new TransactionList();
+
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "31", "   "), transactions, TODAY));
+
+        assertEquals(31, transactions.getAllowance().orElseThrow().day());
+        assertFalse(transactions.getAllowance().orElseThrow().hasAmount());
+    }
+
+    @Test
+    public void run_invalidAllowanceAnswers_asksAgain() {
+        TransactionList transactions = new TransactionList();
+
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "32", "five", "5", "-1", "0", "250.50"),
+                transactions, TODAY));
+
+        assertEquals(new BigDecimal("250.50"), transactions.getAllowance().orElseThrow().amount());
+    }
+
+    @Test
+    public void run_inputEndsAtAllowance_stillCompletesWithOpeningBalance() {
+        TransactionList transactions = new TransactionList();
+
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes"), transactions, TODAY));
+
+        assertEquals(Money.of("100"), transactions.getOpeningBalance());
+        assertTrue(transactions.getAllowance().isEmpty());
+    }
+    //@@author
 }

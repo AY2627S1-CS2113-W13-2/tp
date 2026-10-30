@@ -46,8 +46,12 @@ class HelpCommandTest {
                 "| find         | Search descriptions  | find KEYWORD                           |",
                 "| delete       | Delete a record      | delete INDEX                           |",
                 "| balance      | Current balance      | balance                                |",
+                //@@author chancheese
+                "| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |",
+                "|              |                      | [c/CURRENCY]] or off                   |",
+                //@@author nabijonzzz
                 "| rate         | Manage FX rates      | rate [CURRENCY RATE]                   |",
-                "| category     | Manage categories    | category add NAME or list              |",
+                "| category     | Manage categories    | category [NAME]                        |",
                 "| help         | List commands        | help                                   |",
                 "| exit         | Close FinNUS         | exit                                   |",
                 "+--------------+----------------------+----------------------------------------+",

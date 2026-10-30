@@ -42,7 +42,9 @@ class CategoryCommandTest {
 
     @Test
     public void execute_list_showsPredefinedAndCustomCategories() throws FinNusException {
-        assertTrue(captureOutput(new CategoryCommand()).contains("Custom: none yet"));
+        String emptyListOutput = captureOutput(new CategoryCommand());
+        assertTrue(emptyListOutput.contains("Custom: none yet"));
+        assertTrue(emptyListOutput.contains("category NAME"));
 
         new CategoryCommand("Gym").execute(transactions, new Ui());
         String output = captureOutput(new CategoryCommand());

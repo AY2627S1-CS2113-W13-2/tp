@@ -1,66 +1,76 @@
 # FinNUS
 
-This is a personal financial management application. Given below are instructions on how to set up and use the project.
+FinNUS is a command-line finance tracker for university students on a tight monthly budget, including international
+students who receive allowances in foreign currencies. Users record deposits and withdrawals, tag spending with
+categories, track their monthly allowance cycle and see how much money they have left, all by typing short commands.
 
-## Setting up in Intellij
+* [User Guide](https://ay2627s1-cs2113-w13-2.github.io/tp/UserGuide.html)
+* [Developer Guide](https://ay2627s1-cs2113-w13-2.github.io/tp/DeveloperGuide.html)
+* [About Us](https://ay2627s1-cs2113-w13-2.github.io/tp/AboutUs.html)
 
-Prerequisites: JDK 25 (use the exact version), update Intellij to the most recent version.
+## Setting up in IntelliJ
 
-1. **Ensure Intellij JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous Intellij project.
+Prerequisites: JDK 25 (use the exact version), and the most recent version of IntelliJ.
+
+1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk).
+   This step is not needed if you have used JDK 25 in a previous IntelliJ project.
 1. **Import the project _as a Gradle project_**, as described [here](https://se-education.org/guides/tutorials/intellijImportGradleProject.html).
-1. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/duke/Duke.java` file, right-click it, and choose `Run Duke.main()`. If the setup is correct, you should see something like the below:
+1. **Verify the setup**: after the import is complete, locate `src/main/java/finnus/FinNUS.java`, right-click it and
+   choose `Run 'FinNUS.main()'`. On the first run, FinNUS starts its first-time setup:
    ```
-   > Task :compileJava
-   > Task :processResources NO-SOURCE
-   > Task :classes
-   
-   > Task :Duke.main()
-   Hello from
-    ____        _
-   |  _ \ _   _| | _____ 
-   | | | | | | | |/ / _ \
-   | |_| | |_| |   <  __/
-   |____/ \__,_|_|\_\___|
-   
-   What is your name?
+   ____________________________________________________________
+   First-time setup
+   Enter your current opening balance in SGD.
+   This is your starting balance and will not be recorded as a transaction.
+   ____________________________________________________________
+   Opening balance (SGD):
    ```
-   Type some word and press enter to let the execution proceed to the end.
+   Enter an amount (e.g. `100`), confirm with `yes`, and type `help` to see all commands.
+1. **Enable assertions** for the run configuration: `Run` > `Edit Configurations...` > `FinNUS` > `Modify options` >
+   `Add VM options`, and enter `-ea`.
 
-**Warning:** Keep the `src\main\java` folder as the root folder for Java files (i.e., don't rename those folders or move Java files to another folder outside of this folder path), as this is the default location some tools (e.g., Gradle) expect to find Java files.
+FinNUS saves its data in `finnus.txt` (with a backup in `finnus.txt.bak`) and writes logs to `finnus.log`, all in
+the folder it is run from. These files are ignored by Git.
+
+**Warning:** Keep the `src/main/java` folder as the root folder for Java files (i.e., don't rename those folders or
+move Java files to another folder outside of this folder path), as this is the default location some tools (e.g.,
+Gradle) expect to find Java files.
 
 ## Build automation using Gradle
 
-* This project uses Gradle for build automation and dependency management. It includes a basic build script as well (i.e. the `build.gradle` file).
-* If you are new to Gradle, refer to the [Gradle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/gradle.html).
+This project uses Gradle for build automation and dependency management. Common tasks:
+
+* `./gradlew run`: runs FinNUS, with assertions enabled
+* `./gradlew test`: runs the JUnit tests
+* `./gradlew check`: runs the tests and Checkstyle
+* `./gradlew shadowJar`: builds the executable `build/libs/finnus.jar`, which can be run with `java -jar finnus.jar`
+
+On Windows, use `gradlew.bat` instead of `./gradlew`. If you are new to Gradle, refer to the
+[Gradle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/gradle.html).
 
 ## Testing
 
-### I/O redirection tests
+JUnit tests are in `src/test/java/finnus`, in the same packages as the classes they test. Run them with
+`./gradlew test`, or right-click the `src/test/java` folder in IntelliJ and choose `Run 'All Tests'`.
 
-* To run _I/O redirection_ tests (aka _Text UI tests_), navigate to the `text-ui-test` and run the `runtest(.bat/.sh)` script.
-
-### JUnit tests
-
-* A skeleton JUnit test (`src/test/java/seedu/duke/DukeTest.java`) is provided with this project template. 
-* If you are new to JUnit, refer to the [JUnit Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/junit.html).
+If you are new to JUnit, refer to the [JUnit Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/junit.html).
 
 ## Checkstyle
 
-* A sample CheckStyle rule configuration is provided in this project.
-* If you are new to Checkstyle, refer to the [Checkstyle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/checkstyle.html).
+The Checkstyle rules are in `config/checkstyle/checkstyle.xml`, and are checked by `./gradlew check`.
+If you are new to Checkstyle, refer to the [Checkstyle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/checkstyle.html).
 
 ## CI using GitHub Actions
 
-The project uses [GitHub actions](https://github.com/features/actions) for CI. When you push a commit to this repo or PR against it, GitHub actions will run automatically to build and verify the code as updated by the commit/PR.
+The project uses [GitHub Actions](https://github.com/features/actions) for CI. When you push a commit to this repo or
+open a PR against it, GitHub Actions builds the project and runs `./gradlew check` on Windows, macOS and Linux.
 
 ## Documentation
 
-`/docs` folder contains a skeleton version of the project documentation.
+The `/docs` folder contains the project documentation, published with GitHub Pages from the `master` branch's
+`/docs` folder:
 
-Steps for publishing documentation to the public: 
-1. If you are using this project template for an individual project, go your fork on GitHub.<br>
-   If you are using this project template for a team project, go to the team fork on GitHub.
-1. Click on the `settings` tab.
-1. Scroll down to the `GitHub Pages` section.
-1. Set the `source` as `master branch /docs folder`.
-1. Optionally, use the `choose a theme` button to choose a theme for your documentation.
+* `docs/UserGuide.md`: how to use FinNUS
+* `docs/DeveloperGuide.md`: design and implementation, with UML diagrams (PlantUML sources are in `docs/diagrams`
+  and the exported images in `docs/images`)
+* `docs/AboutUs.md` and `docs/team/`: the team and each member's project portfolio page

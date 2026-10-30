@@ -87,7 +87,7 @@ public class CategoryList {
         }
         return find(name).orElseThrow(() -> new FinNusException("Unknown category '" + name
                 + "'. Valid categories: " + String.join(", ", getAll())
-                + "\nAdd a new one with: category add NAME"));
+                + "\nAdd a new one with: category NAME"));
     }
 
     /** Returns the custom categories in the order they were added. */
