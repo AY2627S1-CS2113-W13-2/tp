@@ -3,6 +3,7 @@ package finnus.command;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -96,6 +97,84 @@ class FindCommandTest {
             System.setOut(original);
         }
         return output.toString();
+    }
+
+    private String runCategory(String keyword, String categoryName) {
+        return runCommand(transactions, new FindCommand(keyword, categoryName));
+    }
+
+    @Test
+    public void execute_categoryOnly_listsThatCategoryWithTotal() {
+        String output = runCategory(null, "food");
+
+        assertTrue(output.contains("Found 2 transaction(s) in #Food:"));
+        int newer = output.indexOf("1. [Withdrawal] -$12.00 (Lunch with friends) #Food");
+        int older = output.indexOf("3. [Withdrawal] -$4.50 (Lunch) #Food");
+        assertTrue(newer >= 0 && older > newer, "Matches should be listed most recent first");
+        assertTrue(output.contains("Total spent: $16.50"));
+        assertFalse(output.contains("Bus"));
+    }
+
+    @Test
+    public void execute_keywordAndCategory_mustMatchBoth() {
+        transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("3"), "Lunch bus", "Transport"));
+
+        String output = runCategory("lunch", "FOOD");
+
+        assertTrue(output.contains("Found 2 transaction(s) matching \"lunch\" in #Food:"));
+        assertFalse(output.contains("Lunch bus"));
+        assertTrue(output.contains("Total spent: $16.50"));
+    }
+
+    @Test
+    public void execute_depositWithMatchingDescription_notFoundByCategory() {
+        transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of("50"), "Food money"));
+
+        String output = runCategory("food", "food");
+
+        assertTrue(output.contains("No transactions match \"food\" in #Food."));
+    }
+
+    @Test
+    public void execute_categoryWithNoSpending_showsMessage() {
+        String output = runCategory(null, "bills");
+
+        assertTrue(output.contains("No transactions in #Bills."));
+        assertFalse(output.contains("Total spent"));
+    }
+
+    @Test
+    public void execute_customCategory_listsItsWithdrawals() {
+        transactions.getCategories().add("Gym");
+        transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("30"), "Membership", "Gym"));
+
+        String output = runCategory(null, "gym");
+
+        assertTrue(output.contains("1. [Withdrawal] -$30.00 (Membership) #Gym"));
+        assertTrue(output.contains("Total spent: $30.00"));
+    }
+
+    @Test
+    public void execute_unknownCategory_throwsAndListsValidOnes() {
+        FinNusException e = assertThrows(FinNusException.class,
+                () -> new FindCommand(null, "fod").execute(transactions, new Ui()));
+
+        assertTrue(e.getMessage().startsWith("Unknown category 'fod'. Valid categories: Food"));
+        assertEquals(4, transactions.size());
+    }
+
+    @Test
+    public void execute_categoryMatch_showsIndexThatDeleteUses() throws FinNusException {
+        assertTrue(runCategory(null, "transport").contains("2. [Withdrawal] -$1.20 (Bus) #Transport"));
+
+        new DeleteCommand(2).execute(transactions, new Ui());
+
+        assertTrue(runCategory(null, "transport").contains("No transactions in #Transport."));
+    }
+
+    @Test
+    public void execute_keywordOnly_showsNoTotal() {
+        assertFalse(run("lunch").contains("Total spent"));
     }
     //@@author nabijonzzz
 
