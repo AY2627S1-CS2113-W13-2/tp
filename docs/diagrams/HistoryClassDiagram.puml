@@ -1,0 +1,59 @@
+@startuml HistoryClassDiagram
+' @@author nkyjStar
+' Only members relevant to paginated history are shown.
+!pragma layout smetana
+hide circle
+hide empty members
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+class FinNUS {
+    - historyView : HistoryCommand
+    - executeCommand(input) : boolean
+}
+
+class Parser <<utility>> {
+    + {static} parse(input, today) : Command
+    - {static} parseHistory(arguments) : Command
+}
+
+abstract class Command {
+    + {abstract} execute(transactions, ui) : void
+}
+
+class HistoryCommand {
+    + {static} DEFAULT_PAGE_SIZE : int
+    - pageSize : int
+    - firstIndex : int
+    + execute(transactions, ui) : void
+    + handleInput(input, transactions, ui) : boolean
+    + {static} parsePositiveNumber(value, name) : int
+    - showPage(transactions, ui) : void
+}
+
+class TransactionList {
+    + size() : int
+    + get(index) : Transaction
+}
+
+class Transaction {
+    + toString() : String
+}
+
+class Ui {
+    + showMessage(lines) : void
+}
+
+Command <|-- HistoryCommand
+FinNUS --> "0..1" HistoryCommand : active view
+FinNUS ..> Parser : parses input
+Parser ..> HistoryCommand : constructs
+HistoryCommand ..> TransactionList : reads
+HistoryCommand ..> Ui : displays
+TransactionList *-- "0..*" Transaction : entries
+
+note right of HistoryCommand
+  firstIndex counts from the newest entry.
+  TransactionList stores entries oldest first.
+end note
+@enduml
