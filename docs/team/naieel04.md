@@ -38,14 +38,8 @@ terminals.
 
 ### Contributions to the Developer Guide
 
-- ([Architecture](../DeveloperGuide.md#architecture), [Storage](../DeveloperGuide.md#storage)) **Architecture and storage design:** Documented the application architecture and storage components, including file format, snapshots, backups, and recovery behavior.
-- ([Automatic saving and recovery](../DeveloperGuide.md#automatic-saving-and-recovery)) **Automatic saving and recovery:** Explained change detection, save retries, backup rotation, corruption recovery, and failure handling, with sequence and activity diagrams.
-- ([Documentation, logging, testing, and DevOps](../DeveloperGuide.md#documentation-logging-testing-and-devops)) **Developer setup and documentation:** Added project setup and guide material for documentation, testing, and DevOps.
-- ([Product scope](../DeveloperGuide.md#product-scope), [user stories](../DeveloperGuide.md#user-stories), [use cases](../DeveloperGuide.md#use-cases), [non-functional requirements](../DeveloperGuide.md#non-functional-requirements), [glossary](../DeveloperGuide.md#glossary), [manual testing instructions](../DeveloperGuide.md#instructions-for-manual-testing), [planned enhancements](../DeveloperGuide.md#planned-enhancements)) **Project reference sections:** Added the project's product and development reference sections.
-
-[Developer Guide](../DeveloperGuide.md) |
-[Diagram additions](https://github.com/naieel04/tp/commit/6d02f6f) |
-[Command class diagram](https://github.com/naieel04/tp/commit/51d74fc)
+- [#76](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/76) **System design documentation:** Documented architecture, storage, and automatic saving and recovery, including component roles, file format, change detection, backups, and failure handling. Added UML diagrams to explain these designs.
+- [#69](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/69) **Project documentation:** Added setup, scope, requirements, glossary, manual testing, and planned enhancement sections.
 
 ### Contributions to team-based tasks
 
