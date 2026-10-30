@@ -1,6 +1,7 @@
 //@@author nkyjStar
 package finnus.command;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -133,15 +134,15 @@ public class HistoryCommand extends Command {
         if (!value.matches("[0-9]+")) {
             throw new FinNusException("The " + name + " must be a positive whole number.");
         }
-        try {
-            int number = Integer.parseInt(value);
-            if (number > 0) {
-                return number;
-            }
-        } catch (NumberFormatException e) {
-            // Values larger than int can represent are rejected below.
+        // Parse before narrowing to int so oversized positive numbers get a range error.
+        BigInteger number = new BigInteger(value);
+        if (number.signum() == 0) {
+            throw new FinNusException("The " + name + " must be a positive whole number.");
         }
-        throw new FinNusException("The " + name + " must be a positive whole number.");
+        if (number.compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0) {
+            throw new FinNusException("History " + name + " is out of range.");
+        }
+        return number.intValue();
     }
 
     /**

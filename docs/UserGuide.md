@@ -468,7 +468,8 @@ Format: `history [n/NUMBER] [p/PAGE]`
 
 * `n/NUMBER` sets the number of transactions per page; the default is 5.
 * `p/PAGE` chooses the first page to show; the default is 1. Both fields are optional and can appear in either order.
-* Numbers must be positive whole numbers. A page beyond the available transactions is rejected.
+* Numbers must be positive whole numbers no larger than 2,147,483,647. A page beyond the available
+  transactions is also rejected.
 * While viewing history, only the following inputs are accepted:
     * `next` shows the next page; `prev` shows the previous page.
     * `p/PAGE` jumps to a page. Page 1 begins with the newest transaction.
