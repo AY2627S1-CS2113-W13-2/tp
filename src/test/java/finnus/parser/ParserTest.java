@@ -31,6 +31,7 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+import finnus.command.HistoryCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -53,6 +54,7 @@ class ParserTest {
             Map.entry(CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class)),
             Map.entry(CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class)),
             Map.entry(CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class)),
+            Map.entry(CommandWord.HISTORY, new CommandExample("history n/3 p/1", HistoryCommand.class)),
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
@@ -118,6 +120,19 @@ class ParserTest {
         "delete 2147483648", "recent 2147483648"})
     public void parse_invalidIntegerArguments_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"history n/0", "history p/-1", "history n/nope", "history p/2147483648",
+        "history n/2 n/3", "history p/1 p/2", "history extra", "history n/2 p/1 extra"})
+    public void parse_invalidHistoryArguments_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_historyOptionsInEitherOrder_returnsHistoryCommand() throws FinNusException {
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history p/2 n/3"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history"));
     }
 
     @Test
