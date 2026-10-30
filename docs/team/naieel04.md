@@ -49,3 +49,7 @@ terminals.
 * Configured Gradle to launch FinNUS and package its executable JAR: [Build configuration](https://github.com/naieel04/tp/commit/6f437b6).
 
 ### Review/Mentoring contributions
+
+
+### Contributions beyond the project team
+* Reviewed the Developer Guide of [ScheduleFlow PR](https://github.com/NUS-CS2113-AY2627-S1/tp/pull/29) [CS2113-T10-1]
