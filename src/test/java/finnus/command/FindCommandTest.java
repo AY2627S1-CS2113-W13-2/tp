@@ -79,16 +79,25 @@ class FindCommandTest {
 
     /** Runs a find command on the given list and returns what it printed. */
     private String runOn(TransactionList list, String keyword) {
+        return runCommand(list, new FindCommand(keyword));
+    }
+
+    //@@author chancheese
+    /** Runs a command on the given list and returns what it printed. */
+    private static String runCommand(TransactionList list, FindCommand command) {
         PrintStream original = System.out;
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         System.setOut(new PrintStream(output));
         try {
-            new FindCommand(keyword).execute(list, new Ui());
+            command.execute(list, new Ui());
+        } catch (FinNusException e) {
+            throw new AssertionError("Unexpected error: " + e.getMessage(), e);
         } finally {
             System.setOut(original);
         }
         return output.toString();
     }
+    //@@author nabijonzzz
 
     @Test
     public void containsIgnoreCase_textWhoseLowercaseChangesLength_stillMatches() {

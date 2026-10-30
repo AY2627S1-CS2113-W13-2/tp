@@ -217,17 +217,26 @@ public class Parser {
 
     //@@author nabijonzzz
     /**
-     * Parses {@code find KEYWORD}. Everything after the command word is the keyword,
-     * so a phrase such as {@code find chicken rice} is searched as a whole.
+     * Parses {@code find [KEYWORD] [t/CATEGORY]}. Everything after the command word, apart from
+     * an optional {@code t/CATEGORY} part, is the keyword, so a phrase such as
+     * {@code find chicken rice} is searched as a whole.
      *
-     * @throws FinNusException If no keyword is given.
+     * @throws FinNusException If neither a keyword nor a category is given, or the category
+     *     part is invalid.
      */
     private static Command parseFind(String arguments) throws FinNusException {
-        if (arguments.isBlank()) {
-            throw new FinNusException("Missing keyword to search for, e.g. " + CommandWord.FIND.getWord()
-                    + " lunch.\nFormat: " + CommandWord.FIND.getUsage());
+        //@@author chancheese
+        // t/ is read exactly as for withdraw, so the same category names and errors apply.
+        String[] categoryAndRest = extractCategory(arguments);
+        String categoryName = categoryAndRest[0];
+        String keyword = categoryAndRest[1].trim();
+        if (categoryName == null && keyword.isEmpty()) {
+            throw new FinNusException("Missing keyword or category to search for, e.g. "
+                    + CommandWord.FIND.getWord() + " lunch or " + CommandWord.FIND.getWord() + " "
+                    + CATEGORY_PREFIX + "food.\nFormat: " + CommandWord.FIND.getUsage());
         }
-        return new FindCommand(arguments.trim());
+        return new FindCommand(keyword.isEmpty() ? null : keyword, categoryName);
+        //@@author nabijonzzz
     }
     //@@author
 
