@@ -496,6 +496,8 @@ insertion order would need to account for that choice. `getRecentTransactions()`
 read-only view so callers can display entries without directly editing the ledger. The command
 only formats data; it does not add, remove or change transactions.
 
+<!-- @@author -->
+<!-- @@author nkyjStar -->
 ### Viewing paginated transaction history
 
 `history [n/NUMBER] [p/PAGE]` opens a newest-first view of the full ledger. The parser accepts
@@ -522,6 +524,7 @@ keeps the current position. An empty ledger allows page 1 and `stop`, and report
 `HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
 resizing, invalid input, empty history, and the command restriction in the application loop.
 
+<!-- @@author -->
 <!-- @@author nabijonzzz -->
 ### Finding transactions
 

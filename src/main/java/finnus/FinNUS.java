@@ -13,7 +13,9 @@ import java.util.logging.SimpleFormatter;
 
 import finnus.command.Command;
 import finnus.command.CreditAllowanceCommand;
+//@@author nkyjStar
 import finnus.command.HistoryCommand;
+//@@author
 import finnus.exception.FinNusException;
 import finnus.parser.Parser;
 import finnus.storage.FileStorage;
@@ -44,8 +46,10 @@ public class FinNUS {
     private boolean hasUnsavedChanges;
     /** Prevents writes when loading could not establish that replacing storage is safe. */
     private boolean savingAllowed;
+    //@@author nkyjStar
     /** Active paginated history view, or null when normal commands are available. */
     private HistoryCommand historyView;
+    //@@author
 
     /**
      * Creates the console application with persistent storage beside the packaged JAR.
@@ -144,7 +148,9 @@ public class FinNUS {
     private boolean restoreSession() {
         LoadResult loaded = storage.load();
         transactions = loaded.snapshot().toTransactionList();
+        //@@author nkyjStar
         historyView = null;
+        //@@author
         savingAllowed = loaded.savingAllowed();
         hasUnsavedChanges = false;
         assert transactions != null : "Restored transaction list must exist";
@@ -186,6 +192,7 @@ public class FinNUS {
      * Detects actual changes without requiring every command to declare whether it writes data.
      */
     private boolean executeCommand(String input) throws FinNusException {
+        //@@author nkyjStar
         if (historyView != null) {
             boolean stopped = historyView.handleInput(input, transactions, ui);
             if (stopped) {
@@ -195,14 +202,17 @@ public class FinNUS {
             savePendingChanges();
             return false;
         }
+        //@@author
         Command command = Parser.parse(input, today());
         assert command != null : "Parser must return a command";
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
         logger.fine("Executing " + command.getClass().getSimpleName());
         command.execute(transactions, ui);
+        //@@author nkyjStar
         if (command instanceof HistoryCommand historyCommand) {
             historyView = historyCommand;
         }
+        //@@author
         //@@author chancheese
         // A new rate or a date change during the session can make a waiting allowance addable.
         if (!command.isExit()) {

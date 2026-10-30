@@ -22,7 +22,9 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+//@@author nkyjStar
 import finnus.command.HistoryCommand;
+//@@author
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -169,8 +171,10 @@ public class Parser {
             new HelpCommand();
         case RECENT ->
             parseRecent(arguments);
+        //@@author nkyjStar
         case HISTORY ->
             parseHistory(arguments);
+        //@@author
         case FIND ->
             parseFind(arguments);
         case BALANCE ->
@@ -325,6 +329,7 @@ public class Parser {
         return new RecentTransactionCommand(length);
     }
 
+    //@@author nkyjStar
     /** Parses optional page size and page fields, allowing either order but no duplicates. */
     private static Command parseHistory(String arguments) throws FinNusException {
         int pageSize = HistoryCommand.DEFAULT_PAGE_SIZE;
@@ -347,6 +352,7 @@ public class Parser {
         }
         return new HistoryCommand(pageSize, page);
     }
+    //@@author
 
     /**
      * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set

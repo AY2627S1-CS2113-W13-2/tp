@@ -459,6 +459,7 @@ Here is a list of the recent 2 transaction(s):
 
 ```
 
+<!-- @@author nkyjStar -->
 ### Viewing transaction history: `history`
 Shows every transaction in pages, newest entry first. The numbers match `recent` and the indices used by `delete`.
 The opening balance is not a transaction and is not shown.
@@ -487,6 +488,7 @@ Transaction history: 3-4 of 5 (2 per page):
 History controls: next, prev, p/PAGE, n/NUMBER, stop.
 ____________________________________________________________
 ```
+<!-- @@author -->
 
 <!-- @@author nabijonzzz -->
 ### Finding transactions: `find`

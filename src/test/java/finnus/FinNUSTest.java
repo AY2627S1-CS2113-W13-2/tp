@@ -44,6 +44,7 @@ class FinNUSTest {
         assertEquals(0, storage.attempts);
     }
 
+    //@@author nkyjStar
     @Test
     public void run_historyMode_blocksNormalCommandsUntilStop() {
         RecordingStorage storage = new RecordingStorage();
@@ -69,6 +70,7 @@ class FinNUSTest {
         assertTrue(ui.output().contains("History page is out of range."));
         assertEquals(1, storage.saved.size());
     }
+    //@@author
 
     @Test
     public void run_repeatedRate_doesNotWriteAgain() {
