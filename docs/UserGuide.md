@@ -461,15 +461,17 @@ Here is a list of the recent 2 transaction(s):
 
 <!-- @@author nkyjStar -->
 ### Viewing transaction history: `history`
-Shows every transaction in pages, newest entry first. The numbers match `recent` and the indices used by `delete`.
+Shows every transaction in pages, most recently recorded entry first. A transaction's date does not change its
+position. The numbers match `recent` and the indices used by `delete`.
 The opening balance is not a transaction and is not shown.
 
 Format: `history [n/NUMBER] [p/PAGE]`
 
-* `n/NUMBER` sets the number of transactions per page; the default is 5.
+* `n/NUMBER` sets the number of transactions per page; the default is 5. If the page size exceeds
+  the remaining transaction count, the page shows all remaining entries.
 * `p/PAGE` chooses the first page to show; the default is 1. Both fields are optional and can appear in either order.
-* Numbers must be positive whole numbers no larger than 2,147,483,647. A page beyond the available
-  transactions is also rejected.
+* Numbers must be positive whole numbers no larger than 2,147,483,647. Zero or malformed input is
+  rejected as invalid; a larger number or a page beyond the available transactions is out of range.
 * While viewing history, only the following inputs are accepted:
     * `next` shows the next page; `prev` shows the previous page.
     * `p/PAGE` jumps to a page. Page 1 begins with the newest transaction.
