@@ -1,0 +1,57 @@
+@startuml MoneyClassDiagram
+' @@author nkyjStar
+' All Money methods are shown; formatting constants and unrelated collaborator members are omitted.
+' Multiplicities describe references held by one instance of the class at the opposite end.
+hide circle
+hide empty members
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+class TransactionList {
+    - transactions : List<Transaction>
+    - openingBalance : Money
+    + getBalance() : Money
+}
+
+class Transaction {
+    - amount : Money
+    + getAmount() : Money
+    + getSignedAmount() : Money
+}
+
+class Money <<value object>> {
+    + {static} ZERO : Money
+    + {static} MAX_AMOUNT : Money
+    - value : BigDecimal
+    - Money(value : BigDecimal)
+    + {static} of(value : BigDecimal) : Money
+    + {static} of(value : String) : Money
+    + {static} of(value : long) : Money
+    + add(other : Money) : Money
+    + negate() : Money
+    + isPositive() : boolean
+    + isNegative() : boolean
+    + isZero() : boolean
+    + toBigDecimal() : BigDecimal
+    + toPlainString() : String
+    + format() : String
+    + formatWithSign() : String
+    + compareTo(other : Money) : int
+    + equals(other : Object) : boolean
+    + hashCode() : int
+    + toString() : String
+}
+
+class BigDecimal <<JDK>>
+
+TransactionList -- "0..*  " Transaction : transactions
+TransactionList -- "1  " Money : openingBalance
+Transaction -- "1 " Money : amount
+Money -- "1   " BigDecimal : value
+
+note bottom of Money
+  Money is immutable. ZERO may be shared;
+  arithmetic returns a Money value.
+end note
+@enduml
