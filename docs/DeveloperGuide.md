@@ -542,6 +542,10 @@ The class diagram shows the session reference and how history reads `Transaction
 relationships.
 [PlantUML source](diagrams/HistoryClassDiagram.puml).*
 
+The multiplicities describe an active session: `FinNUS` has one `Ui`, one `TransactionList`,
+and at most one active `HistoryCommand`. A `TransactionList` holds zero or more transactions.
+Dashed dependencies represent method calls or construction, so they have no multiplicity.
+
 `HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
 resizing, invalid input, empty history, and the command restriction in the application loop.
 
