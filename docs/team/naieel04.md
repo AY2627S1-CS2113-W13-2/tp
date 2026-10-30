@@ -33,13 +33,15 @@ terminals.
 
 ### Contributions to the User Guide
 
-Wrote the saving and recovery instructions and the help-command explanation.
+- ([#17](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/17)) **Help command and command documentation:** Added the help-command explanation and documented the available commands so users can find command names, descriptions, and syntax.
+- **Saving and recovering data:** Documented automatic saving and user expectations when ledger rows or the full data file are corrupted, including backup recovery behavior.
 
 ### Contributions to the Developer Guide
 
-Wrote architecture, application lifecycle, storage, automatic saving and recovery, and validation explanations.
-Reorganised the guide and integrated teammates' feature documentation. Added six UML diagrams covering architecture,
-command execution, command/model relationships, storage structure, automatic saving, and storage recovery.
+- ([Architecture](../DeveloperGuide.md#architecture), [Storage](../DeveloperGuide.md#storage)) **Architecture and storage design:** Documented the application architecture and storage components, including file format, snapshots, backups, and recovery behavior.
+- ([Automatic saving and recovery](../DeveloperGuide.md#automatic-saving-and-recovery)) **Automatic saving and recovery:** Explained change detection, save retries, backup rotation, corruption recovery, and failure handling, with sequence and activity diagrams.
+- ([Documentation, logging, testing, and DevOps](../DeveloperGuide.md#documentation-logging-testing-and-devops)) **Developer setup and documentation:** Added project setup and guide material for documentation, testing, and DevOps.
+- ([Product scope](../DeveloperGuide.md#product-scope), [user stories](../DeveloperGuide.md#user-stories), [use cases](../DeveloperGuide.md#use-cases), [non-functional requirements](../DeveloperGuide.md#non-functional-requirements), [glossary](../DeveloperGuide.md#glossary), [manual testing instructions](../DeveloperGuide.md#instructions-for-manual-testing), [planned enhancements](../DeveloperGuide.md#planned-enhancements)) **Project reference sections:** Added the project's product and development reference sections.
 
 [Developer Guide](../DeveloperGuide.md) |
 [Diagram additions](https://github.com/naieel04/tp/commit/6d02f6f) |
