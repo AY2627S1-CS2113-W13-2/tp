@@ -3,6 +3,7 @@ package finnus.command;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Logger;
 
 import finnus.exception.FinNusException;
 import finnus.transaction.TransactionList;
@@ -14,6 +15,8 @@ import finnus.ui.Ui;
  */
 public class HistoryCommand extends Command {
     public static final int DEFAULT_PAGE_SIZE = 5;
+
+    private static final Logger logger = Logger.getLogger(HistoryCommand.class.getName());
 
     private int pageSize;
     /** Zero-based position in the newest-first list of the first visible transaction. */
@@ -37,6 +40,7 @@ public class HistoryCommand extends Command {
             throw new FinNusException("History page is out of range.");
         }
         showPage(transactions, ui);
+        logger.fine("Opened history at transaction index " + firstIndex + " with page size " + pageSize);
     }
 
     /**
@@ -48,6 +52,7 @@ public class HistoryCommand extends Command {
         String trimmed = input.trim().toLowerCase(Locale.ROOT);
         if (trimmed.equals("stop")) {
             ui.showMessage("Stopped viewing transaction history.");
+            logger.fine("Stopped viewing history");
             return true;
         }
         if (trimmed.equals("next")) {
@@ -56,11 +61,13 @@ public class HistoryCommand extends Command {
                 throw new FinNusException("You are already on the last history page.");
             }
             firstIndex = (int) nextIndex;
+            logger.fine("Moved to next history page at transaction index " + firstIndex);
         } else if (trimmed.equals("prev")) {
             if (firstIndex == 0) {
                 throw new FinNusException("You are already on the first history page.");
             }
             firstIndex = Math.max(0, firstIndex - pageSize);
+            logger.fine("Moved to previous history page at transaction index " + firstIndex);
         } else if (trimmed.startsWith("p/")) {
             int page = parsePositiveNumber(trimmed.substring(2), "page");
             long requestedFirst = ((long) page - 1) * pageSize;
@@ -68,9 +75,12 @@ public class HistoryCommand extends Command {
                 throw new FinNusException("History page is out of range.");
             }
             firstIndex = (int) requestedFirst;
+            logger.fine("Jumped to history page " + page + " at transaction index " + firstIndex);
         } else if (trimmed.startsWith("n/")) {
             // Keeping firstIndex preserves the first transaction currently on screen.
-            pageSize = parsePositiveNumber(trimmed.substring(2), "page size");
+            int newPageSize = parsePositiveNumber(trimmed.substring(2), "page size");
+            logger.fine("Changed history page size from " + pageSize + " to " + newPageSize);
+            pageSize = newPageSize;
         } else {
             throw new FinNusException("While viewing history, use next, prev, p/PAGE, n/NUMBER, or stop.");
         }
