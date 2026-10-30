@@ -600,6 +600,7 @@ public class Parser {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
+        rejectNegativeAmount(text);
         if (!text.matches("\\d+(\\.\\d{1,2})?")) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a number with at most 2 decimal places, e.g. 1100");
@@ -680,8 +681,11 @@ public class Parser {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
+        //@@author chancheese
+        rejectNegativeAmount(text);
+        //@@author
         // Only plain decimals like 4, 4.5 or 4.50 are accepted; this rejects
-        // "1e3", "NaN", "Infinity", "-5" and "$5" in one simple check.
+        // "1e3", "NaN", "Infinity" and "$5" in one simple check.
         if (!text.matches("\\d+(\\.\\d{1,2})?")) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a number with at most 2 decimal places, e.g. 4.50");
@@ -693,4 +697,19 @@ public class Parser {
         }
         return amount;
     }
+
+    //@@author chancheese
+    /**
+     * Rejects amounts typed with a minus sign, such as {@code "-5"}, with their own
+     * message, so users know the sign is the problem rather than the number format.
+     * Amounts are always entered as positive numbers; the command decides the sign.
+     *
+     * @throws FinNusException If the text is a number with a leading minus sign.
+     */
+    private static void rejectNegativeAmount(String text) throws FinNusException {
+        if (text.matches("-\\d+(\\.\\d+)?")) {
+            throw new FinNusException("Amount must not be negative.");
+        }
+    }
+    //@@author
 }
