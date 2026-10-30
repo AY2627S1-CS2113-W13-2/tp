@@ -40,44 +40,44 @@ deactivate TransactionList
 Command -> CurrencyRates : convert(1100, "JPY")
 activate CurrencyRates
 
-break no rate set for JPY
+alt no rate set for JPY
     CurrencyRates --> Command : FinNusException
     Command --> FinNUS : FinNusException
+else rate set
+    create ForeignAmount
+    CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
+    activate ForeignAmount
+    ForeignAmount --> CurrencyRates : foreignAmount
+    deactivate ForeignAmount
+    CurrencyRates -> ForeignAmount : toSgd()
+    activate ForeignAmount
+    ForeignAmount --> CurrencyRates : sgd
+    deactivate ForeignAmount
+
+    alt sgd is $0.00 or above $1,000,000
+        CurrencyRates --> Command : FinNusException
+        Command --> FinNUS : FinNusException
+    else sgd in range
+        CurrencyRates --> Command : foreignAmount
+        deactivate CurrencyRates
+
+        create Transaction
+        Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
+        activate Transaction
+        Transaction -> ForeignAmount : toSgd()
+        activate ForeignAmount
+        ForeignAmount --> Transaction : sgd
+        deactivate ForeignAmount
+        Transaction --> Command : transaction
+        deactivate Transaction
+
+        Command -> TransactionList : add(transaction)
+        activate TransactionList
+        TransactionList --> Command
+        deactivate TransactionList
+
+        Command --> FinNUS
+        deactivate Command
+    end
 end
-
-create ForeignAmount
-CurrencyRates -> ForeignAmount : new("JPY", 1100, 110)
-activate ForeignAmount
-ForeignAmount --> CurrencyRates : foreignAmount
-deactivate ForeignAmount
-CurrencyRates -> ForeignAmount : toSgd()
-activate ForeignAmount
-ForeignAmount --> CurrencyRates : sgd
-deactivate ForeignAmount
-
-break sgd is $0.00 or above $1,000,000
-    CurrencyRates --> Command : FinNusException
-    Command --> FinNUS : FinNusException
-end
-
-CurrencyRates --> Command : foreignAmount
-deactivate CurrencyRates
-
-create Transaction
-Command -> Transaction : new(WITHDRAWAL, foreignAmount, "Ramen")
-activate Transaction
-Transaction -> ForeignAmount : toSgd()
-activate ForeignAmount
-ForeignAmount --> Transaction : sgd
-deactivate ForeignAmount
-Transaction --> Command : transaction
-deactivate Transaction
-
-Command -> TransactionList : add(transaction)
-activate TransactionList
-TransactionList --> Command
-deactivate TransactionList
-
-Command --> FinNUS
-deactivate Command
 @enduml
