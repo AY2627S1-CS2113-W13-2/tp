@@ -105,7 +105,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 9's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 11's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -496,6 +496,115 @@ insertion order would need to account for that choice. `getRecentTransactions()`
 read-only view so callers can display entries without directly editing the ledger. The command
 only formats data; it does not add, remove or change transactions.
 
+<!-- @@author -->
+<!-- @@author nkyjStar -->
+### Viewing paginated transaction history
+
+`history [n/NUMBER] [p/PAGE]` opens a newest-first view of all recorded transactions. The parser
+accepts the two optional fields in either order, rejects duplicates, and creates a `HistoryCommand`.
+Both fields use `HistoryCommand#parsePositiveNumber()`: malformed or non-positive text is rejected
+as invalid, while a positive number above `Integer.MAX_VALUE` is reported as out of range. Its
+defaults are five transactions per page and page 1. A page size larger than the transaction
+count is valid; page 1 then displays all available entries. `HistoryCommand#execute()` checks that the
+requested page exists before the application enters history mode, so an invalid initial page
+leaves normal commands available.
+
+`FinNUS` retains the active `HistoryCommand` in `historyView`. While it is active, the main loop
+sends every non-blank line to `HistoryCommand#handleInput()` rather than the normal parser. That
+method switches on `next`, `prev`, and `stop`, then checks the `p/` and `n/` prefixes. All other
+commands, including `exit`, produce a mode-specific error. `stop` clears `historyView`. History
+navigation does not modify `TransactionList`, but the loop still retries any pending save after a
+successful input. The command logs successful navigation at `FINE`. Internal state assumptions
+use assertions, while invalid user input produces `FinNusException`.
+
+History controls only read transactions and update the viewing position; they create no new
+transaction changes to save. This keeps the displayed indices stable during navigation. The saved
+transaction list can still change if the application retries a save that failed before the view.
+Opening `history` also runs the normal automatic allowance check, which may add a due deposit.
+
+The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` session:
+
+![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
+
+*Figure 7. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
+allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
+
+The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
+transactions from `TransactionList` using `size - 1 - index`, leaving the stored insertion order
+untouched. Displayed transaction numbers are global newest-first indices, so they agree with
+`recent` and `delete`. The heading shows the visible range and total count instead of a page
+number because `n/NUMBER` preserves the first visible transaction even when that position is
+not aligned to a page boundary. `next` and `prev` move by the new page size from that position;
+`p/PAGE` returns to boundaries counted from the newest transaction. Out-of-range navigation
+keeps the current position. With no recorded transactions, page 1 shows an empty-list message
+and `stop` remains available.
+
+The class diagram shows the session reference and how history reads `TransactionList` for display:
+
+![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
+
+*Figure 8. History command state and its application, parser, transaction list, and UI
+relationships.
+[PlantUML source](diagrams/HistoryClassDiagram.puml).*
+
+The multiplicities describe an active session: `FinNUS` has one `Ui`, one `TransactionList`,
+and at most one active `HistoryCommand`. A `TransactionList` holds zero or more transactions.
+Dashed dependencies represent method calls or construction, so they have no multiplicity.
+
+`HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
+resizing, invalid input, empty history, and the command restriction in the application loop.
+
+#### Design considerations
+
+**Aspect: how to present the full history**
+
+* **Alternative 1 (current choice):** show a page at a time, with a configurable page size and
+  navigation commands.
+  * Pros: each response stays readable as the transaction list grows, while every entry remains
+    reachable. The user can choose how much to see at once.
+  * Cons: reviewing distant entries takes more commands, and the command must keep track of the
+    current position.
+* **Alternative 2:** print the entire history in one response.
+  * Pros: simple to implement and easy to scan when there are few entries.
+  * Cons: a long history can flood the terminal and make a particular entry hard to find.
+
+**Aspect: which commands are available while viewing history**
+
+* **Alternative 1 (current choice):** accept only history controls until `stop`.
+  * Pros: inputs have one meaning in this mode, and the displayed positions remain stable because
+    transactions cannot be added or deleted during navigation.
+  * Cons: the user must leave the view even to run a read-only command such as `recent` or `balance`.
+* **Alternative 2:** allow normal commands alongside history controls.
+  * Pros: the user could check a balance or recent activity without leaving the view.
+  * Cons: command dispatch becomes more complex. A command that changes the transaction list could
+    shift the current page and its displayed indices, so the view would need a rule for refreshing
+    or resetting its position. Allowing only read-only commands would avoid that shift but still
+    require a separate rule for which normal commands are permitted.
+
+**Aspect: transaction display order**
+
+* **Alternative 1 (current choice):** display newest first, as `recent` does, while keeping
+  `TransactionList` in oldest-first insertion order.
+  * Pros: recent activity appears first. The global displayed indices match `recent` and `delete`,
+    and adding a transaction remains a simple append to the stored list.
+  * Cons: the displayed order differs from storage order, so history translates each displayed
+    position to a list index.
+* **Alternative 2:** display oldest first, matching storage order.
+  * Pros: follows the chronology of transactions and needs no reverse index lookup.
+  * Cons: a user must navigate toward the end to see recent activity, and the displayed indices
+    would differ from those used by `recent` and `delete`.
+
+**Aspect: what happens when the page size changes**
+
+* **Alternative 1 (current choice):** keep the first visible transaction at the top after `n/NUMBER`.
+  * Pros: the user keeps their place while adjusting how many entries are visible.
+  * Cons: the new view may start between page boundaries, so the heading shows a transaction range
+    rather than a page number; `p/PAGE` returns to boundaries for the new size.
+* **Alternative 2:** return to the first page after changing the size.
+  * Pros: page numbering stays straightforward.
+  * Cons: the user loses their place and may need to navigate back to the same transaction.
+
+<!-- @@author -->
 <!-- @@author nabijonzzz -->
 ### Finding transactions
 
@@ -575,7 +684,7 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-*Figure 7. Calculating and displaying the current balance.
+*Figure 9. Calculating and displaying the current balance.
 [PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -605,7 +714,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
-*Figure 8. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+*Figure 10. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
 [PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
@@ -888,7 +997,7 @@ without the record load with no allowance. A record with an invalid day, amount,
 
 * **Alternative 1 (current choice):** a total and count in the summary.
   * Pros: short enough to check every day, alongside the countdown.
-  * Cons: does not list the withdrawals; a cycle filter on the planned `history` command is a better fit for that.
+  * Cons: does not list the withdrawals; a future cycle filter on `history` is a better fit for that.
 * **Alternative 2:** list every withdrawal of the cycle in the summary.
   * Pros: one command shows everything.
   * Cons: a month of logged meals and bus rides is 60 to 100 lines, which hides the countdown.
@@ -910,7 +1019,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 9. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 11. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -927,7 +1036,7 @@ protect data that could not be inspected.
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 10. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 12. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
@@ -1094,11 +1203,18 @@ criteria with the team.
 
 **Related story:** US-03
 
-**Preconditions:** At least one transaction has been recorded.
+<!-- @@author nkyjStar -->
+**Preconditions:** FinNUS is running.
 
-**Main success scenario:** The user enters `recent 2`. FinNUS displays up to two transactions, newest first, with descriptions and indices that can be used by `delete`.
+**Main success scenario:**
 
-**Extension:** If the ledger is empty, FinNUS displays an empty-list message.
+1. The user enters `history n/2`. FinNUS displays the two most recently recorded transactions.
+2. The user enters `next`. FinNUS displays the next two transactions, if available.
+3. The user enters `stop`. FinNUS returns to the normal command loop.
+
+**Extensions:** An empty ledger displays an empty-list message while keeping history mode active.
+During an active view, an out-of-range page or page size reports an error without changing the current view.
+<!-- @@author naieel04 -->
 <!-- @@author -->
 
 ---
@@ -1175,6 +1291,15 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
 | MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
 | MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
+
+<!-- @@author nkyjStar -->
+### History navigation scenario
+
+Using the two-transaction sample ledger, enter `history n/1`, `next`, `prev`, `n/2`,
+`exit`, `stop`, then `exit`. The displayed ranges should be 1-1, 2-2, 1-1, and 1-2.
+The first `exit` should be rejected while history mode is active; the second should close FinNUS.
+In a new run, check that `history p/10000000000000000` reports an out-of-range page error.
+<!-- @@author naieel04 -->
 
 ### Storage and recovery scenarios
 

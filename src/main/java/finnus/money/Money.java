@@ -1,3 +1,4 @@
+//@@author nkyjStar
 package finnus.money;
 
 import java.math.BigDecimal;
@@ -136,3 +137,4 @@ public final class Money implements Comparable<Money> {
         return value.toPlainString();
     }
 }
+//@@author

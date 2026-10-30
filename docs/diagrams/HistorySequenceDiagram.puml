@@ -1,0 +1,69 @@
+@startuml HistorySequenceDiagram
+' @@author nkyjStar
+' Assumes at least five recorded transactions so next has a page to show.
+title Opening and navigating transaction history
+skinparam shadowing false
+
+actor User
+participant "ui:Ui" as Ui
+participant ":FinNUS" as App
+participant "<<class>>\nParser" as Parser
+participant "historyView:HistoryCommand" as History
+participant "transactions:TransactionList" as Ledger
+
+App -> Ui: readCommand()
+User -> Ui: history n/2 p/2
+Ui --> App: input
+App -> Parser: parse(input, today)
+activate Parser
+Parser -> Parser: parseHistory("n/2 p/2")
+Parser -> History: new HistoryCommand(2, 2)
+History --> Parser: command
+Parser --> App: command
+deactivate Parser
+App -> History: execute(transactions, ui)
+activate History
+History -> Ledger: size()
+Ledger --> History: total
+loop each visible transaction
+    History -> Ledger: get(total - 1 - index)
+    Ledger --> History: transaction
+end
+History -> Ui: showMessage(range and numbered entries)
+Ui --> User: history page
+History --> App: return
+deactivate History
+App -> App: historyView = command
+
+App -> Ui: readCommand()
+User -> Ui: next
+Ui --> App: "next"
+App -> History: handleInput("next", transactions, ui)
+activate History
+History -> Ledger: size()
+Ledger --> History: total
+History -> History: firstIndex += pageSize
+loop each visible transaction
+    History -> Ledger: get(total - 1 - index)
+    Ledger --> History: transaction
+end
+History -> Ui: showMessage(next page)
+Ui --> User: next history page
+History --> App: false
+deactivate History
+
+App -> Ui: readCommand()
+User -> Ui: stop
+Ui --> App: "stop"
+App -> History: handleInput("stop", transactions, ui)
+History -> Ui: showMessage(stop confirmation)
+Ui --> User: history closed
+History --> App: true
+destroy History
+App -> App: historyView = null
+
+note over App, Ledger
+  Snapshot comparison, allowance credit, and
+  pending-save retry are omitted for clarity.
+end note
+@enduml

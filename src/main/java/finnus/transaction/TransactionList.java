@@ -95,6 +95,7 @@ public class TransactionList {
     }
     //@@author
 
+    //@@author nkyjStar
     /**
      * Returns a read-only view of all transactions, so callers cannot modify
      * the list directly.
@@ -137,6 +138,7 @@ public class TransactionList {
         List<Transaction> subList = getSubList(fromIndex, transactions.size()).reversed();
         return subList;
     }
+    //@@author
 
     /**
      * Deletes the transaction at the given zero-based index and returns it.
@@ -167,6 +169,7 @@ public class TransactionList {
         this.openingBalance = openingBalance;
     }
 
+    //@@author nkyjStar
     /**
      * Returns the current balance: the opening balance plus all deposits minus all withdrawals.
      * This is the single place the balance is calculated, so every feature reports the same figure.
@@ -176,4 +179,5 @@ public class TransactionList {
                 .map(Transaction::getSignedAmount)
                 .reduce(openingBalance, Money::add);
     }
+    //@@author
 }

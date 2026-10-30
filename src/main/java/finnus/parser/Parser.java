@@ -22,6 +22,7 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+import finnus.command.HistoryCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -168,6 +169,10 @@ public class Parser {
             new HelpCommand();
         case RECENT ->
             parseRecent(arguments);
+        //@@author nkyjStar
+        case HISTORY ->
+            parseHistory(arguments);
+        //@@author
         case FIND ->
             parseFind(arguments);
         case BALANCE ->
@@ -295,6 +300,7 @@ public class Parser {
     }
     //@@author
 
+    //@@author nkyjStar
     /**
      * Returns RecentTransactionCommand instance
      *
@@ -321,6 +327,40 @@ public class Parser {
 
         return new RecentTransactionCommand(length);
     }
+
+    /**
+     * Parses optional page size and page fields, allowing either order but no duplicates.
+     *
+     * @param arguments The text after {@code history}, or blank for the default page and size.
+     * @return A history command configured with the requested page and page size.
+     * @throws FinNusException If a field is invalid, duplicated, or unrecognized.
+     */
+    private static Command parseHistory(String arguments) throws FinNusException {
+        assert arguments != null : "History arguments must not be null";
+        int pageSize = HistoryCommand.DEFAULT_PAGE_SIZE;
+        int page = 1;
+        boolean hasPageSize = false;
+        boolean hasPage = false;
+        if (arguments.isBlank()) {
+            return new HistoryCommand(pageSize, page);
+        }
+
+        for (String field : arguments.split("\\s+")) {
+            if (field.startsWith("n/") && !hasPageSize) {
+                pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
+                hasPageSize = true;
+            } else if (field.startsWith("p/") && !hasPage) {
+                page = HistoryCommand.parsePositiveNumber(field.substring(2), "page");
+                hasPage = true;
+            } else {
+                throw new FinNusException("Invalid history arguments. Format: "
+                        + CommandWord.HISTORY.getUsage());
+            }
+        }
+
+        return new HistoryCommand(pageSize, page);
+    }
+    //@@author
 
     /**
      * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set

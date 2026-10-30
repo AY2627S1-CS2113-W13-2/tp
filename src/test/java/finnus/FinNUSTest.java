@@ -44,6 +44,34 @@ class FinNUSTest {
         assertEquals(0, storage.attempts);
     }
 
+    //@@author nkyjStar
+    @Test
+    public void run_historyMode_blocksNormalCommandsUntilStop() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("deposit 1 d/First", "history n/1", "deposit 2 d/Blocked",
+                "exit", "next", "stop", "deposit 3 d/Allowed", "exit");
+
+        new FinNUS(ui, storage).run();
+
+        assertTrue(ui.output().contains("While viewing history, use next, prev, p/PAGE, n/NUMBER, or stop."));
+        assertTrue(ui.output().contains("Stopped viewing transaction history."));
+        assertEquals(2, storage.saved.size());
+        assertEquals(2, storage.saved.getLast().transactions().size());
+        assertEquals(Money.of("4"), storage.saved.getLast().toTransactionList().getBalance());
+    }
+
+    @Test
+    public void run_invalidInitialHistoryPage_doesNotEnterHistoryMode() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("history p/2", "deposit 2", "exit");
+
+        new FinNUS(ui, storage).run();
+
+        assertTrue(ui.output().contains("History page is out of range."));
+        assertEquals(1, storage.saved.size());
+    }
+    //@@author
+
     @Test
     public void run_repeatedRate_doesNotWriteAgain() {
         RecordingStorage storage = new RecordingStorage();

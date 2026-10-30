@@ -31,6 +31,9 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+//@@author nkyjStar
+import finnus.command.HistoryCommand;
+//@@author
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -53,6 +56,9 @@ class ParserTest {
             Map.entry(CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class)),
             Map.entry(CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class)),
             Map.entry(CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class)),
+            //@@author nkyjStar
+            Map.entry(CommandWord.HISTORY, new CommandExample("history n/3 p/1", HistoryCommand.class)),
+            //@@author
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
@@ -119,6 +125,43 @@ class ParserTest {
     public void parse_invalidIntegerArguments_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
     }
+
+    //@@author nkyjStar
+    @ParameterizedTest
+    @ValueSource(strings = {"history n/0", "history n/", "history p/", "history p/-1", "history n/nope",
+        "history p/2147483648",
+        "history n/2 n/3", "history p/1 p/2", "history extra", "history n/2 p/1 extra"})
+    public void parse_invalidHistoryArguments_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_oversizedHistoryPage_reportsRangeError() {
+        FinNusException error = assertThrows(FinNusException.class,
+                () -> Parser.parse("history p/10000000000000000"));
+        assertEquals("History page is out of range.", error.getMessage());
+    }
+
+    @Test
+    public void parse_oversizedHistoryPageSize_reportsRangeError() {
+        FinNusException error = assertThrows(FinNusException.class,
+                () -> Parser.parse("history n/10000000000000000"));
+        assertEquals("History page size is out of range.", error.getMessage());
+    }
+
+    @Test
+    public void parse_nonPositiveHistoryNumber_reportsFormatError() {
+        FinNusException error = assertThrows(FinNusException.class, () -> Parser.parse("history p/0"));
+        assertEquals("The page must be a positive whole number.", error.getMessage());
+    }
+
+    @Test
+    public void parse_historyOptionsInEitherOrder_returnsHistoryCommand() throws FinNusException {
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history p/2 n/3"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history n/2147483647"));
+    }
+    //@@author
 
     @Test
     public void parse_unknownCommand_preservesErrorMessage() {
