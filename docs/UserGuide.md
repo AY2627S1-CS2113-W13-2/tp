@@ -245,7 +245,13 @@ Format: `withdraw AMOUNT d/DESCRIPTION t/CATEGORY`
 * `t/CATEGORY` can be given anywhere after the command word, but only once. It also works together with `c/CURRENCY`.
 * A category that does not exist is rejected, so a typo such as `t/fod` never creates a new category by accident.
 * Because `t/` marks the category, a word starting with `t/` cannot be used inside a description.
+<!-- @@author -->
 
+<!-- @@author chancheese -->
+To see your spending in one category and its total, use [`find t/CATEGORY`](#finding-transactions-find).
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
 Examples:
 
 * `withdraw 4.50 d/Chicken rice t/food`
@@ -462,13 +468,13 @@ Here is a list of the recent 2 transaction(s):
 <!-- @@author nabijonzzz -->
 ### Finding transactions: `find`
 Lists the transactions whose description contains a keyword, so you can find a past transaction without scrolling
-through all of them.
+through all of them. You can also list your spending in one category.
 
-Format: `find KEYWORD`
+Format: `find [KEYWORD] [t/CATEGORY]`
 
 * The search is not case-sensitive, and matches part of a word, e.g. `lun` matches `Lunch`.
 * `KEYWORD` can be more than one word. The whole phrase is searched, e.g. `find chicken rice`.
-* Only descriptions are searched, not amounts or categories.
+* Only descriptions are searched, not amounts.
 * Results are shown from the most recent. Each one has the same number as in `recent`, so you can remove it straight
   away with `delete`.
 
@@ -483,6 +489,33 @@ ____________________________________________________________
 Found 2 transaction(s) matching "lunch":
 1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food
 3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food
+Use the number with delete to remove a transaction.
+____________________________________________________________
+```
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+Searching by category:
+
+* Give a `KEYWORD`, a `t/CATEGORY`, or both. With both, only transactions matching both are shown.
+* `t/CATEGORY` works as in [`withdraw`](#categorising-your-spending-t-and-category): it is not case-sensitive, and a
+  category that does not exist is rejected. It can be given anywhere after `find`, but only once.
+* Deposits have no category, so a search with `t/CATEGORY` only shows withdrawals. It also shows the total spent,
+  in SGD.
+
+Examples:
+
+* `find t/food`
+* `find lunch t/food`
+
+Expected output for `find t/food`:
+```
+____________________________________________________________
+Found 3 transaction(s) in #Food:
+1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food
+3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food
+4. [27 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Food
+Total spent: $26.50
 Use the number with delete to remove a transaction.
 ____________________________________________________________
 ```
@@ -529,7 +562,7 @@ Available commands:
 | withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |
 |              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |
 | recent       | Recent activity      | recent [NUMBER]                        |
-| find         | Search descriptions  | find KEYWORD                           |
+| find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |
 | delete       | Delete a record      | delete INDEX                           |
 | balance      | Current balance      | balance                                |
 | allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
@@ -576,7 +609,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * Set your monthly allowance: `allowance DAY [a/AMOUNT] [c/CURRENCY]`
 * View or stop your allowance: `allowance` or `allowance off`
 * View recent transactions: `recent [NUMBER]`
-* Find transactions by description: `find KEYWORD`
+* Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
