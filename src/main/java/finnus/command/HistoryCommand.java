@@ -23,7 +23,13 @@ public class HistoryCommand extends Command {
     /** Zero-based position in the newest-first list of the first visible transaction. */
     private int firstIndex;
 
-    /** Creates a history view at the requested page using the requested page size. */
+    /**
+     * Creates a history view at the requested page using the requested page size.
+     *
+     * @param pageSize The positive number of transactions to show per page.
+     * @param page The positive, one-based page number to show first.
+     * @throws IllegalArgumentException If either number is not positive.
+     */
     public HistoryCommand(int pageSize, int page) {
         if (pageSize <= 0 || page <= 0) {
             throw new IllegalArgumentException("Page size and page must be positive");
@@ -34,7 +40,13 @@ public class HistoryCommand extends Command {
         this.firstIndex = requestedFirst > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) requestedFirst;
     }
 
-    /** Shows the initial page, rejecting a page beyond the available transactions. */
+    /**
+     * Shows the initial page, rejecting a page beyond the available transactions.
+     *
+     * @param transactions The ledger to read without modifying it.
+     * @param ui Displays the page or empty-list message.
+     * @throws FinNusException If the requested page is beyond the available transactions.
+     */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
         if (firstIndex >= transactions.size() && (firstIndex != 0 || transactions.size() != 0)) {
@@ -47,7 +59,12 @@ public class HistoryCommand extends Command {
     /**
      * Handles one input while history mode is active.
      *
+     * @param input The navigation input: {@code next}, {@code prev}, {@code p/PAGE},
+     *     {@code n/NUMBER}, or {@code stop}.
+     * @param transactions The ledger used to determine page boundaries and display entries.
+     * @param ui Displays the resulting page or stop message.
      * @return Whether the user chose {@code stop} and should leave history mode.
+     * @throws FinNusException If the input is invalid or requests a page outside the ledger.
      */
     public boolean handleInput(String input, TransactionList transactions, Ui ui) throws FinNusException {
         String trimmed = input.trim().toLowerCase(Locale.ROOT);
@@ -89,7 +106,14 @@ public class HistoryCommand extends Command {
         return false;
     }
 
-    /** Parses a positive decimal integer without signs or extra text. */
+    /**
+     * Parses a positive decimal integer without signs or extra text.
+     *
+     * @param value The text following {@code n/} or {@code p/}.
+     * @param name A label for the number, used in validation errors.
+     * @return The parsed positive integer.
+     * @throws FinNusException If the text is missing, non-numeric, zero, or too large for an int.
+     */
     public static int parsePositiveNumber(String value, String name) throws FinNusException {
         if (!value.matches("[0-9]+")) {
             throw new FinNusException("The " + name + " must be a positive whole number.");
@@ -105,7 +129,12 @@ public class HistoryCommand extends Command {
         throw new FinNusException("The " + name + " must be a positive whole number.");
     }
 
-    /** Renders one page with global transaction numbers shared with recent and delete. */
+    /**
+     * Renders one page with global transaction numbers shared with recent and delete.
+     *
+     * @param transactions The ledger to read in newest-first order.
+     * @param ui Displays the page or empty-list message.
+     */
     private void showPage(TransactionList transactions, Ui ui) {
         int total = transactions.size();
         if (total == 0) {

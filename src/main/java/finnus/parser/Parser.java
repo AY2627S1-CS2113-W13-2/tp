@@ -330,7 +330,13 @@ public class Parser {
     }
 
     //@@author nkyjStar
-    /** Parses optional page size and page fields, allowing either order but no duplicates. */
+    /**
+     * Parses optional page size and page fields, allowing either order but no duplicates.
+     *
+     * @param arguments The text after {@code history}, or blank for the default page and size.
+     * @return A history command configured with the requested page and page size.
+     * @throws FinNusException If a field is invalid, duplicated, or unrecognized.
+     */
     private static Command parseHistory(String arguments) throws FinNusException {
         int pageSize = HistoryCommand.DEFAULT_PAGE_SIZE;
         int page = 1;

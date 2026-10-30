@@ -189,7 +189,12 @@ public class FinNUS {
     //@@author
 
     /**
-     * Detects actual changes without requiring every command to declare whether it writes data.
+     * Runs a normal command or handles navigation while history mode is active.
+     * Detects ledger changes without requiring each command to declare whether it writes data.
+     *
+     * @param input The non-blank line entered by the user.
+     * @return Whether an exit command ended the application session.
+     * @throws FinNusException If parsing, history navigation, or command execution fails.
      */
     private boolean executeCommand(String input) throws FinNusException {
         //@@author nkyjStar
