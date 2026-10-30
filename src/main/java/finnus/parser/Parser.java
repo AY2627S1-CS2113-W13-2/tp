@@ -22,6 +22,7 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+import finnus.command.HistoryCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -168,6 +169,8 @@ public class Parser {
             new HelpCommand();
         case RECENT ->
             parseRecent(arguments);
+        case HISTORY ->
+            parseHistory(arguments);
         case FIND ->
             parseFind(arguments);
         case BALANCE ->
@@ -320,6 +323,29 @@ public class Parser {
         }
 
         return new RecentTransactionCommand(length);
+    }
+
+    /** Parses optional page size and page fields, allowing either order but no duplicates. */
+    private static Command parseHistory(String arguments) throws FinNusException {
+        int pageSize = HistoryCommand.DEFAULT_PAGE_SIZE;
+        int page = 1;
+        boolean hasPageSize = false;
+        boolean hasPage = false;
+        if (!arguments.isBlank()) {
+            for (String field : arguments.split("\\s+")) {
+                if (field.startsWith("n/") && !hasPageSize) {
+                    pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
+                    hasPageSize = true;
+                } else if (field.startsWith("p/") && !hasPage) {
+                    page = HistoryCommand.parsePositiveNumber(field.substring(2), "page");
+                    hasPage = true;
+                } else {
+                    throw new FinNusException("Invalid history arguments. Format: "
+                            + CommandWord.HISTORY.getUsage());
+                }
+            }
+        }
+        return new HistoryCommand(pageSize, page);
     }
 
     /**
