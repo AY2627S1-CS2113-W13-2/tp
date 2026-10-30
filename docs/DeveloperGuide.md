@@ -517,6 +517,11 @@ navigation does not modify `TransactionList`, but the loop still retries any pen
 successful input. The command logs successful navigation at `FINE`. Internal state assumptions
 use assertions, while invalid user input produces `FinNusException`.
 
+History controls only read transactions and update the viewing position; they create no new
+transaction changes to save. This keeps the displayed indices stable during navigation. The saved
+transaction list can still change if the application retries a save that failed before the view.
+Opening `history` also runs the normal automatic allowance check, which may add a due deposit.
+
 The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` session:
 
 ![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
