@@ -136,9 +136,30 @@ class ParserTest {
     }
 
     @Test
+    public void parse_oversizedHistoryPage_reportsRangeError() {
+        FinNusException error = assertThrows(FinNusException.class,
+                () -> Parser.parse("history p/10000000000000000"));
+        assertEquals("History page is out of range.", error.getMessage());
+    }
+
+    @Test
+    public void parse_oversizedHistoryPageSize_reportsRangeError() {
+        FinNusException error = assertThrows(FinNusException.class,
+                () -> Parser.parse("history n/10000000000000000"));
+        assertEquals("History page size is out of range.", error.getMessage());
+    }
+
+    @Test
+    public void parse_nonPositiveHistoryNumber_reportsFormatError() {
+        FinNusException error = assertThrows(FinNusException.class, () -> Parser.parse("history p/0"));
+        assertEquals("The page must be a positive whole number.", error.getMessage());
+    }
+
+    @Test
     public void parse_historyOptionsInEitherOrder_returnsHistoryCommand() throws FinNusException {
         assertInstanceOf(HistoryCommand.class, Parser.parse("history p/2 n/3"));
         assertInstanceOf(HistoryCommand.class, Parser.parse("history"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history n/2147483647"));
     }
     //@@author
 

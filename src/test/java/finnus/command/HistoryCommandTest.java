@@ -66,7 +66,12 @@ class HistoryCommandTest {
         assertThrows(FinNusException.class, () -> history.handleInput("n/0", transactions, ui));
         assertThrows(FinNusException.class, () -> history.handleInput("n/", transactions, ui));
         assertThrows(FinNusException.class, () -> history.handleInput("p/", transactions, ui));
-        assertThrows(FinNusException.class, () -> history.handleInput("n/2147483648", transactions, ui));
+        FinNusException oversizedPage = assertThrows(FinNusException.class,
+                () -> history.handleInput("p/10000000000000000", transactions, ui));
+        assertEquals("History page is out of range.", oversizedPage.getMessage());
+        FinNusException oversizedPageSize = assertThrows(FinNusException.class,
+                () -> history.handleInput("n/10000000000000000", transactions, ui));
+        assertEquals("History page size is out of range.", oversizedPageSize.getMessage());
         assertThrows(FinNusException.class, () -> history.handleInput("deposit 5", transactions, ui));
         history.handleInput("next", transactions, ui);
         assertEquals("Transaction history: 4-4 of 4 (3 per page):", ui.lines.getFirst());
