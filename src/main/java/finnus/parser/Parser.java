@@ -338,24 +338,28 @@ public class Parser {
      * @throws FinNusException If a field is invalid, duplicated, or unrecognized.
      */
     private static Command parseHistory(String arguments) throws FinNusException {
+        assert arguments != null : "History arguments must not be null";
         int pageSize = HistoryCommand.DEFAULT_PAGE_SIZE;
         int page = 1;
         boolean hasPageSize = false;
         boolean hasPage = false;
-        if (!arguments.isBlank()) {
-            for (String field : arguments.split("\\s+")) {
-                if (field.startsWith("n/") && !hasPageSize) {
-                    pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
-                    hasPageSize = true;
-                } else if (field.startsWith("p/") && !hasPage) {
-                    page = HistoryCommand.parsePositiveNumber(field.substring(2), "page");
-                    hasPage = true;
-                } else {
-                    throw new FinNusException("Invalid history arguments. Format: "
-                            + CommandWord.HISTORY.getUsage());
-                }
+        if (arguments.isBlank()) {
+            return new HistoryCommand(pageSize, page);
+        }
+
+        for (String field : arguments.split("\\s+")) {
+            if (field.startsWith("n/") && !hasPageSize) {
+                pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
+                hasPageSize = true;
+            } else if (field.startsWith("p/") && !hasPage) {
+                page = HistoryCommand.parsePositiveNumber(field.substring(2), "page");
+                hasPage = true;
+            } else {
+                throw new FinNusException("Invalid history arguments. Format: "
+                        + CommandWord.HISTORY.getUsage());
             }
         }
+
         return new HistoryCommand(pageSize, page);
     }
     //@@author

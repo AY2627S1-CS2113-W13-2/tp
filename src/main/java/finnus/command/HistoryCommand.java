@@ -49,8 +49,8 @@ public class HistoryCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        assert transactions != null: "Transaction list must not be null";
-        assert ui != null: "Ui must not be null";
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
         if (firstIndex >= transactions.size() && (firstIndex != 0 || transactions.size() != 0)) {
             throw new FinNusException("History page is out of range.");
         }
@@ -69,50 +69,50 @@ public class HistoryCommand extends Command {
      * @throws FinNusException If the input is invalid or requests a page outside the ledger.
      */
     public boolean handleInput(String input, TransactionList transactions, Ui ui) throws FinNusException {
-        // Preliminary error checks
-        assert input != null: "Input must not be null";
-        assert transactions != null: "Transaction list must not be null";
-        assert ui != null: "Ui must not be null";
+        assert input != null : "Input must not be null";
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
 
-        // Parse input
         String trimmed = input.trim().toLowerCase(Locale.ROOT);
-        if (trimmed.equals("stop")) {
+        switch (trimmed) {
+        case "stop" -> {
             ui.showMessage("Stopped viewing transaction history.");
             logger.fine("Stopped viewing history");
             return true;
         }
-        if (trimmed.equals("next")) {
-            long nextIndex = (long) firstIndex + pageSize;            
+        case "next" -> {
+            long nextIndex = (long) firstIndex + pageSize;
             if (nextIndex >= transactions.size()) {
                 throw new FinNusException("You are already on the last history page.");
             }
-
             firstIndex = (int) nextIndex;
-            assert firstIndex >= 0: "The index of the first item must be non-negative";
             logger.fine("Moved to next history page at transaction index " + firstIndex);
-        } else if (trimmed.equals("prev")) {
+        }
+        case "prev" -> {
             if (firstIndex == 0) {
                 throw new FinNusException("You are already on the first history page.");
             }
             firstIndex = Math.max(0, firstIndex - pageSize);
             logger.fine("Moved to previous history page at transaction index " + firstIndex);
-        } else if (trimmed.startsWith("p/")) {
-            int page = parsePositiveNumber(trimmed.substring(2), "page");
-            long requestedFirst = ((long) page - 1) * pageSize;
-            if (requestedFirst >= transactions.size() && (requestedFirst != 0 || transactions.size() != 0)) {
-                throw new FinNusException("History page is out of range.");
+        }
+        default -> {
+            if (trimmed.startsWith("p/")) {
+                int page = parsePositiveNumber(trimmed.substring(2), "page");
+                long requestedFirst = ((long) page - 1) * pageSize;
+                if (requestedFirst >= transactions.size() && (requestedFirst != 0 || transactions.size() != 0)) {
+                    throw new FinNusException("History page is out of range.");
+                }
+                firstIndex = (int) requestedFirst;
+                logger.fine("Jumped to history page " + page + " at transaction index " + firstIndex);
+            } else if (trimmed.startsWith("n/")) {
+                // Keeping firstIndex preserves the first transaction currently on screen.
+                int newPageSize = parsePositiveNumber(trimmed.substring(2), "page size");
+                logger.fine("Changed history page size from " + pageSize + " to " + newPageSize);
+                pageSize = newPageSize;
+            } else {
+                throw new FinNusException("While viewing history, use next, prev, p/PAGE, n/NUMBER, or stop.");
             }
-            firstIndex = (int) requestedFirst;
-            logger.fine("Jumped to history page " + page + " at transaction index " + firstIndex);
-        } else if (trimmed.startsWith("n/")) {
-            // Keeping firstIndex preserves the first transaction currently on screen.
-            int newPageSize = parsePositiveNumber(trimmed.substring(2), "page size");
-            assert newPageSize > 0: "Page size should be positive";
-
-            logger.fine("Changed history page size from " + pageSize + " to " + newPageSize);
-            pageSize = newPageSize;
-        } else {
-            throw new FinNusException("While viewing history, use next, prev, p/PAGE, n/NUMBER, or stop.");
+        }
         }
         showPage(transactions, ui);
         return false;
@@ -127,8 +127,8 @@ public class HistoryCommand extends Command {
      * @throws FinNusException If the text is missing, non-numeric, zero, or too large for an int.
      */
     public static int parsePositiveNumber(String value, String name) throws FinNusException {
-        assert !name.isEmpty(): "There should be a label";
-        assert !value.isEmpty(): "There should a parsed value from the user";
+        assert value != null : "Number text must not be null";
+        assert name != null && !name.isBlank() : "Number label must not be blank";
 
         if (!value.matches("[0-9]+")) {
             throw new FinNusException("The " + name + " must be a positive whole number.");
@@ -151,12 +151,13 @@ public class HistoryCommand extends Command {
      * @param ui Displays the page or empty-list message.
      */
     private void showPage(TransactionList transactions, Ui ui) {
-        // Preliminary checks
-        assert transactions != null: "Transaction list must not be null";
-        assert ui != null: "Ui must not be null";
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
+        assert pageSize > 0 : "Page size must remain positive";
 
         int total = transactions.size();
-        assert total >= 0: "Size should be non-negative";
+        assert firstIndex >= 0 && (total == 0 ? firstIndex == 0 : firstIndex < total)
+                : "First visible transaction must be within the ledger";
         if (total == 0) {
             ui.showMessage("Your list of transactions is currently empty.",
                     "History controls: next, prev, p/PAGE, n/NUMBER, stop.");
@@ -164,7 +165,6 @@ public class HistoryCommand extends Command {
         }
 
         int end = (int) Math.min((long) total, (long) firstIndex + pageSize);
-        assert end >= 0 && end <= total: "Calculated end is out of bounds";
 
         List<String> lines = new ArrayList<>();
         lines.add("Transaction history: " + (firstIndex + 1) + "-" + end + " of " + total
@@ -173,8 +173,6 @@ public class HistoryCommand extends Command {
             lines.add((index + 1) + ". " + transactions.get(total - 1 - index));
         }
         lines.add("History controls: next, prev, p/PAGE, n/NUMBER, stop.");
-        assert !lines.isEmpty(): "Message to show should not be empty";
-
         ui.showMessage(lines);
     }
 }
