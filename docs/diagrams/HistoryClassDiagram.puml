@@ -2,7 +2,6 @@
 ' @@author nkyjStar
 ' Only members relevant to paginated history are shown.
 ' Multiplicities describe an active session after the transaction list has loaded.
-!pragma layout smetana
 hide circle
 hide empty members
 skinparam shadowing false
@@ -48,9 +47,9 @@ class Ui {
 }
 
 Command <|-- HistoryCommand
-FinNUS --> "1..1" Ui : ui
-FinNUS --> "1..1" TransactionList : transactions
-FinNUS --> "0..1" HistoryCommand : active view
+FinNUS -- "1..1" Ui : ui
+FinNUS -- "1..1" TransactionList : transactions
+FinNUS -- "0..1" HistoryCommand : active view
 FinNUS ..> Parser : parses input
 Parser ..> HistoryCommand : constructs
 HistoryCommand ..> TransactionList : reads
