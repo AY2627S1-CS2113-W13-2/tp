@@ -215,7 +215,7 @@ public class Parser {
         return new DeleteCommand(index);
     }
 
-    //@@author nabijonzzz
+    //@@author chancheese
     /**
      * Parses {@code find [KEYWORD] [t/CATEGORY]}. Everything after the command word, apart from
      * an optional {@code t/CATEGORY} part, is the keyword, so a phrase such as
@@ -225,7 +225,6 @@ public class Parser {
      *     part is invalid.
      */
     private static Command parseFind(String arguments) throws FinNusException {
-        //@@author chancheese
         // t/ is read exactly as for withdraw, so the same category names and errors apply.
         String[] categoryAndRest = extractCategory(arguments);
         String categoryName = categoryAndRest[0];
@@ -236,7 +235,6 @@ public class Parser {
                     + CATEGORY_PREFIX + "food.\nFormat: " + CommandWord.FIND.getUsage());
         }
         return new FindCommand(keyword.isEmpty() ? null : keyword, categoryName);
-        //@@author nabijonzzz
     }
     //@@author
 

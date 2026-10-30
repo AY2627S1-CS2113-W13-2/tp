@@ -70,6 +70,7 @@ public class FindCommand extends Command {
         int sizeBefore = transactions.size();
         List<Integer> positions = findMatches(transactions, category);
         assert transactions.size() == sizeBefore : "Searching must not change the transactions";
+        //@@author chancheese
         logger.fine("Found " + positions.size() + " transaction(s) for a search");
 
         if (positions.isEmpty()) {
@@ -82,7 +83,6 @@ public class FindCommand extends Command {
         for (int position : positions) {
             lines.add((size - position) + ". " + transactions.get(position));
         }
-        //@@author chancheese
         if (category != null) {
             // Only withdrawals have categories, so this is money spent, in SGD.
             lines.add("Total spent: " + totalAmount(transactions, positions).format());
@@ -92,6 +92,7 @@ public class FindCommand extends Command {
         ui.showMessage(lines);
     }
 
+    //@@author chancheese
     /**
      * Returns the positions (oldest first, starting from 0) of the matching transactions, from
      * the most recent to the oldest. A transaction at position {@code i} has index
@@ -107,7 +108,6 @@ public class FindCommand extends Command {
         return positions;
     }
 
-    //@@author chancheese
     /**
      * Returns whether a transaction meets every criterion given. Deposits have no category,
      * so they never match a category search.
