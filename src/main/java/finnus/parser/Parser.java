@@ -22,9 +22,7 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
-//@@author nkyjStar
 import finnus.command.HistoryCommand;
-//@@author
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -302,6 +300,7 @@ public class Parser {
     }
     //@@author
 
+    //@@author nkyjStar
     /**
      * Returns RecentTransactionCommand instance
      *
@@ -329,7 +328,6 @@ public class Parser {
         return new RecentTransactionCommand(length);
     }
 
-    //@@author nkyjStar
     /**
      * Parses optional page size and page fields, allowing either order but no duplicates.
      *

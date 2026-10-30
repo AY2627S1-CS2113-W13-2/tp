@@ -1,3 +1,4 @@
+//@@author nkyjStar
 package finnus.command;
 
 import java.util.logging.Logger;
@@ -33,3 +34,4 @@ public class OpeningBalanceCommand extends Command {
         logger.info("Opening balance set during first-run setup");
     }
 }
+//@@author
