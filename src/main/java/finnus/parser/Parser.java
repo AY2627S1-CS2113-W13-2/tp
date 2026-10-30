@@ -111,15 +111,12 @@ public class Parser {
     private static final Pattern CATEGORY_PATTERN = Pattern.compile("(?<!\\S)" + CATEGORY_PREFIX
             + "\\s*(\\S*)");
 
-    /**
-     * Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty).
-     */
-    private static final Pattern DATE_PATTERN = Pattern.compile("(?<!\\S)" + DATE_PREFIX + "(\\S*)");
+    /** Matches {@code on/DATE} at the start of a word, capturing the date (which may be empty). */
+    private static final Pattern DATE_PATTERN = Pattern.compile("(?<!\\S)" + DATE_PREFIX + "\\s*(\\S*)");
 
-    // A date that is safely in the past, so copying the example never gives a "future date" error.
+    /** A date safely in the past, so the example remains valid on future runs. */
     private static final String DATE_EXAMPLE = DATE_PREFIX + "2026-01-15";
-    private static final String CATEGORY_LIST = "list";
-    private static final String CATEGORY_ADD = "add";
+
     //@@author
 
     private static final Logger logger = Logger.getLogger(Parser.class.getName());
@@ -520,9 +517,7 @@ public class Parser {
         return nameAndRest;
     }
 
-    /**
-     * The date of a transaction together with the arguments left after removing {@code on/DATE}.
-     */
+    /** The date of a transaction and the arguments left after removing {@code on/DATE}. */
     record DateAndRest(LocalDate date, String rest) {
     }
 
@@ -566,24 +561,13 @@ public class Parser {
     }
 
     /**
-     * Parses {@code category list} or {@code category add NAME}.
+     * Parses {@code category} to list categories or {@code category NAME} to add one.
      */
     private static Command parseCategory(String arguments) throws FinNusException {
-        String[] parts = arguments.split("\\s+", 2);
-        String subCommand = parts[0].toLowerCase(Locale.ROOT);
-        if (subCommand.equals(CATEGORY_LIST)) {
+        if (arguments.isBlank()) {
             return new CategoryCommand();
         }
-        if (!subCommand.equals(CATEGORY_ADD)) {
-            throw new FinNusException("Use " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_ADD
-                    + " NAME or " + CommandWord.CATEGORY.getWord() + " " + CATEGORY_LIST
-                    + ".\nFormat: " + CommandWord.CATEGORY.getUsage());
-        }
-        String name = parts.length > 1 ? parts[1].trim() : "";
-        if (name.isEmpty()) {
-            throw new FinNusException("Missing category name, e.g. " + CommandWord.CATEGORY.getWord() + " "
-                    + CATEGORY_ADD + " Gym.");
-        }
+        String name = arguments.trim();
         checkCategoryName(name);
         return new CategoryCommand(name);
     }

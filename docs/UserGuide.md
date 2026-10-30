@@ -261,15 +261,17 @@ You now have 1 transaction(s).
 ____________________________________________________________
 ```
 
-#### Adding your own category: `category add`
-Creates a custom category that you can then use with `t/`.
+### Managing categories: `category`
+Use `category` to list all predefined and custom spending categories. Use `category NAME` to add a custom category that
+you can then use with `t/`.
 
-Format: `category add NAME`
+Formats: `category` or `category NAME`
 
 * `NAME` is one word made of letters, digits and `-`, at most 20 characters, e.g. `Gym` or `bubble-tea`.
-* `NAME` must not already exist, ignoring case. For example, `category add FOOD` is rejected because `Food` exists.
+* `NAME` must not already exist, ignoring case. For example, `category FOOD` is rejected because `Food` exists.
+* `add` and `list` are valid category names when entered alone: `category add` creates `add`, and `category list` creates `list`.
 
-Example: `category add Gym`, then `withdraw 30 d/Membership t/gym`
+Example: `category Gym`, then `withdraw 30 d/Membership t/gym`
 ```
 ____________________________________________________________
 Category added: #Gym
@@ -277,10 +279,7 @@ Use it with, e.g.: withdraw 4.50 d/Lunch t/Gym
 ____________________________________________________________
 ```
 
-#### Listing all categories: `category list`
-Shows the predefined categories and any custom categories you have added.
-
-Format: `category list`
+Example output for `category`:
 ```
 ____________________________________________________________
 Categories:
@@ -536,7 +535,7 @@ Available commands:
 | allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
 |              |                      | [c/CURRENCY]] or off                   |
 | rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
-| category     | Manage categories    | category add NAME or list              |
+| category     | Manage categories    | category [NAME]                        |
 | help         | List commands        | help                                   |
 | exit         | Close FinNUS         | exit                                   |
 +--------------+----------------------+----------------------------------------+
@@ -580,7 +579,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * Find transactions by description: `find KEYWORD`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
-* Add a custom category: `category add NAME`
-* List all categories: `category list`
+* Add a custom category: `category NAME`
+* List categories: `category`
 * View command usage: `help`
 * Exit the application: `exit`

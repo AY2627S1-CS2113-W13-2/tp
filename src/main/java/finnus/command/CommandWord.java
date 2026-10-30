@@ -19,7 +19,7 @@ public enum CommandWord {
     ALLOWANCE("allowance", "Monthly allowance", "[DAY [a/AMOUNT] [c/CURRENCY]] or off"),
     //@@author
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
-    CATEGORY("category", "Manage categories", "add NAME or list"),
+    CATEGORY("category", "Manage categories", "[NAME]"),
     HELP("help", "List commands", ""),
     EXIT("exit", "Close FinNUS", "");
 

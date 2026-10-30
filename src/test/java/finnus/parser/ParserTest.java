@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -34,6 +36,8 @@ import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
+import finnus.transaction.TransactionList;
+import finnus.ui.Ui;
 
 /**
  * Checks command recognition and argument validation in the parser.
@@ -54,7 +58,7 @@ class ParserTest {
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
             Map.entry(CommandWord.ALLOWANCE, new CommandExample("allowance 5 a/500", AllowanceCommand.class)),
             Map.entry(CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class)),
-            Map.entry(CommandWord.CATEGORY, new CommandExample("category list", CategoryCommand.class)),
+            Map.entry(CommandWord.CATEGORY, new CommandExample("category", CategoryCommand.class)),
             Map.entry(CommandWord.HELP, new CommandExample("help", HelpCommand.class)),
             Map.entry(CommandWord.EXIT, new CommandExample("exit", ExitCommand.class)));
 
@@ -97,13 +101,12 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE", "CATEGORY", "FIND"})
+    @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE", "FIND"})
     public void parse_invalidArguments_reportsRegisteredUsage(CommandWord command) {
         Map<CommandWord, String> invalidInputs = Map.of(
                 CommandWord.DEPOSIT, "deposit",
                 CommandWord.WITHDRAW, "withdraw 1",
                 CommandWord.RATE, "rate JPY",
-                CommandWord.CATEGORY, "category remove Gym",
                 CommandWord.FIND, "find   ");
         FinNusException exception = assertThrows(FinNusException.class,
                 () -> Parser.parse(invalidInputs.get(command)));
@@ -404,16 +407,61 @@ class ParserTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"category list", "category LIST", "category add Gym", "category ADD bubble-tea"})
+    @ValueSource(strings = {"category", "CATEGORY", "category Gym", "category bubble-tea",
+        "category add", "category list"})
     public void parse_validCategoryCommand_returnsCategoryCommand(String input) throws FinNusException {
         assertInstanceOf(CategoryCommand.class, Parser.parse(input));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"category", "category add", "category add two words", "category add a/b",
-        "category delete Gym"})
+    @ValueSource(strings = {"category two words", "category a/b", "category abcdefghijklmnopqrstu"})
     public void parse_invalidCategoryCommand_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_categoryWithoutNameListsAndWithNameAdds() throws FinNusException {
+        TransactionList transactions = new TransactionList();
+        List<String> displayedLines = new ArrayList<>();
+        Ui ui = new Ui() {
+            @Override
+            public void showMessage(String... lines) {
+                displayedLines.addAll(List.of(lines));
+            }
+
+            @Override
+            public void showMessage(List<String> lines) {
+                displayedLines.addAll(lines);
+            }
+        };
+
+        Parser.parse("category").execute(transactions, ui);
+        assertTrue(displayedLines.contains("Categories:"));
+        assertTrue(transactions.getCategories().getCustom().isEmpty());
+
+        Parser.parse("category Gym").execute(transactions, ui);
+        assertEquals(List.of("Gym"), transactions.getCategories().getCustom());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"add", "list"})
+    public void parse_categoryNameMatchingFormerSubcommand_addsCategory(String name) throws FinNusException {
+        TransactionList transactions = new TransactionList();
+        Ui ui = new Ui() {
+            @Override
+            public void showMessage(String... lines) {
+                // Category creation has no effect on the ledger output needed by this test.
+            }
+        };
+
+        Parser.parse("category " + name).execute(transactions, ui);
+
+        assertEquals(List.of(name), transactions.getCategories().getCustom());
+    }
+
+    @Test
+    public void parse_oldCategoryAddSyntax_isRejected() {
+        assertThrows(FinNusException.class, () -> Parser.parse("category add Gym"));
     }
     //@@author
 

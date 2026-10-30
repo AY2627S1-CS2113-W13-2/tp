@@ -56,6 +56,7 @@ class CategoryListTest {
         FinNusException e = assertThrows(FinNusException.class, () -> categories.resolve("fod"));
         assertTrue(e.getMessage().contains("Unknown category 'fod'"));
         assertTrue(e.getMessage().contains("Food, Transport"));
+        assertTrue(e.getMessage().contains("category NAME"));
     }
 
     @ParameterizedTest
