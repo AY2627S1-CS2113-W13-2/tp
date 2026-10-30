@@ -363,13 +363,8 @@ re-entry, and input ending before confirmation.
 flow.
 
 The opening balance is a separate field in `TransactionList`, not a `Transaction`.
-`getBalance()` uses it as the starting value when adding up all transactions:
-
-```java
-return transactions.stream()
-        .map(Transaction::getSignedAmount)
-        .reduce(openingBalance, Money::add);
-```
+`getBalance()` uses it as the starting value when adding up all transactions, as shown in
+[Viewing the current balance](#viewing-the-current-balance).
 
 #### Design considerations
 
@@ -571,6 +566,11 @@ are covered by the balance command tests, even though ordinary user input is lim
 Negative balances are allowed and displayed with a minus sign when their rounded value is
 nonzero.
 
+<!-- @@author chancheese -->
+The balance itself has no upper limit, because `BigDecimal` has no fixed size. `Money.MAX_AMOUNT`
+only limits each amount the user enters.
+<!-- @@author -->
+
 The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
@@ -651,12 +651,26 @@ because the record is inconsistent.
     * Pros: fewer classes.
     * Cons: both commands would need the same conversion code, and their `execute()` would start
       throwing an exception that every existing caller has to handle.
+
+**Aspect: rounding the converted amount**
+
+`Money` keeps sub-cent values exact, but `toSgd()` rounds each conversion to the cent.
+
+* **Alternative 1 (current choice):** round to the cent when converting.
+    * Pros: the SGD value matches what a bank would record, and the original amount and rate are
+      saved with it, so nothing is lost.
+    * Cons: small rounding differences can add up across many foreign transactions.
+* **Alternative 2:** keep the exact quotient, e.g. 1000 JPY at 110 is $9.0909...
+    * Pros: no rounding at all.
+    * Cons: some quotients never end, so they must be cut off somewhere anyway, and the balance
+      would hold fractions of a cent that no real account has.
 <!-- @@author -->
 
 <!-- @@author nabijonzzz -->
 ### Categorising spending
 
-Every withdrawal belongs to exactly one category, given with `t/CATEGORY` (e.g. `withdraw 4.50 d/Lunch t/food`).
+Every withdrawal belongs to exactly one category, given with the optional `t/CATEGORY` (e.g. `withdraw 4.50 d/Lunch t/food`).
+Without `t/CATEGORY`, the withdrawal is recorded under `Others`.
 Users can add their own categories with `category NAME` and list all categories with `category`. A name may be `add` or
 `list`; these are treated as category names, not subcommands.
 
@@ -1050,14 +1064,13 @@ criteria with the team.
 
 | ID    | As a/an...               | I want to...                                                            | So that...                                 |
 |-------|--------------------------|-------------------------------------------------------------------------|--------------------------------------------|
-| US-01 | active user              | edit the display currency                                               | I can change the currency used for display |
-| US-02 | lazy user                | set the day my allowance arrives                                        | the app knows my budgeting cycle           |
-| US-03 | habitual user            | view all transactions                                                   | I can review my spending history           |
-| US-04 | international student    | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD             |
-| US-05 | forgetful user           | categorise my spending                                                  | I can later see where my money went        |
-| US-06 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
-| US-07 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
-| US-08 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
+| US-01 | lazy user                | set the day my allowance arrives                                        | the app knows my budgeting cycle           |
+| US-02 | habitual user            | view all transactions                                                   | I can review my spending history           |
+| US-03 | international student    | record an incoming allowance with its amount and received exchange rate | the app knows its value in SGD             |
+| US-04 | forgetful user           | categorise my spending                                                  | I can later see where my money went        |
+| US-05 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
+| US-06 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
+| US-07 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
 
 [Add acceptance criteria for each story selected for implementation.]
 <!-- @@author -->
@@ -1071,7 +1084,7 @@ criteria with the team.
 
 **Actor:** FinNUS user
 
-**Related story:** US-04 (record an incoming allowance)
+**Related story:** US-03 (record an incoming allowance)
 
 **Preconditions:** FinNUS is running and an exchange rate has been set for the allowance currency.
 
@@ -1092,7 +1105,7 @@ criteria with the team.
 
 **Actor:** FinNUS user
 
-**Related story:** US-03
+**Related story:** US-02
 
 **Preconditions:** At least one transaction has been recorded.
 
