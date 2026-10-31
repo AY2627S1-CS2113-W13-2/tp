@@ -2,13 +2,10 @@
 
 ## Introduction
 
-<!-- @@author lololol8484 -->
 FinNUS is a desktop finance tracker designed for tech-savvy university students managing a tight monthly budget. Whether you are an international student juggling foreign currency allowances or a local student managing daily campus expenses, FinNUS provides a streamlined Command Line Interface (CLI) to help you determine exactly how much is safe to spend each day.
-<!-- @@author -->
 
 ## Quick Start
 
-<!-- @@author lololol8484 -->
 1. Ensure that JDK 25 is installed on your computer.
    - On macOS with SDKMAN, select the project version with `sdk use java 25.0.3.fx-zulu`.
 2. Download the latest `finnus.jar` file from here.
@@ -18,7 +15,6 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
    ```bash
    java -jar finnus.jar
    ```
-<!-- @@author -->
 
 5. The first time you run FinNUS, it asks for your opening balance, and optionally your monthly allowance. See [First-run setup](#first-run-setup-opening-balance).
 6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
@@ -269,7 +265,6 @@ You now have 1 transaction(s).
 ____________________________________________________________
 ```
 
-<!-- @@author lololol8484 -->
 ### Managing categories: `category`
 Use `category` to list all predefined and custom spending categories. Use `category NAME` to add a custom category that
 you can then use with `t/`.
@@ -422,9 +417,7 @@ ____________________________________________________________
 
 <!-- @@author nkyjStar -->
 ### Viewing balance: `balance`
-<!-- @@author lololol8484 -->
 Shows the remaining balance of the user's account. 
-<!-- @@author -->
 
 Format: `balance`
 
@@ -597,7 +590,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * Find transactions by description: `find KEYWORD`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
-* Add a custom category: <!-- @@author lololol8484 -->`category NAME`<!-- @@author -->
-* List categories: <!-- @@author lololol8484 -->`category`<!-- @@author -->
+* Add a custom category: `category NAME`
+* List categories: `category`
 * View command usage: `help`
 * Exit the application: `exit`
