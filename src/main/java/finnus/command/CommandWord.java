@@ -11,7 +11,7 @@ public enum CommandWord {
     DEPOSIT("deposit", "Record income", "AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]"),
     WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]"),
     RECENT("recent", "Recent activity", "[NUMBER]"),
-    FIND("find", "Search descriptions", "KEYWORD"),
+    FIND("find", "Search transactions", "[KEYWORD] [t/CATEGORY]"),
     DELETE("delete", "Delete a record", "INDEX"),
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),
