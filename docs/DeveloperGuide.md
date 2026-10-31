@@ -251,7 +251,7 @@ skipped with warnings, as described in [Automatic saving and recovery](#automati
 
 ## Implementation
 
-<!-- @@author Nabijon Nazarov -->
+<!-- @@author nabijonzzz -->
 ### Adding a deposit or withdrawal
 
 The `deposit` and `withdraw` commands record money coming in and going out. Each one creates a

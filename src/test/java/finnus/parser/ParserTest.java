@@ -419,6 +419,7 @@ class ParserTest {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
     }
 
+    //@@author lololol8484
     @Test
     public void parse_categoryWithoutNameListsAndWithNameAdds() throws FinNusException {
         TransactionList transactions = new TransactionList();
