@@ -2,10 +2,13 @@
 
 ## Introduction
 
+<!-- @@author lololol8484 -->
 FinNUS is a desktop finance tracker designed for tech-savvy university students managing a tight monthly budget. Whether you are an international student juggling foreign currency allowances or a local student managing daily campus expenses, FinNUS provides a streamlined Command Line Interface (CLI) to help you determine exactly how much is safe to spend each day.
+<!-- @@author -->
 
 ## Quick Start
 
+<!-- @@author lololol8484 -->
 1. Ensure that JDK 25 is installed on your computer.
    - On macOS with SDKMAN, select the project version with `sdk use java 25.0.3.fx-zulu`.
 2. Download the latest `finnus.jar` file from here.
@@ -15,6 +18,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
    ```bash
    java -jar finnus.jar
    ```
+<!-- @@author -->
 
 5. The first time you run FinNUS, it asks for your opening balance, and optionally your monthly allowance. See [First-run setup](#first-run-setup-opening-balance).
 6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
@@ -25,9 +29,11 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
 file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
 
+<!-- @@author lololol8484 -->
 On a first run with no existing ledger or backup, FinNUS creates a pending setup file and asks for an opening balance.
 The balance is saved only after you confirm it. If you exit or input ends before confirmation, the pending setup state
 remains and FinNUS asks you to complete setup the next time you run it.
+<!-- @@author -->
 
 If a data row is corrupt, FinNUS skips it and reports a warning; the recovered ledger may be incomplete.
 If the main file is unusable, FinNUS tries its backup. If neither can be recovered, it starts with an empty ledger in memory and leaves the original file untouched until data changes.
@@ -107,8 +113,10 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 * Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
 * The opening balance is not a transaction, so it does not show up in `recent` and cannot be removed with `delete`.
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
+<!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
+<!-- @@author -->
 * After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
   skip, and then normal commands begin. Afterwards, `opening` is not a command.
 
@@ -261,6 +269,7 @@ You now have 1 transaction(s).
 ____________________________________________________________
 ```
 
+<!-- @@author lololol8484 -->
 ### Managing categories: `category`
 Use `category` to list all predefined and custom spending categories. Use `category NAME` to add a custom category that
 you can then use with `t/`.
@@ -268,10 +277,13 @@ you can then use with `t/`.
 Formats: `category` or `category NAME`
 
 * `NAME` is one word made of letters, digits and `-`, at most 20 characters, e.g. `Gym` or `bubble-tea`.
+<!-- @@author nabijonzzz -->
 * `NAME` must not already exist, ignoring case. For example, `category FOOD` is rejected because `Food` exists.
+<!-- @@author lololol8484 -->
 * `add` and `list` are valid category names when entered alone: `category add` creates `add`, and `category list` creates `list`.
 
 Example: `category Gym`, then `withdraw 30 d/Membership t/gym`
+<!-- @@author nabijonzzz -->
 ```
 ____________________________________________________________
 Category added: #Gym
@@ -408,8 +420,11 @@ ____________________________________________________________
 ```
 <!-- @@author -->
 
+<!-- @@author nkyjStar -->
 ### Viewing balance: `balance`
+<!-- @@author lololol8484 -->
 Shows the remaining balance of the user's account. 
+<!-- @@author -->
 
 Format: `balance`
 
@@ -425,6 +440,7 @@ Your current balance is: $100.00
 ____________________________________________________________
 ```
 
+<!-- @@author -->
 <!-- @@author chancheese -->
 If you have [set your allowance](#setting-your-monthly-allowance-allowance), `balance` also shows how many days are
 left until it arrives:
@@ -436,6 +452,7 @@ ____________________________________________________________
 ```
 <!-- @@author -->
 
+<!-- @@author nkyjStar -->
 ### Viewing recent transactions: `recent`
 Shows the user's most recent transactions, ordered by recency with the newest transaction first.
 
@@ -458,6 +475,7 @@ Here is a list of the recent 2 transaction(s):
 2. [29 Oct 2026] [Withdrawal] -$30.00 (Lunch) #Food
 
 ```
+<!-- @@author -->
 
 <!-- @@author nabijonzzz -->
 ### Finding transactions: `find`
@@ -579,7 +597,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * Find transactions by description: `find KEYWORD`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
-* Add a custom category: `category NAME`
-* List categories: `category`
+* Add a custom category: <!-- @@author lololol8484 -->`category NAME`<!-- @@author -->
+* List categories: <!-- @@author lololol8484 -->`category`<!-- @@author -->
 * View command usage: `help`
 * Exit the application: `exit`

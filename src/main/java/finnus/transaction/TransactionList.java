@@ -138,6 +138,7 @@ public class TransactionList {
         return subList;
     }
 
+    //@@author lololol8484
     /**
      * Deletes the transaction at the given zero-based index and returns it.
      *
@@ -150,6 +151,7 @@ public class TransactionList {
         assert transactions.size() == oldSize - 1 : "Deleting a transaction must reduce the list size";
         return removed;
     }
+    //@@author
 
     /** Returns the starting balance before any transactions are applied. */
     public Money getOpeningBalance() {

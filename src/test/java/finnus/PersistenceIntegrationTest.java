@@ -51,6 +51,7 @@ class PersistenceIntegrationTest {
         assertEquals(new BigDecimal("110.00"), restored.rates().get("JPY"));
     }
 
+    //@@author lololol8484
     @Test
     public void run_setupConfirmation_persistsOpeningBalanceAndSkipsSetupNextTime() {
         Path path = directory.resolve("finnus.txt");
@@ -67,7 +68,9 @@ class PersistenceIntegrationTest {
         assertTrue(nextRun.output().contains("$67.00"));
         assertFalse(nextRun.output().contains("First-time setup"));
     }
+    //@@author
 
+    //@@author lololol8484
     @Test
     public void run_interruptedSetup_keepsPendingMarkerAndRepeatsSetup() throws IOException {
         Path path = directory.resolve("finnus.txt");
@@ -80,6 +83,7 @@ class PersistenceIntegrationTest {
         assertFalse(new FileStorage(path).load().setupRequired());
         assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
     }
+    //@@author
 
     @Test
     public void run_corruptFileAndReadOnlyCommands_leavesRepairFileUntouched() throws IOException {
