@@ -370,6 +370,34 @@ class ParserTest {
         assertEquals(new BigDecimal("2000000"), Parser.parseForeignAmount("2000000", FORMAT));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"-5", "-4.50", "-0.001"})
+    public void parseAmount_negativeAmount_hasOwnMessage(String amount) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseAmount(amount, FORMAT));
+        assertEquals("Amount must not be negative.", e.getMessage());
+        e = assertThrows(FinNusException.class, () -> Parser.parseNonNegativeAmount(amount, FORMAT));
+        assertEquals("Amount must not be negative.", e.getMessage());
+        e = assertThrows(FinNusException.class, () -> Parser.parseForeignAmount(amount, FORMAT));
+        assertEquals("Amount must not be negative.", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"deposit -5", "withdraw -5 d/Lunch", "withdraw d/Lunch -5", "deposit -1100 c/JPY",
+        "allowance 5 a/-500"})
+    public void parse_negativeAmount_hasOwnMessage(String input) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse(input));
+        assertEquals("Amount must not be negative.", e.getMessage());
+    }
+
+    @Test
+    public void parseAmount_otherInvalidFormats_keepFormatMessage() {
+        // Only a plain number with a minus sign gets the new message.
+        for (String amount : new String[]{"-", "-abc", "--5", "5-"}) {
+            FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseAmount(amount, FORMAT));
+            assertTrue(e.getMessage().contains("is not a valid amount"), "Unexpected message for: " + amount);
+        }
+    }
+
     //@@author nabijonzzz
     @ParameterizedTest
     @ValueSource(strings = {"withdraw 4.50 d/Chicken rice t/food", "withdraw t/food d/Chicken rice 4.50",
