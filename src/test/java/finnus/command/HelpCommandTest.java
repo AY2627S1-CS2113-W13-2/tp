@@ -46,7 +46,9 @@ class HelpCommandTest {
                 //@@author nkyjStar
                 "| history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |",
                 //@@author nabijonzzz
-                "| find         | Search descriptions  | find KEYWORD                           |",
+                //@@author chancheese
+                "| find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |",
+                //@@author nabijonzzz
                 "| delete       | Delete a record      | delete INDEX                           |",
                 "| balance      | Current balance      | balance                                |",
                 //@@author chancheese
