@@ -10,7 +10,6 @@ import java.util.logging.Logger;
 
 import finnus.allowance.Allowance;
 import finnus.exception.FinNusException;
-import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -168,8 +167,8 @@ public class AllowanceCommand extends Command {
                 + Transaction.formatDate(allowance.cycleEnd(today)));
         lines.add(countdown(allowance, today));
 
-        CycleTotal received = new CycleTotal();
-        CycleTotal spent = new CycleTotal();
+        TransactionTotal received = new TransactionTotal();
+        TransactionTotal spent = new TransactionTotal();
         int undated = 0;
         for (Transaction transaction : transactions.getAll()) {
             Optional<LocalDate> date = transaction.getDate();
@@ -181,11 +180,11 @@ public class AllowanceCommand extends Command {
             if (date.get().isBefore(start) || !date.get().isBefore(next)) {
                 continue;
             }
-            CycleTotal total = transaction.getType() == TransactionType.DEPOSIT ? received : spent;
+            TransactionTotal total = transaction.getType() == TransactionType.DEPOSIT ? received : spent;
             total.add(transaction.getAmount());
         }
-        lines.add("Received this cycle: " + received.amount.format() + " in " + received.count + " deposit(s).");
-        lines.add("Spent this cycle: " + spent.amount.format() + " in " + spent.count + " withdrawal(s).");
+        lines.add("Received this cycle: " + received.describe("deposit") + ".");
+        lines.add("Spent this cycle: " + spent.describe("withdrawal") + ".");
         if (undated > 0) {
             lines.add(undated + " older transaction(s) have no date, so they are not counted.");
         }
@@ -213,17 +212,6 @@ public class AllowanceCommand extends Command {
             return "Allowance day: " + day;
         }
         return "Allowance: " + allowance.formatAmount() + " on day " + day + " (added automatically)";
-    }
-
-    /** Adds up the SGD value and number of transactions of one type within a cycle. */
-    private static class CycleTotal {
-        private Money amount = Money.ZERO;
-        private int count;
-
-        private void add(Money value) {
-            amount = amount.add(value);
-            count++;
-        }
     }
 }
 //@@author
