@@ -14,7 +14,7 @@ public enum CommandWord {
     //@@author nkyjStar
     HISTORY("history", "Transaction history", "[n/NUMBER] [p/PAGE]"),
     //@@author
-    FIND("find", "Search descriptions", "KEYWORD"),
+    FIND("find", "Search transactions", "[KEYWORD] [t/CATEGORY]"),
     DELETE("delete", "Delete a record", "INDEX"),
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),

@@ -251,7 +251,7 @@ skipped with warnings, as described in [Automatic saving and recovery](#automati
 
 ## Implementation
 
-<!-- @@author Nabijon Nazarov -->
+<!-- @@author nabijonzzz -->
 ### Adding a deposit or withdrawal
 
 The `deposit` and `withdraw` commands record money coming in and going out. Each one creates a
@@ -456,7 +456,7 @@ newest-first ordering. The opening balance is not a transaction, so it never app
 
 #### How it works
 
-`FinNUS#run()` reads a line and passes it to `Parser#parse()`. For `recent`, the parser calls
+`FinNUS#run()` reads a line and passes it to `executeCommand()`, which calls `Parser#parse()`. For `recent`, the parser calls
 `parseRecent()`. Blank arguments create a `RecentTransactionCommand` with a default length of five.
 Otherwise, the parser converts the argument to an `int` and rejects a malformed or non-positive
 length with `FinNusException`. The main loop shows that exception as an error and continues.
@@ -478,7 +478,8 @@ This sequence shows the normal path for `recent 2`:
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
 *Figure 6. Retrieving and displaying up to two recent transactions.
-[PlantUML source](diagrams/RecentSequenceDiagram.puml).*
+[PlantUML source](diagrams/RecentSequenceDiagram.puml). Logging, allowance crediting, the ledger state check and
+saving are left out.*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
 Java deletion or guarantee immediate collection.
@@ -609,9 +610,18 @@ resizing, invalid input, empty history, and the command restriction in the appli
 ### Finding transactions
 
 `find KEYWORD` lists the transactions whose description contains `KEYWORD`, ignoring case.
+<!-- @@author -->
 
-The parser treats everything after the command word as the keyword, so `find chicken rice` searches for the
-whole phrase, and returns a `FindCommand`. A missing keyword is rejected with the usual `FinNusException`.
+<!-- @@author chancheese -->
+`find t/CATEGORY` lists the withdrawals in one category, and `find KEYWORD t/CATEGORY` combines both.
+
+The parser first removes an optional `t/CATEGORY` with `Parser#extractCategory()`, the same method `withdraw`
+uses, so category names follow the same rules and give the same errors. The rest is the keyword, so
+`find chicken rice` still searches for the whole phrase. The parser returns a `FindCommand` with the keyword, the
+category name, or both. If both are missing, it throws a `FinNusException`.
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
 
 `FindCommand#execute()` goes through the `TransactionList` from the newest transaction to the oldest, and keeps the
 ones whose description contains the keyword. Each result is numbered with the same index that `recent` shows and
@@ -625,6 +635,20 @@ find lunch
 ```
 
 The command only reads the list, so searching never changes any transaction.
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+With a category, `execute()` first resolves the name through `CategoryList#resolve()`, as `WithdrawCommand` does. This
+turns `food` into `Food`, and rejects a category that does not exist. A transaction then matches only if it meets
+every criterion given. Deposits have no category, so they never match a category search.
+
+Below the results, `FindCommand` shows `Received:` and `Spent:` totals, worded as in the `allowance` summary. Both
+commands count with the same small `TransactionTotal` class, which adds up the SGD amounts with `Money#add()` and
+counts the transactions. Foreign transactions count at the SGD value stored when they were recorded. A category
+search leaves out the `Received:` line, because it can never include a deposit.
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
 
 #### Design considerations
 
@@ -639,12 +663,24 @@ The command only reads the list, so searching never changes any transaction.
 
 **Aspect: what is searched**
 
-* **Alternative 1 (current choice):** the description only.
+* **Alternative 1 (current choice):** the description, plus the category when `t/CATEGORY` is given.
   * Pros: simple and predictable; a keyword such as `5` will not match every amount containing a 5.
-  * Cons: cannot search by category or amount. This can be added later as separate options.
+  * Cons: cannot search by amount.
 * **Alternative 2:** the whole displayed text of each transaction.
   * Pros: one search covers description, amount and category.
   * Cons: many unexpected matches, e.g. `food` would match every `#Food` withdrawal.
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+**Aspect: where the category filter goes**
+
+* **Alternative 1 (current choice):** a `t/CATEGORY` option on `find`.
+  * Pros: reuses the `t/` prefix users already know from `withdraw`, and keeps the `recent` numbering that `delete`
+    uses. No new command to learn.
+  * Cons: `find` now has two optional parts, so the parser must reject a search with neither.
+* **Alternative 2:** a new command such as `category food`.
+  * Pros: a short command.
+  * Cons: `category NAME` already adds a category, so the same words would mean two different things.
 <!-- @@author -->
 
 ### Viewing the current balance
