@@ -456,7 +456,7 @@ newest-first ordering. The opening balance is not a transaction, so it never app
 
 #### How it works
 
-`FinNUS#run()` reads a line and passes it to `Parser#parse()`. For `recent`, the parser calls
+`FinNUS#run()` reads a line and passes it to `executeCommand()`, which calls `Parser#parse()`. For `recent`, the parser calls
 `parseRecent()`. Blank arguments create a `RecentTransactionCommand` with a default length of five.
 Otherwise, the parser converts the argument to an `int` and rejects a malformed or non-positive
 length with `FinNusException`. The main loop shows that exception as an error and continues.
@@ -478,7 +478,8 @@ This sequence shows the normal path for `recent 2`:
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
 *Figure 6. Retrieving and displaying up to two recent transactions.
-[PlantUML source](diagrams/RecentSequenceDiagram.puml).*
+[PlantUML source](diagrams/RecentSequenceDiagram.puml). Logging, allowance crediting, the ledger state check and
+saving are left out.*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
 Java deletion or guarantee immediate collection.
