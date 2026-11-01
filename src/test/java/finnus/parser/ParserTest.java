@@ -550,7 +550,7 @@ class ParserTest {
         String printed = output.toString();
         assertTrue(printed.contains("Found 1 transaction(s) in #Food:"));
         assertTrue(printed.contains("2. [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food"));
-        assertTrue(printed.contains("Total spent: $4.50"));
+        assertTrue(printed.contains("Spent: $4.50 in 1 withdrawal(s)."));
         assertFalse(printed.contains("Bus"));
     }
     //@@author

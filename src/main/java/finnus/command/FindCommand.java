@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import finnus.exception.FinNusException;
-import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
+import finnus.transaction.TransactionType;
 import finnus.ui.Ui;
 
 /**
@@ -83,10 +83,7 @@ public class FindCommand extends Command {
         for (int position : positions) {
             lines.add((size - position) + ". " + transactions.get(position));
         }
-        if (category != null) {
-            // Only withdrawals have categories, so this is money spent, in SGD.
-            lines.add("Total spent: " + totalAmount(transactions, positions).format());
-        }
+        lines.addAll(describeTotals(transactions, positions, category != null));
         //@@author nabijonzzz
         lines.add("Use the number with " + CommandWord.DELETE.getWord() + " to remove a transaction.");
         ui.showMessage(lines);
@@ -139,13 +136,29 @@ public class FindCommand extends Command {
         return String.join(" ", parts);
     }
 
-    /** Adds up the SGD amounts of the transactions at the given positions. */
-    private static Money totalAmount(TransactionList transactions, List<Integer> positions) {
-        Money total = Money.ZERO;
+    /**
+     * Returns the SGD totals of the matches, worded as in the {@code allowance} summary, e.g.
+     * <pre>
+     * Received: $500.00 in 1 deposit(s).
+     * Spent: $16.50 in 2 withdrawal(s).
+     * </pre>
+     * A category search leaves out the first line, since deposits have no category and never match.
+     */
+    private static List<String> describeTotals(TransactionList transactions, List<Integer> positions,
+            boolean isCategorySearch) {
+        TransactionTotal received = new TransactionTotal();
+        TransactionTotal spent = new TransactionTotal();
         for (int position : positions) {
-            total = total.add(transactions.get(position).getAmount());
+            Transaction transaction = transactions.get(position);
+            TransactionTotal total = transaction.getType() == TransactionType.DEPOSIT ? received : spent;
+            total.add(transaction.getAmount());
         }
-        return total;
+        List<String> lines = new ArrayList<>();
+        if (!isCategorySearch) {
+            lines.add("Received: " + received.describe("deposit") + ".");
+        }
+        lines.add("Spent: " + spent.describe("withdrawal") + ".");
+        return lines;
     }
     //@@author nabijonzzz
 

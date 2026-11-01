@@ -111,7 +111,8 @@ class FindCommandTest {
         int newer = output.indexOf("1. [Withdrawal] -$12.00 (Lunch with friends) #Food");
         int older = output.indexOf("3. [Withdrawal] -$4.50 (Lunch) #Food");
         assertTrue(newer >= 0 && older > newer, "Matches should be listed most recent first");
-        assertTrue(output.contains("Total spent: $16.50"));
+        assertTrue(output.contains("Spent: $16.50 in 2 withdrawal(s)."));
+        assertFalse(output.contains("Received:"), "Deposits never match a category search");
         assertFalse(output.contains("Bus"));
     }
 
@@ -123,7 +124,8 @@ class FindCommandTest {
 
         assertTrue(output.contains("Found 2 transaction(s) matching \"lunch\" in #Food:"));
         assertFalse(output.contains("Lunch bus"));
-        assertTrue(output.contains("Total spent: $16.50"));
+        assertTrue(output.contains("Spent: $16.50 in 2 withdrawal(s)."));
+        assertFalse(output.contains("Received:"), "Deposits never match a category search");
     }
 
     @Test
@@ -140,7 +142,7 @@ class FindCommandTest {
         String output = runCategory(null, "bills");
 
         assertTrue(output.contains("No transactions in #Bills."));
-        assertFalse(output.contains("Total spent"));
+        assertFalse(output.contains("Spent:"));
     }
 
     @Test
@@ -151,7 +153,7 @@ class FindCommandTest {
         String output = runCategory(null, "gym");
 
         assertTrue(output.contains("1. [Withdrawal] -$30.00 (Membership) #Gym"));
-        assertTrue(output.contains("Total spent: $30.00"));
+        assertTrue(output.contains("Spent: $30.00 in 1 withdrawal(s)."));
     }
 
     @Test
@@ -173,8 +175,28 @@ class FindCommandTest {
     }
 
     @Test
-    public void execute_keywordOnly_showsNoTotal() {
-        assertFalse(run("lunch").contains("Total spent"));
+    public void execute_keywordMatchingBothTypes_showsReceivedAndSpent() {
+        // "l" matches the Allowance deposit and both lunches, but not Bus.
+        String output = run("l");
+
+        assertTrue(output.contains("Received: $500.00 in 1 deposit(s)."));
+        assertTrue(output.contains("Spent: $16.50 in 2 withdrawal(s)."));
+    }
+
+    @Test
+    public void execute_keywordMatchingWithdrawalsOnly_showsZeroReceived() {
+        String output = run("lunch");
+
+        assertTrue(output.contains("Received: $0.00 in 0 deposit(s)."));
+        assertTrue(output.contains("Spent: $16.50 in 2 withdrawal(s)."));
+    }
+
+    @Test
+    public void execute_noMatch_showsNoTotals() {
+        String output = run("rent");
+
+        assertFalse(output.contains("Received:"));
+        assertFalse(output.contains("Spent:"));
     }
     //@@author nabijonzzz
 
