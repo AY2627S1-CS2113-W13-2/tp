@@ -105,7 +105,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 10's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 12's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -684,6 +684,8 @@ The class diagram below shows how these classes are related. Only the members re
 
 ![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
 
+*Figure 10. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
+
 `TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
 it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
 is only checked at that point.
@@ -768,6 +770,8 @@ the category from [Categorising spending](#categorising-spending) is resolved. L
 validation are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
+
+*Figure 11. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
 
 The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
 description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
@@ -922,7 +926,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 10. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 12. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -939,7 +943,7 @@ protect data that could not be inspected.
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 11. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 13. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
