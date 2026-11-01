@@ -13,9 +13,7 @@ import java.util.logging.SimpleFormatter;
 
 import finnus.command.Command;
 import finnus.command.CreditAllowanceCommand;
-//@@author nkyjStar
 import finnus.command.HistoryCommand;
-//@@author
 import finnus.exception.FinNusException;
 import finnus.parser.Parser;
 import finnus.storage.FileStorage;
@@ -212,22 +210,20 @@ public class FinNUS {
         assert command != null : "Parser must return a command";
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
         logger.fine("Executing " + command.getClass().getSimpleName());
-        if (command instanceof HistoryCommand) {
+        if (command instanceof HistoryCommand historyCommand) {
             // Include any newly due allowance before history assigns numbers to transactions.
             creditAllowance(false);
-        }
-        command.execute(transactions, ui);
-        //@@author nkyjStar
-        if (command instanceof HistoryCommand historyCommand) {
+            historyCommand.execute(transactions, ui);
             historyView = historyCommand;
+        } else {
+            command.execute(transactions, ui);
+            //@@author chancheese
+            // A new rate or a date change during the session can make a waiting allowance addable.
+            if (!command.isExit()) {
+                new CreditAllowanceCommand(today(), false).execute(transactions, ui);
+            }
+            //@@author
         }
-        //@@author
-        //@@author chancheese
-        // A new rate or a date change during the session can make a waiting allowance addable.
-        if (!command.isExit() && !(command instanceof HistoryCommand)) {
-            new CreditAllowanceCommand(today(), false).execute(transactions, ui);
-        }
-        //@@author
         boolean changed = !before.equals(LedgerSnapshot.capture(transactions));
         hasUnsavedChanges |= changed;
         if (changed) {
