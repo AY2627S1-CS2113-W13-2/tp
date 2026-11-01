@@ -1295,10 +1295,10 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 <!-- @@author nkyjStar -->
 ### History navigation scenario
 
-Using the two-transaction sample ledger, enter `history n/1`, `next`, `prev`, `n/2`,
-`exit`, `stop`, then `exit`. The displayed ranges should be 1-1, 2-2, 1-1, and 1-2.
-The first `exit` should be rejected while history mode is active; the second should close FinNUS.
-In a new run, check that `history p/10000000000000000` reports an out-of-range page error.
+| ID    | Preconditions       | Steps / input                                                       | Expected result                                                                                                           |
+|-------|---------------------|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| MT-14 | Sample ledger with two transactions | Enter `history n/1`, `next`, `prev`, `n/2`, `exit`, `stop`, then `exit`. | History shows ranges 1-1, 2-2, 1-1, and 1-2. The first `exit` is rejected in history mode; the second closes FinNUS. |
+| MT-15 | Saved sample ledger; restart FinNUS | Enter `history p/10000000000000000`. | FinNUS reports `History page is out of range.` |
 <!-- @@author naieel04 -->
 
 ### Storage and recovery scenarios
