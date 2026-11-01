@@ -3,11 +3,14 @@ package finnus;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,6 +72,49 @@ class FinNUSTest {
 
         assertTrue(ui.output().contains("History page is out of range."));
         assertEquals(1, storage.saved.size());
+    }
+
+    @Test
+    public void run_allowanceDueWhenOpeningHistory_numbersBothPagesConsistently() {
+        RecordingStorage storage = new RecordingStorage();
+        Allowance allowance = new Allowance(5, new BigDecimal("500"), null, LocalDate.of(2026, 9, 5));
+        storage.loaded = new LoadResult(new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of(), allowance),
+                List.of(), true);
+        AtomicReference<Instant> currentTime = new AtomicReference<>(fixedOn(LocalDate.of(2026, 10, 4)).instant());
+        Clock clock = new Clock() {
+            @Override
+            public ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(ZoneId zone) {
+                return Clock.fixed(currentTime.get(), zone);
+            }
+
+            @Override
+            public Instant instant() {
+                return currentTime.get();
+            }
+        };
+        ScriptedUi ui = new ScriptedUi("deposit 10 d/First", "history n/1", "next", "stop", "exit") {
+            @Override
+            public String readCommand() {
+                String command = super.readCommand();
+                if ("history n/1".equals(command)) {
+                    currentTime.set(fixedOn(LocalDate.of(2026, 10, 5)).instant());
+                }
+                return command;
+            }
+        };
+
+        new FinNUS(ui, storage, clock).run();
+
+        assertTrue(ui.output().contains("Transaction history: 1-1 of 2 (1 per page):"));
+        assertTrue(ui.output().contains("1. [5 Oct 2026] [Deposit] +$500.00 (Allowance)"));
+        assertTrue(ui.output().contains("Transaction history: 2-2 of 2 (1 per page):"));
+        assertTrue(ui.output().contains("2. [4 Oct 2026] [Deposit] +$10.00 (First)"));
+        assertEquals(2, storage.saved.getLast().transactions().size());
     }
     //@@author
 

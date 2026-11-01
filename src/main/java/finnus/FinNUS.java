@@ -212,6 +212,10 @@ public class FinNUS {
         assert command != null : "Parser must return a command";
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
         logger.fine("Executing " + command.getClass().getSimpleName());
+        if (command instanceof HistoryCommand) {
+            // Include any newly due allowance before history assigns numbers to transactions.
+            creditAllowance(false);
+        }
         command.execute(transactions, ui);
         //@@author nkyjStar
         if (command instanceof HistoryCommand historyCommand) {
@@ -220,7 +224,7 @@ public class FinNUS {
         //@@author
         //@@author chancheese
         // A new rate or a date change during the session can make a waiting allowance addable.
-        if (!command.isExit()) {
+        if (!command.isExit() && !(command instanceof HistoryCommand)) {
             new CreditAllowanceCommand(today(), false).execute(transactions, ui);
         }
         //@@author
