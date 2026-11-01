@@ -169,7 +169,6 @@ public class TransactionList {
         this.openingBalance = openingBalance;
     }
 
-    //@@author nkyjStar
     /**
      * Returns the current balance: the opening balance plus all deposits minus all withdrawals.
      * This is the single place the balance is calculated, so every feature reports the same figure.
@@ -179,5 +178,4 @@ public class TransactionList {
                 .map(Transaction::getSignedAmount)
                 .reduce(openingBalance, Money::add);
     }
-    //@@author
 }
