@@ -2,16 +2,18 @@ package finnus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+import finnus.alert.SpendingAlert;
 import finnus.command.AllowanceCommand;
 import finnus.command.OpeningBalanceCommand;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
 import finnus.parser.Parser;
 import finnus.transaction.TransactionList;
+import finnus.ui.Confirmation;
+import finnus.ui.Confirmation.Result;
 import finnus.ui.Ui;
 
 /**
@@ -20,10 +22,6 @@ import finnus.ui.Ui;
  */
 public class Setup {
     private static final Logger logger = Logger.getLogger(Setup.class.getName());
-
-    private enum Confirmation {
-        CONFIRMED, NOT_CONFIRMED
-    }
 
     /**
      * Runs setup using the real current date.
@@ -63,11 +61,12 @@ public class Setup {
                 ui.showError(e.getMessage());
                 continue;
             }
-            Optional<Confirmation> confirmation = confirmBalance(ui, amount);
-            if (confirmation.isEmpty()) {
+            Result confirmation = Confirmation.ask(ui,
+                    "Confirm opening balance " + amount.format() + " SGD? [yes/no]: ");
+            if (confirmation == Result.INPUT_ENDED) {
                 return false;
             }
-            if (confirmation.get() == Confirmation.NOT_CONFIRMED) {
+            if (confirmation == Result.NO) {
                 continue;
             }
 
@@ -75,8 +74,14 @@ public class Setup {
             assert transactions.getOpeningBalance().compareTo(amount) == 0
                     : "Setup must store the entered opening balance";
             logger.info("First-run opening balance confirmed");
-            //@@author chancheese
-            askForAllowance(ui, transactions, today);
+            //@@author lololol8484
+            Optional<Money> balanceThreshold = askForBalanceThreshold(ui);
+            boolean hasAllowanceAmount = askForAllowance(ui, transactions, today);
+            Optional<BigDecimal> allowancePercentage = hasAllowanceAmount
+                    ? askForAllowancePercentage(ui) : Optional.empty();
+            transactions.setSpendingAlert(new SpendingAlert(balanceThreshold.orElse(null),
+                    allowancePercentage.orElse(null)));
+            logger.info("Spending alert settings recorded during setup");
             //@@author
             return true;
         }
@@ -88,14 +93,18 @@ public class Setup {
      * and so does ending the input, since the opening balance has already been confirmed.
      * Foreign currencies need a rate first, so they can only be set later with the command.
      */
-    private void askForAllowance(Ui ui, TransactionList transactions, LocalDate today) {
+    //@@author lololol8484
+    private boolean askForAllowance(Ui ui, TransactionList transactions, LocalDate today) {
+        //@@author chancheese
         ui.showMessage("Optional: when does your monthly allowance arrive?",
                 "FinNUS can count the days until it arrives and add it for you each month.",
                 "Press Enter to skip; you can set it later with: " + AllowanceCommand.EXAMPLE);
         Optional<Integer> day = askUntilValid(ui, "Allowance day (1-31): ", Parser::parseAllowanceDay);
         if (day.isEmpty()) {
             logger.fine("Allowance skipped during setup");
-            return;
+            //@@author lololol8484
+            return false;
+            //@@author chancheese
         }
         Optional<Money> amount = askUntilValid(ui, "Allowance amount in SGD (Enter to only count days): ",
                 text -> Parser.parseAmount(text, "AMOUNT"));
@@ -106,10 +115,48 @@ public class Setup {
             // Only foreign amounts can fail when set, and setup only takes SGD.
             assert false : "Setting an SGD allowance must not fail: " + e.getMessage();
             ui.showError(e.getMessage());
-            return;
+            //@@author lololol8484
+            return false;
+            //@@author chancheese
         }
         logger.info("Allowance set during setup");
+        //@@author lololol8484
+        return amount.isPresent();
+        //@@author chancheese
     }
+
+    //@@author lololol8484
+    /** Asks for an optional balance floor that should trigger a withdrawal alert. */
+    private Optional<Money> askForBalanceThreshold(Ui ui) {
+        ui.showMessage("Optional: set a balance threshold for spending alerts.",
+                "FinNUS will ask before a withdrawal takes your balance below it.",
+                "Press Enter to skip.");
+        return askUntilValid(ui, "Balance alert threshold in SGD: ", text -> {
+            Money amount = Parser.parseNonNegativeAmount(text, "AMOUNT");
+            if (!amount.isPositive()) {
+                throw new FinNusException("The balance alert threshold must be greater than $0.00.");
+            }
+            return amount;
+        });
+    }
+
+    /** Asks for an optional alert percentage of the configured monthly allowance. */
+    private Optional<BigDecimal> askForAllowancePercentage(Ui ui) {
+        ui.showMessage("Optional: set a percentage of your monthly allowance for spending alerts.",
+                "FinNUS will ask before withdrawals in an allowance cycle exceed this percentage.",
+                "Enter a whole percentage from 1 to 100, or press Enter to skip.");
+        return askUntilValid(ui, "Allowance alert percentage (1-100): ", text -> {
+            if (!text.matches("\\d{1,3}")) {
+                throw new FinNusException("Enter a whole percentage from 1 to 100.");
+            }
+            int percentage = Integer.parseInt(text);
+            if (percentage < 1 || percentage > 100) {
+                throw new FinNusException("Enter a whole percentage from 1 to 100.");
+            }
+            return BigDecimal.valueOf(percentage);
+        });
+    }
+    //@@author
 
     /**
      * Reads one answer, asking again until it is valid.
@@ -137,25 +184,4 @@ public class Setup {
     }
     //@@author
 
-    /** Repeats the confirmation prompt until the user answers yes or no. */
-    private Optional<Confirmation> confirmBalance(Ui ui, Money amount) {
-        while (true) {
-            String answer = ui.readCommand("Confirm opening balance "
-                    + amount.format() + " SGD? [yes/no]: ");
-            if (answer == null) {
-                logger.fine("First-run setup ended before the opening balance was confirmed");
-                return Optional.empty();
-            }
-            switch (answer.trim().toLowerCase(Locale.ROOT)) {
-            case "yes", "y" -> {
-                return Optional.of(Confirmation.CONFIRMED);
-            }
-            case "no", "n" -> {
-                logger.fine("User requested another opening balance entry");
-                return Optional.of(Confirmation.NOT_CONFIRMED);
-            }
-            default -> ui.showError("Please answer yes or no.");
-            }
-        }
-    }
 }

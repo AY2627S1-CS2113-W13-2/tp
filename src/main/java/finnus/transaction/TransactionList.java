@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import finnus.alert.SpendingAlert;
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
@@ -46,6 +47,11 @@ public class TransactionList {
      * transaction, so it never shifts the indices used by {@code recent} and {@code delete}.
      */
     private Allowance allowance;
+    //@@author
+
+    //@@author lololol8484
+    /** Persisted optional spending-alert thresholds configured during first-run setup. */
+    private SpendingAlert spendingAlert = new SpendingAlert(null, null);
     //@@author
 
     /** Adds a transaction at the end of the ledger, preserving entry order. */
@@ -92,6 +98,19 @@ public class TransactionList {
      */
     public void setAllowance(Allowance allowance) {
         this.allowance = allowance;
+    }
+    //@@author
+
+    //@@author lololol8484
+    /** Returns the optional spending-alert thresholds. */
+    public SpendingAlert getSpendingAlert() {
+        return spendingAlert;
+    }
+
+    /** Replaces the optional spending-alert thresholds. */
+    public void setSpendingAlert(SpendingAlert spendingAlert) {
+        assert spendingAlert != null : "Spending alert settings must not be null";
+        this.spendingAlert = spendingAlert;
     }
     //@@author
 
