@@ -9,13 +9,10 @@ skinparam classAttributeIconSize 0
 skinparam linetype ortho
 
 class TransactionList {
-    - transactions : List<Transaction>
-    - openingBalance : Money
     + getBalance() : Money
 }
 
 class Transaction {
-    - amount : Money
     + getAmount() : Money
     + getSignedAmount() : Money
 }
@@ -23,7 +20,6 @@ class Transaction {
 class Money <<value object>> {
     + {static} ZERO : Money
     + {static} MAX_AMOUNT : Money
-    - value : BigDecimal
     - Money(value : BigDecimal)
     + {static} of(value : BigDecimal) : Money
     + {static} of(value : String) : Money
@@ -44,11 +40,13 @@ class Money <<value object>> {
 }
 
 class BigDecimal <<JDK>>
+interface "Comparable<Money>" as ComparableMoney <<JDK>>
 
-TransactionList -- "0..*  " Transaction : transactions
-TransactionList -- "1  " Money : openingBalance
-Transaction -- "1 " Money : amount
-Money -- "1   " BigDecimal : value
+TransactionList --> "0..*  " Transaction : transactions
+TransactionList --> "1  " Money : openingBalance
+Transaction --> "1 " Money : amount
+Money --> "1   " BigDecimal : value
+Money ..|> ComparableMoney
 
 note bottom of Money
   Money is immutable. ZERO may be shared;
