@@ -23,17 +23,19 @@ class ForeignTransactionCommandTest {
     public void execute_withdrawalWithRate_addsSgdValueAndKeepsOriginal() throws FinNusException {
         TransactionList transactions = new TransactionList();
         transactions.getRates().setRate("JPY", new BigDecimal("110"));
+        transactions.setOpeningBalance(Money.of("100"));
+        new DepositCommand(Money.of("100")).execute(transactions, ui);
 
         new ForeignTransactionCommand(TransactionType.WITHDRAWAL, new BigDecimal("1100"), "JPY", "Ramen")
                 .execute(transactions, ui);
 
-        Transaction added = transactions.get(0);
+        Transaction added = transactions.get(1);
         assertEquals(TransactionType.WITHDRAWAL, added.getType());
         assertEquals(Money.of("10"), added.getAmount());
         assertEquals("Ramen", added.getDescription());
         assertEquals(new ForeignAmount("JPY", new BigDecimal("1100"), new BigDecimal("110")),
                 added.getForeignAmount().orElseThrow());
-        assertEquals(Money.of("-10"), transactions.getBalance());
+        assertEquals(Money.of("190"), transactions.getBalance());
     }
 
     @Test

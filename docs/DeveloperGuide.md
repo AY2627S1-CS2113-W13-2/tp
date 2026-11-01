@@ -215,7 +215,10 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 - The main file is `finnus.txt`, beside the packaged JAR or in the working directory during development.
 - The previous-state backup is `finnus.txt.bak`.
-- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, and transactions.
+<!-- @@author lololol8484 -->
+- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, transactions,
+  allowance settings, and optional spending-alert thresholds.
+<!-- @@author -->
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
@@ -232,6 +235,8 @@ FINNUS|1
 OPENING|100
 RATE|JPY|110
 CATEGORY|Meals
+ALLOWANCE|5|500||2026-10-05
+SPENDING_ALERT|100|90
 TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
 TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
 ```
@@ -240,6 +245,12 @@ TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
 category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
 and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
 Foreign transactions place their currency code, original amount, and recorded rate before the category field.
+
+<!-- @@author lololol8484 -->
+`SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE` stores the optional alert settings. Either value may be empty
+when the user skipped it. Files without this record load with both optional settings unset; malformed or duplicate alert
+records are skipped with a warning.
+<!-- @@author -->
 
 Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
 seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
@@ -342,17 +353,61 @@ collects and confirms this value once, before normal commands become available.
    confirmation does `Setup` execute `OpeningBalanceCommand`.
 5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
    without saving the unconfirmed amount. The pending marker remains, so setup is offered again
-   on the next run. After successful setup, `FinNUS` saves the ledger and later runs skip setup.
+   on the next run. Once the remaining setup prompts finish, `FinNUS` saves the ledger and later
+   runs skip setup.
+6. After confirming the opening balance, setup asks for an optional balance threshold, then the
+   allowance day and optional amount. If an amount is entered, setup asks for an optional whole
+   percentage from 1 to 100. End of input or Enter skips these optional settings.
+
+See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
 
 <!-- @@author chancheese -->
-After the opening balance is confirmed, `Setup` also asks for the allowance day and its SGD amount. Pressing Enter (or
-input ending) skips either one, and setup still counts as complete. See
+<!-- @@author lololol8484 -->
+`Setup` asks for the optional balance threshold before the allowance prompts. The optional percentage prompt only
+appears when an allowance amount was entered. See [Spending alerts](#spending-alerts).
+<!-- @@author -->
+After the threshold prompt, `Setup` asks for the allowance day and its SGD amount. Pressing Enter (or input ending)
+skips either one, and setup still counts as complete. See
 [Setting a monthly allowance](#setting-a-monthly-allowance).
 <!-- @@author lololol8484 -->
 
 `opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
 treated as an unknown command. `SetupTest` covers valid and invalid amounts, confirmation,
 re-entry, and input ending before confirmation.
+<!-- @@author -->
+
+<!-- @@author lololol8484 -->
+### Spending alerts
+
+`SpendingAlert` stores the two optional settings and evaluates a proposed withdrawal before it is added. `WithdrawCommand`
+and `ForeignTransactionCommand` both call `confirmWithdrawal()`, so SGD and converted foreign withdrawals use the same
+rules. A declined confirmation or ended input returns before `TransactionList#add()`; only explicit `yes` or `y` lets the
+command continue.
+
+`SpendingAlert#crossedBy()` compares the current ledger with the proposed result and returns every threshold crossed:
+
+1. The optional fixed balance threshold, when configured.
+2. The optional percentage of the allowance, when configured and an allowance amount exists.
+3. The fixed 100% allowance amount, when an allowance amount exists.
+4. The opening balance.
+5. Zero.
+
+The allowance thresholds sum dated withdrawals in the cycle containing the proposed transaction date. Older undated
+transactions are excluded, matching `AllowanceCommand#summarise()`. The allowance amount is converted to SGD using its
+configured currency rate when needed. Balance thresholds use the current calculated balance, including the proposed
+withdrawal. Comparisons report a threshold only when the value moves from its safe side to beyond it; if the balance
+later recovers and crosses again, a new alert is shown. A single withdrawal can cross several thresholds and produces
+one confirmation listing them all. When the opening balance is zero, the opening-balance and zero conditions coincide
+and both descriptions are included.
+
+`Confirmation#ask()` handles yes/no parsing and invalid-answer retries. It returns `YES`, `NO`, or `INPUT_ENDED`, leaving
+each caller to decide what those results mean. Setup uses it for opening-balance confirmation; spending alerts use it
+before recording a withdrawal.
+
+`TransactionList` owns the settings, and `LedgerSnapshot` includes them in equality-based change detection. The codec
+stores non-empty settings in `SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE`; empty fields represent skipped
+options. Older files without this row load with both options unset, and malformed or duplicate rows are reported and
+skipped. Tests cover setup, threshold crossing and re-crossing, confirmation outcomes, and persistence.
 <!-- @@author -->
 
 <!-- @@author chancheese -->
@@ -1151,7 +1206,8 @@ do not mark a case as passed until it has been run.
 3. For each independent scenario, use a fresh folder unless it explicitly tests restart or recovery.
 4. Record: [Insert operating system, Java version, release, tester, and date here].
 
-On first launch, enter `100` as the opening balance and confirm it with `yes`. Then create the sample ledger with:
+On first launch, enter `100` as the opening balance and confirm it with `yes`. Press Enter to skip the balance alert
+threshold and allowance setup. Then create the sample ledger with:
 
 ```text
 deposit 50 d/Allowance
@@ -1166,7 +1222,7 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
 |-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the balance threshold and allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
 | MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
 | MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
 | MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
@@ -1175,6 +1231,12 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
 | MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
 | MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
+
+<!-- @@author lololol8484 -->
+For the spending-alert check, use a fresh folder and complete setup with opening balance `100` and balance threshold
+`90`. Skip the allowance, enter `withdraw 20 d/Books`, answer `no`, then enter `balance`. The alert lists the balance
+threshold and opening balance; the withdrawal is cancelled, so the balance remains `$100.00`.
+<!-- @@author -->
 
 ### Storage and recovery scenarios
 

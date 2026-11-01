@@ -109,8 +109,11 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
-* After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
-  skip, and then normal commands begin. Afterwards, `opening` is not a command.
+<!-- @@author lololol8484 -->
+* After confirmation, FinNUS asks for an optional [balance alert threshold](#spending-alerts), then asks about your
+  [allowance](#setting-your-monthly-allowance-allowance). If you enter an allowance amount, it also asks for an optional
+  percentage threshold. You can skip these settings; normal commands begin afterwards, and `opening` is not a command.
+<!-- @@author -->
 
 Example of first-run setup, entering `1200.50` and then `yes`:
 ```
@@ -406,6 +409,47 @@ ____________________________________________________________
 Your allowance for 5 Nov 2026 was not added yet. No exchange rate set for JPY. Set one first with: rate JPY RATE
 ____________________________________________________________
 ```
+<!-- @@author -->
+
+<!-- @@author lololol8484 -->
+### Spending alerts
+
+FinNUS warns before a withdrawal crosses a spending threshold. It does not block large withdrawals or prevent your
+balance from becoming negative. When a withdrawal crosses one or more thresholds, FinNUS lists all of them and asks
+whether to proceed. Enter `yes` or `y` to record it; `no`, `n`, or end of input cancels it. An invalid answer repeats the
+confirmation prompt.
+
+During first-run setup, after confirming your opening balance, you can set either or both optional alerts:
+
+* **Balance threshold:** enter an SGD amount such as `100`. FinNUS warns when a withdrawal takes your balance from at
+  least that amount to below it. Press Enter to skip.
+* **Allowance percentage:** if you enter an allowance amount during setup, you can enter a whole percentage from 1 to
+  100, such as `90`. FinNUS warns when withdrawals dated in an allowance cycle move from at or below that percentage
+  to above it. Press Enter to skip. If you do not enter an allowance amount, this setting is not asked for and does not
+  exist.
+
+Three thresholds are always applied when their reference values exist: withdrawals exceeding 100% of the allowance
+amount, balance falling below the opening balance, and balance falling below `$0.00`. The 100% allowance threshold is
+inactive when no allowance amount is set. Allowance spending is calculated in SGD from dated withdrawals in the cycle;
+older transactions without dates are excluded.
+
+Each threshold alerts only when crossed. Further withdrawals do not repeat an alert while the value remains beyond that
+threshold. If the value returns to the safe side and crosses again, FinNUS alerts again. A withdrawal can cross multiple
+thresholds at once, in which case one confirmation lists all of them. For example, with an allowance of `$500.00` and a
+90% alert, moving cycle spending from `$440.00` to `$451.00` prompts:
+
+```
+____________________________________________________________
+Spending alert:
+Withdrawals would exceed 90% of your allowance ($450.00).
+Proceed with this withdrawal? [yes/no]: no
+____________________________________________________________
+Withdrawal cancelled.
+____________________________________________________________
+```
+
+Alert settings are saved with your ledger and remain in effect after restarting FinNUS. If your opening balance is zero,
+falling below the opening balance also means falling below zero, so both threshold descriptions may appear together.
 <!-- @@author -->
 
 ### Viewing balance: `balance`
