@@ -3,12 +3,16 @@ package finnus.parser;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,6 +35,9 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+//@@author nkyjStar
+import finnus.command.HistoryCommand;
+//@@author
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -53,6 +60,9 @@ class ParserTest {
             Map.entry(CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class)),
             Map.entry(CommandWord.WITHDRAW, new CommandExample("withdraw 4.50 d/Lunch", WithdrawCommand.class)),
             Map.entry(CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class)),
+            //@@author nkyjStar
+            Map.entry(CommandWord.HISTORY, new CommandExample("history n/3 p/1", HistoryCommand.class)),
+            //@@author
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
@@ -119,6 +129,46 @@ class ParserTest {
     public void parse_invalidIntegerArguments_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
     }
+
+    //@@author nkyjStar
+    @ParameterizedTest
+    @ValueSource(strings = {"history n/0", "history n/", "history p/", "history p/-1", "history n/nope",
+        "history p/2147483648",
+        "history n/2 n/3", "history p/1 p/2", "history N/2 n/3", "history extra",
+        "history n/2 p/1 extra"})
+    public void parse_invalidHistoryArguments_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_oversizedHistoryPage_reportsRangeError() {
+        FinNusException error = assertThrows(FinNusException.class,
+                () -> Parser.parse("history p/10000000000000000"));
+        assertEquals("History page is out of range.", error.getMessage());
+    }
+
+    @Test
+    public void parse_oversizedHistoryPageSize_reportsRangeError() {
+        FinNusException error = assertThrows(FinNusException.class,
+                () -> Parser.parse("history n/10000000000000000"));
+        assertEquals("History page size is out of range.", error.getMessage());
+    }
+
+    @Test
+    public void parse_nonPositiveHistoryNumber_reportsFormatError() {
+        FinNusException error = assertThrows(FinNusException.class, () -> Parser.parse("history p/0"));
+        assertEquals("The page must be a positive whole number.", error.getMessage());
+    }
+
+    @Test
+    public void parse_historyOptionsInEitherOrder_returnsHistoryCommand() throws FinNusException {
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history p/2 n/3"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history n/2147483647"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history N/2"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("HiStOrY P/2 n/3"));
+    }
+    //@@author
 
     @Test
     public void parse_unknownCommand_preservesErrorMessage() {
@@ -370,6 +420,34 @@ class ParserTest {
         assertEquals(new BigDecimal("2000000"), Parser.parseForeignAmount("2000000", FORMAT));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"-5", "-4.50", "-0.001"})
+    public void parseAmount_negativeAmount_hasOwnMessage(String amount) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseAmount(amount, FORMAT));
+        assertEquals("Amount must not be negative.", e.getMessage());
+        e = assertThrows(FinNusException.class, () -> Parser.parseNonNegativeAmount(amount, FORMAT));
+        assertEquals("Amount must not be negative.", e.getMessage());
+        e = assertThrows(FinNusException.class, () -> Parser.parseForeignAmount(amount, FORMAT));
+        assertEquals("Amount must not be negative.", e.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"deposit -5", "withdraw -5 d/Lunch", "withdraw d/Lunch -5", "deposit -1100 c/JPY",
+        "allowance 5 a/-500"})
+    public void parse_negativeAmount_hasOwnMessage(String input) {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse(input));
+        assertEquals("Amount must not be negative.", e.getMessage());
+    }
+
+    @Test
+    public void parseAmount_otherInvalidFormats_keepFormatMessage() {
+        // Only a plain number with a minus sign gets the new message.
+        for (String amount : new String[]{"-", "-abc", "--5", "5-"}) {
+            FinNusException e = assertThrows(FinNusException.class, () -> Parser.parseAmount(amount, FORMAT));
+            assertTrue(e.getMessage().contains("is not a valid amount"), "Unexpected message for: " + amount);
+        }
+    }
+
     //@@author nabijonzzz
     @ParameterizedTest
     @ValueSource(strings = {"withdraw 4.50 d/Chicken rice t/food", "withdraw t/food d/Chicken rice 4.50",
@@ -419,6 +497,7 @@ class ParserTest {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
     }
 
+    //@@author lololol8484
     @Test
     public void parse_categoryWithoutNameListsAndWithNameAdds() throws FinNusException {
         TransactionList transactions = new TransactionList();
@@ -475,6 +554,50 @@ class ParserTest {
     @ValueSource(strings = {"find", "find   ", "FIND"})
     public void parse_findWithoutKeyword_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+    //@@author
+
+    //@@author chancheese
+    @ParameterizedTest
+    @ValueSource(strings = {"find t/food", "find lunch t/food", "find t/food lunch", "find t/ food",
+        "find chicken t/food rice"})
+    public void parse_findWithCategory_returnsFindCommand(String input) throws FinNusException {
+        assertInstanceOf(FindCommand.class, Parser.parse(input));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"find t/", "find lunch t/", "find t/food t/bills", "find t/fo|od", "find t/food/bills"})
+    public void parse_findWithInvalidCategory_throwsException(String input) {
+        assertThrows(FinNusException.class, () -> Parser.parse(input));
+    }
+
+    @Test
+    public void parse_findWithoutKeywordOrCategory_suggestsBoth() {
+        FinNusException e = assertThrows(FinNusException.class, () -> Parser.parse("find"));
+        assertTrue(e.getMessage().startsWith("Missing keyword or category to search for, e.g. find lunch or "
+                + "find t/food."));
+    }
+
+    @Test
+    public void parse_findThenExecute_filtersByCategoryEndToEnd() throws FinNusException {
+        LocalDate today = LocalDate.of(2026, 10, 30);
+        TransactionList list = new TransactionList();
+        Parser.parse("withdraw 4.50 d/Lunch t/food", today).execute(list, new Ui());
+        Parser.parse("withdraw 1.20 d/Bus t/transport", today).execute(list, new Ui());
+
+        PrintStream original = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(output));
+        try {
+            Parser.parse("find t/FOOD", today).execute(list, new Ui());
+        } finally {
+            System.setOut(original);
+        }
+        String printed = output.toString();
+        assertTrue(printed.contains("Found 1 transaction(s) in #Food:"));
+        assertTrue(printed.contains("2. [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food"));
+        assertTrue(printed.contains("Spent: $4.50 in 1 withdrawal(s)."));
+        assertFalse(printed.contains("Bus"));
     }
     //@@author
 }

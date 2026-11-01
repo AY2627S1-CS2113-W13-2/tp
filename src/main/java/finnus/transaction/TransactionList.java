@@ -95,6 +95,7 @@ public class TransactionList {
     }
     //@@author
 
+    //@@author nkyjStar
     /**
      * Returns a read-only view of all transactions, so callers cannot modify
      * the list directly.
@@ -137,6 +138,7 @@ public class TransactionList {
         List<Transaction> subList = getSubList(fromIndex, transactions.size()).reversed();
         return subList;
     }
+    //@@author
 
     /**
      * Deletes the transaction at the given zero-based index and returns it.

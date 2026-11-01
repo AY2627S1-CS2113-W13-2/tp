@@ -22,6 +22,7 @@ import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
 import finnus.command.HelpCommand;
+import finnus.command.HistoryCommand;
 import finnus.command.RateCommand;
 import finnus.command.RecentTransactionCommand;
 import finnus.command.WithdrawCommand;
@@ -168,6 +169,10 @@ public class Parser {
             new HelpCommand();
         case RECENT ->
             parseRecent(arguments);
+        //@@author nkyjStar
+        case HISTORY ->
+            parseHistory(arguments);
+        //@@author
         case FIND ->
             parseFind(arguments);
         case BALANCE ->
@@ -215,19 +220,26 @@ public class Parser {
         return new DeleteCommand(index);
     }
 
-    //@@author nabijonzzz
+    //@@author chancheese
     /**
-     * Parses {@code find KEYWORD}. Everything after the command word is the keyword,
-     * so a phrase such as {@code find chicken rice} is searched as a whole.
+     * Parses {@code find [KEYWORD] [t/CATEGORY]}. Everything after the command word, apart from
+     * an optional {@code t/CATEGORY} part, is the keyword, so a phrase such as
+     * {@code find chicken rice} is searched as a whole.
      *
-     * @throws FinNusException If no keyword is given.
+     * @throws FinNusException If neither a keyword nor a category is given, or the category
+     *     part is invalid.
      */
     private static Command parseFind(String arguments) throws FinNusException {
-        if (arguments.isBlank()) {
-            throw new FinNusException("Missing keyword to search for, e.g. " + CommandWord.FIND.getWord()
-                    + " lunch.\nFormat: " + CommandWord.FIND.getUsage());
+        // t/ is read exactly as for withdraw, so the same category names and errors apply.
+        String[] categoryAndRest = extractCategory(arguments);
+        String categoryName = categoryAndRest[0];
+        String keyword = categoryAndRest[1].trim();
+        if (categoryName == null && keyword.isEmpty()) {
+            throw new FinNusException("Missing keyword or category to search for, e.g. "
+                    + CommandWord.FIND.getWord() + " lunch or " + CommandWord.FIND.getWord() + " "
+                    + CATEGORY_PREFIX + "food.\nFormat: " + CommandWord.FIND.getUsage());
         }
-        return new FindCommand(arguments.trim());
+        return new FindCommand(keyword.isEmpty() ? null : keyword, categoryName);
     }
     //@@author
 
@@ -295,6 +307,7 @@ public class Parser {
     }
     //@@author
 
+    //@@author nkyjStar
     /**
      * Returns RecentTransactionCommand instance
      *
@@ -321,6 +334,41 @@ public class Parser {
 
         return new RecentTransactionCommand(length);
     }
+
+    /**
+     * Parses optional page size and page fields, allowing either order but no duplicates.
+     *
+     * @param arguments The text after {@code history}, or blank for the default page and size.
+     * @return A history command configured with the requested page and page size.
+     * @throws FinNusException If a field is invalid, duplicated, or unrecognized.
+     */
+    private static Command parseHistory(String arguments) throws FinNusException {
+        assert arguments != null : "History arguments must not be null";
+        int pageSize = HistoryCommand.DEFAULT_PAGE_SIZE;
+        int page = 1;
+        boolean hasPageSize = false;
+        boolean hasPage = false;
+        if (arguments.isBlank()) {
+            return new HistoryCommand(pageSize, page);
+        }
+
+        for (String rawField : arguments.split("\\s+")) {
+            String field = rawField.toLowerCase(Locale.ROOT);
+            if (field.startsWith("n/") && !hasPageSize) {
+                pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
+                hasPageSize = true;
+            } else if (field.startsWith("p/") && !hasPage) {
+                page = HistoryCommand.parsePositiveNumber(field.substring(2), "page");
+                hasPage = true;
+            } else {
+                throw new FinNusException("Invalid history arguments. Format: "
+                        + CommandWord.HISTORY.getUsage());
+            }
+        }
+
+        return new HistoryCommand(pageSize, page);
+    }
+    //@@author
 
     /**
      * Parses {@code rate} (list all rates) or {@code rate CURRENCY RATE} (set
@@ -600,6 +648,7 @@ public class Parser {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
+        rejectNegativeAmount(text);
         if (!text.matches("\\d+(\\.\\d{1,2})?")) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a number with at most 2 decimal places, e.g. 1100");
@@ -680,8 +729,11 @@ public class Parser {
         if (text.isEmpty()) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
+        //@@author chancheese
+        rejectNegativeAmount(text);
+        //@@author
         // Only plain decimals like 4, 4.5 or 4.50 are accepted; this rejects
-        // "1e3", "NaN", "Infinity", "-5" and "$5" in one simple check.
+        // "1e3", "NaN", "Infinity" and "$5" in one simple check.
         if (!text.matches("\\d+(\\.\\d{1,2})?")) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a number with at most 2 decimal places, e.g. 4.50");
@@ -693,4 +745,19 @@ public class Parser {
         }
         return amount;
     }
+
+    //@@author chancheese
+    /**
+     * Rejects amounts typed with a minus sign, such as {@code "-5"}, with their own
+     * message, so users know the sign is the problem rather than the number format.
+     * Amounts are always entered as positive numbers; the command decides the sign.
+     *
+     * @throws FinNusException If the text is a number with a leading minus sign.
+     */
+    private static void rejectNegativeAmount(String text) throws FinNusException {
+        if (text.matches("-\\d+(\\.\\d+)?")) {
+            throw new FinNusException("Amount must not be negative.");
+        }
+    }
+    //@@author
 }
