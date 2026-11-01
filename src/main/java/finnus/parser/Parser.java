@@ -345,7 +345,8 @@ public class Parser {
             return new HistoryCommand(pageSize, page);
         }
 
-        for (String field : arguments.split("\\s+")) {
+        for (String rawField : arguments.split("\\s+")) {
+            String field = rawField.toLowerCase(Locale.ROOT);
             if (field.startsWith("n/") && !hasPageSize) {
                 pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
                 hasPageSize = true;

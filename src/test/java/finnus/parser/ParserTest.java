@@ -130,7 +130,8 @@ class ParserTest {
     @ParameterizedTest
     @ValueSource(strings = {"history n/0", "history n/", "history p/", "history p/-1", "history n/nope",
         "history p/2147483648",
-        "history n/2 n/3", "history p/1 p/2", "history extra", "history n/2 p/1 extra"})
+        "history n/2 n/3", "history p/1 p/2", "history N/2 n/3", "history extra",
+        "history n/2 p/1 extra"})
     public void parse_invalidHistoryArguments_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
     }
@@ -160,6 +161,8 @@ class ParserTest {
         assertInstanceOf(HistoryCommand.class, Parser.parse("history p/2 n/3"));
         assertInstanceOf(HistoryCommand.class, Parser.parse("history"));
         assertInstanceOf(HistoryCommand.class, Parser.parse("history n/2147483647"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("history N/2"));
+        assertInstanceOf(HistoryCommand.class, Parser.parse("HiStOrY P/2 n/3"));
     }
     //@@author
 

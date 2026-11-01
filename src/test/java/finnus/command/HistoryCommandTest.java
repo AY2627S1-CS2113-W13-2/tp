@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import finnus.exception.FinNusException;
 import finnus.money.Money;
+import finnus.parser.Parser;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
@@ -53,6 +54,18 @@ class HistoryCommandTest {
 
         history.handleInput("p/2", transactions, ui);
         assertEquals("Transaction history: 4-6 of 10 (3 per page):", ui.lines.getFirst());
+    }
+
+    @Test
+    public void parse_mixedCaseOptions_showsSamePageAsLowerCaseOptions() throws FinNusException {
+        TransactionList transactions = transactions(5);
+
+        Parser.parse("history N/2 P/2").execute(transactions, ui);
+        String mixedCaseHeader = ui.lines.getFirst();
+
+        Parser.parse("history n/2 p/2").execute(transactions, ui);
+        assertEquals("Transaction history: 3-4 of 5 (2 per page):", mixedCaseHeader);
+        assertEquals(mixedCaseHeader, ui.lines.getFirst());
     }
 
     @Test
