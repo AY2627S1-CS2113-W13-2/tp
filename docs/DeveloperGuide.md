@@ -105,7 +105,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 11's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 14's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -154,6 +154,18 @@ create values through `Money.of(BigDecimal)`, `Money.of(String)`, or `Money.of(l
 returns the shared `Money.ZERO` instance for any numerical zero; it creates a new `Money` for a
 nonzero result. This means two references to zero need not identify two different objects.
 
+The class diagram shows where monetary values are stored. Each `Transaction` has one `Money`
+amount, each `TransactionList` has one `Money` opening balance and zero or more transactions, and
+each `Money` wraps one `BigDecimal`. The associations show references rather than exclusive
+ownership: an immutable `Money` instance may be shared. The diagram lists every `Money` method,
+including its private constructor, but omits its private formatting constants and unrelated
+members of `Transaction` and `TransactionList`.
+
+![Class diagram of Money and its stored references](images/MoneyClassDiagram.png)
+
+*Figure 4. Money's internal value and its references from transactions and the transaction list.
+[PlantUML source](diagrams/MoneyClassDiagram.puml).*
+
 Arithmetic does not change either operand. `add()` adds the wrapped `BigDecimal` values and
 returns the result through `Money.of()`. `negate()` similarly returns the value with its sign
 reversed. For example, if `first` represents `10.005` and `second` represents `0.10`,
@@ -168,7 +180,7 @@ inputs and the nonzero sum are distinct objects:
 
 ![Sequence diagram for invoking Money methods](images/MoneySequenceDiagram.png)
 
-*Figure 4. Exact addition, display rounding, and preservation of the original monetary value.
+*Figure 5. Exact addition, display rounding, and preservation of the original monetary value.
 [PlantUML source](diagrams/MoneySequenceDiagram.puml).*
 
 `Money` does not require every value to be positive or below `Money.MAX_AMOUNT`.
@@ -223,7 +235,7 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
-*Figure 5. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
+*Figure 6. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
 
 A complete save file can contain the following records:
 
@@ -477,9 +489,8 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-*Figure 6. Retrieving and displaying up to two recent transactions.
-[PlantUML source](diagrams/RecentSequenceDiagram.puml). Logging, allowance crediting, the ledger state check and
-saving are left out.*
+*Figure 7. Retrieving and displaying up to two recent transactions.
+[PlantUML source](diagrams/RecentSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
 Java deletion or guarantee immediate collection.
@@ -527,7 +538,7 @@ The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` 
 
 ![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
 
-*Figure 7. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
+*Figure 8. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
 allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
 
 The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
@@ -544,7 +555,7 @@ The class diagram shows the session reference and how history reads `Transaction
 
 ![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
 
-*Figure 8. History command state and its application, parser, transaction list, and UI
+*Figure 9. History command state and its application, parser, transaction list, and UI
 relationships.
 [PlantUML source](diagrams/HistoryClassDiagram.puml).*
 
@@ -720,7 +731,7 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-*Figure 9. Calculating and displaying the current balance.
+*Figure 10. Calculating and displaying the current balance.
 [PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -750,7 +761,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
-*Figure 10. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+*Figure 11. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
 [PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
@@ -816,6 +827,8 @@ Users can add their own categories with `category NAME` and list all categories 
 The class diagram below shows how these classes are related. Only the members relevant to categories are shown.
 
 ![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
+
+*Figure 12. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
 
 `TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
 it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
@@ -901,6 +914,8 @@ the category from [Categorising spending](#categorising-spending) is resolved. L
 validation are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
+
+*Figure 13. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
 
 The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
 description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
@@ -1055,7 +1070,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 11. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 14. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -1072,7 +1087,7 @@ protect data that could not be inspected.
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 12. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 15. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
