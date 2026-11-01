@@ -489,19 +489,24 @@ ____________________________________________________________
 Found 2 transaction(s) matching "lunch":
 1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food
 3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food
+Received: $0.00 in 0 deposit(s).
+Spent: $16.50 in 2 withdrawal(s).
 Use the number with delete to remove a transaction.
 ____________________________________________________________
 ```
 <!-- @@author -->
 
 <!-- @@author chancheese -->
+Below the results, `find` adds them up in SGD, in the same way as the
+[`allowance`](#setting-your-monthly-allowance-allowance) summary: `Received` for deposits and `Spent` for withdrawals.
+Amounts in other currencies count at the SGD value they were recorded with.
+
 Searching by category:
 
 * Give a `KEYWORD`, a `t/CATEGORY`, or both. With both, only transactions matching both are shown.
 * `t/CATEGORY` works as in [`withdraw`](#categorising-your-spending-t-and-category): it is not case-sensitive, and a
   category that does not exist is rejected. It can be given anywhere after `find`, but only once.
-* Deposits have no category, so a search with `t/CATEGORY` only shows withdrawals. It also shows the total spent,
-  in SGD.
+* Deposits have no category, so a search with `t/CATEGORY` only shows withdrawals, and only the `Spent` total.
 
 Examples:
 
@@ -515,7 +520,7 @@ Found 3 transaction(s) in #Food:
 1. [30 Oct 2026] [Withdrawal] -$12.00 (Lunch with friends) #Food
 3. [28 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food
 4. [27 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Food
-Total spent: $26.50
+Spent: $26.50 in 3 withdrawal(s).
 Use the number with delete to remove a transaction.
 ____________________________________________________________
 ```

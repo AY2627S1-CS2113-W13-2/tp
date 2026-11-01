@@ -531,9 +531,12 @@ The command only reads the list, so searching never changes any transaction.
 <!-- @@author chancheese -->
 With a category, `execute()` first resolves the name through `CategoryList#resolve()`, as `WithdrawCommand` does. This
 turns `food` into `Food`, and rejects a category that does not exist. A transaction then matches only if it meets
-every criterion given. Deposits have no category, so they never match a category search. Because the results are
-all withdrawals, the command also adds up their SGD amounts with `Money#add()` and shows a `Total spent:` line.
-Foreign withdrawals count at the SGD value stored when they were recorded.
+every criterion given. Deposits have no category, so they never match a category search.
+
+Below the results, `FindCommand` shows `Received:` and `Spent:` totals, worded as in the `allowance` summary. Both
+commands count with the same small `TransactionTotal` class, which adds up the SGD amounts with `Money#add()` and
+counts the transactions. Foreign transactions count at the SGD value stored when they were recorded. A category
+search leaves out the `Received:` line, because it can never include a deposit.
 <!-- @@author -->
 
 <!-- @@author nabijonzzz -->
