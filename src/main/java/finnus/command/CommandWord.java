@@ -59,7 +59,13 @@ public enum CommandWord {
     }
 
     //@@author nkyjStar
-    /** Creates a command word with distinct help rows for its subcommands. */
+    /**
+     * Creates a command word with distinct help rows for its subcommands.
+     *
+     * @param word The command word typed by the user.
+     * @param description A short description of the command.
+     * @param helpEntries The separate help rows for its subcommands.
+     */
     CommandWord(String word, String description, HelpEntry... helpEntries) {
         this.word = word;
         this.description = description;
@@ -85,6 +91,8 @@ public enum CommandWord {
 
     /**
      * Returns full usage syntax, combining subcommand forms when present.
+     *
+     * @return The command syntax, or subcommand syntaxes joined by "or".
      */
     public String getUsage() {
         //@@author nkyjStar
@@ -96,13 +104,23 @@ public enum CommandWord {
     }
 
     //@@author nkyjStar
-    /** Returns the separate rows shown for this command in the help table. */
+    /**
+     * Returns the separate rows shown for this command in the help table.
+     *
+     * @return The configured subcommand rows, or one row for a simple command.
+     */
     public List<HelpEntry> getHelpEntries() {
         return helpEntries.isEmpty()
                 ? List.of(new HelpEntry(word, description, getUsage())) : helpEntries;
     }
 
-    /** One help-table row before it is wrapped to fit the console width. */
+    /**
+     * One help-table row before it is wrapped to fit the console width.
+     *
+     * @param command The command or subcommand label.
+     * @param description The short description shown beside it.
+     * @param usage The full command syntax.
+     */
     public record HelpEntry(String command, String description, String usage) {
     }
     //@@author

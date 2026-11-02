@@ -15,7 +15,12 @@ public enum ChartPeriod {
     MONTH,
     YEAR;
 
-    /** Returns the first day of the period containing {@code date}. Weeks start on Monday. */
+    /**
+     * Finds the first day of the period containing {@code date}. Weeks start on Monday.
+     *
+     * @param date A date within the requested period.
+     * @return The first day of that period.
+     */
     public LocalDate startOf(LocalDate date) {
         return switch (this) {
         case DAY -> date;
@@ -25,7 +30,12 @@ public enum ChartPeriod {
         };
     }
 
-    /** Returns the first day after the period beginning at {@code start}. */
+    /**
+     * Finds the first day after the period beginning at {@code start}.
+     *
+     * @param start The first day of a period.
+     * @return The first day of the next period.
+     */
     public LocalDate nextStart(LocalDate start) {
         return switch (this) {
         case DAY -> start.plusDays(1);
@@ -35,7 +45,13 @@ public enum ChartPeriod {
         };
     }
 
-    /** Parses a chart period without depending on the machine's default locale. */
+    /**
+     * Parses a chart period without depending on the machine's default locale.
+     *
+     * @param text The period name, ignoring letter case.
+     * @return The matching shared enum constant.
+     * @throws FinNusException If {@code text} is not DAY, WEEK, MONTH, or YEAR.
+     */
     public static ChartPeriod parse(String text) throws FinNusException {
         try {
             return valueOf(text.toUpperCase(Locale.ROOT));

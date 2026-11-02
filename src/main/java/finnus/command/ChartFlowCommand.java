@@ -25,7 +25,14 @@ public class ChartFlowCommand extends Command {
     private final ChartPeriod period;
     private final int page;
 
-    /** Creates a read-only cash-flow chart request with an inclusive date range. */
+    /**
+     * Creates a read-only cash-flow chart request with an inclusive date range.
+     *
+     * @param from The first date to include.
+     * @param to The last date to include; not before {@code from}.
+     * @param period The calendar interval used to group transactions.
+     * @param page The one-based page number.
+     */
     public ChartFlowCommand(LocalDate from, LocalDate to, ChartPeriod period, int page) {
         assert from != null : "Chart start date must not be null";
         assert to != null : "Chart end date must not be null";
@@ -38,7 +45,13 @@ public class ChartFlowCommand extends Command {
         this.page = page;
     }
 
-    /** Aggregates only transactions inside the requested dates, including partial end periods. */
+    /**
+     * Aggregates only transactions inside the requested dates, including partial end periods.
+     *
+     * @param transactions The ledger to read without modifying it.
+     * @param ui The UI used to display the selected page.
+     * @throws FinNusException If the requested page is beyond the available pages.
+     */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
         assert transactions != null : "Transaction list must not be null";

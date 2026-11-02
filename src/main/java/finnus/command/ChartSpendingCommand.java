@@ -22,14 +22,24 @@ public class ChartSpendingCommand extends Command {
     private final ChartPeriod period;
     private final LocalDate date;
 
-    /** Creates an overall chart when both arguments are null, or a dated chart otherwise. */
+    /**
+     * Creates an overall chart when both arguments are null, or a dated chart otherwise.
+     *
+     * @param period The calendar interval to show, or null for overall spending.
+     * @param date A date within that interval, or null for overall spending.
+     */
     public ChartSpendingCommand(ChartPeriod period, LocalDate date) {
         assert (period == null) == (date == null) : "Period and date must be supplied together";
         this.period = period;
         this.date = date;
     }
 
-    /** Aggregates recorded SGD withdrawal values and shows only categories with spending. */
+    /**
+     * Aggregates recorded SGD withdrawal values and shows only categories with spending.
+     *
+     * @param transactions The ledger to read without modifying it.
+     * @param ui The UI used to display the category totals.
+     */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
         assert transactions != null : "Transaction list must not be null";

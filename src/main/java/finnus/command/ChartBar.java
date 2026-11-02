@@ -12,7 +12,13 @@ final class ChartBar {
     private ChartBar() {
     }
 
-    /** Scales a positive amount against {@code maximum}; zero has an empty bar. */
+    /**
+     * Scales a positive amount against {@code maximum}; zero has an empty bar.
+     *
+     * @param amount The SGD total represented by the bar.
+     * @param maximum The largest total on the chart; positive when {@code amount} is positive.
+     * @return A fixed-width bar followed by the exact formatted SGD total.
+     */
     static String render(Money amount, Money maximum) {
         int length = 0;
         if (amount.isPositive()) {

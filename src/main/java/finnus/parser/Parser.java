@@ -383,7 +383,14 @@ public class Parser {
     //@@author
 
     //@@author nkyjStar
-    /** Parses the two chart forms and rejects missing, duplicate, or unrecognized fields. */
+    /**
+     * Parses the two chart forms and rejects missing, duplicate, or unrecognized fields.
+     *
+     * @param arguments The chart subcommand and its fields.
+     * @param today The latest date accepted in a chart request.
+     * @return The parsed flow or spending command.
+     * @throws FinNusException If the subcommand or any field is invalid.
+     */
     private static Command parseChart(String arguments, LocalDate today) throws FinNusException {
         String[] parts = arguments.split("\\s+", 2);
         String mode = parts[0].toLowerCase(Locale.ROOT);
@@ -401,7 +408,14 @@ public class Parser {
         }
     }
 
-    /** Parses an inclusive date range, a shared chart period, and an optional page. */
+    /**
+     * Parses an inclusive date range, a shared chart period, and an optional page.
+     *
+     * @param arguments The fields following {@code chart flow}.
+     * @param today The latest date accepted in the range.
+     * @return A flow command for the requested range and page.
+     * @throws FinNusException If a field, date, range, period, or page is invalid.
+     */
     private static Command parseChartFlow(String arguments, LocalDate today) throws FinNusException {
         String fromText = null;
         String toText = null;
@@ -451,7 +465,14 @@ public class Parser {
         return new ChartFlowCommand(from, to, ChartPeriod.parse(periodText), page);
     }
 
-    /** Parses overall spending or one day, week, month, or year containing a date. */
+    /**
+     * Parses overall spending or one day, week, month, or year containing a date.
+     *
+     * @param arguments The optional fields following {@code chart spending}.
+     * @param today The latest date accepted for a dated chart.
+     * @return A spending command for all records or the selected calendar period.
+     * @throws FinNusException If the optional fields, period, or date are invalid.
+     */
     private static Command parseChartSpending(String arguments, LocalDate today) throws FinNusException {
         if (arguments.isBlank()) {
             return new ChartSpendingCommand(null, null);
@@ -484,7 +505,14 @@ public class Parser {
         return new ChartSpendingCommand(ChartPeriod.parse(periodText), parseChartDate(dateText, today));
     }
 
-    /** Checks chart dates using the same limits as transaction dates. */
+    /**
+     * Checks chart dates using the same limits as transaction dates.
+     *
+     * @param text The date in YYYY-MM-DD format.
+     * @param today The latest date permitted.
+     * @return The validated date.
+     * @throws FinNusException If the date is malformed or outside the permitted range.
+     */
     private static LocalDate parseChartDate(String text, LocalDate today) throws FinNusException {
         if (!text.matches(DATE_FORMAT_REGEX)) {
             throw new FinNusException("'" + text + "' is not a valid date. Use YYYY-MM-DD.");
@@ -501,7 +529,13 @@ public class Parser {
         return date;
     }
 
-    /** Converts a one-based page number without overflowing an int. */
+    /**
+     * Converts a one-based page number without overflowing an int.
+     *
+     * @param text The page number as decimal digits.
+     * @return The positive page number.
+     * @throws FinNusException If the number is invalid, zero, or too large for an int.
+     */
     private static int parseChartPage(String text) throws FinNusException {
         if (!text.matches("[0-9]+") || new BigInteger(text).signum() == 0) {
             throw new FinNusException("Chart page must be a positive whole number.");
@@ -513,7 +547,12 @@ public class Parser {
         return number.intValue();
     }
 
-    /** Gives a form-specific syntax hint for invalid chart fields. */
+    /**
+     * Gives a form-specific syntax hint for invalid chart fields.
+     *
+     * @param mode The chart form, either flow or spending.
+     * @return An exception with the matching usage syntax.
+     */
     private static FinNusException invalidChartArguments(String mode) {
         String syntax = mode.equals("flow")
                 ? "chart flow from/START to/END int/PERIOD [p/PAGE]"

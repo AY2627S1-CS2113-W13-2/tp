@@ -38,7 +38,11 @@ public class HelpCommand extends Command {
      */
     private static final String[] HELP_LINES = createHelpLines();
 
-    /** Builds an ASCII table with lines no wider than 80 columns. */
+    /**
+     * Builds an ASCII table with lines no wider than 80 columns.
+     *
+     * @return The help text, with each table row stored as one line.
+     */
     private static String[] createHelpLines() {
         //@@author lololol8484
         List<CommandWord> availableCommands = Arrays.stream(CommandWord.values())
@@ -68,7 +72,14 @@ public class HelpCommand extends Command {
         return lines.toArray(String[]::new);
     }
 
-    /** Adds a row, using blank cells on continuation lines when a value wraps. */
+    /**
+     * Adds a row, using blank cells on continuation lines when a value wraps.
+     *
+     * @param lines The help output being built.
+     * @param command The command label for the first column.
+     * @param description The short description for the second column.
+     * @param syntax The command syntax for the third column.
+     */
     private static void addWrappedRow(List<String> lines, String command, String description, String syntax) {
         List<String> commandLines = wrap(command, COMMAND_WIDTH);
         List<String> descriptionLines = wrap(description, DESCRIPTION_WIDTH);
@@ -80,7 +91,13 @@ public class HelpCommand extends Command {
         }
     }
 
-    /** Wraps text at spaces and hard-wraps any token wider than its column. */
+    /**
+     * Wraps text at spaces and hard-wraps any token wider than its column.
+     *
+     * @param text The text to fit within the column.
+     * @param width The maximum number of characters per line.
+     * @return The text split into lines that fit the column.
+     */
     static List<String> wrap(String text, int width) {
         List<String> lines = new ArrayList<>();
         StringBuilder line = new StringBuilder();
