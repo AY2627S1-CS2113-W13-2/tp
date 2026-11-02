@@ -191,8 +191,8 @@ running balance. It also allows exact sub-cent values within the domain even tho
 user input is limited to two decimal places.
 
 <!-- @@author chancheese -->
-`Money.MAX_AMOUNT` ($1,000,000) caps each amount a user enters, including foreign amounts after
-conversion. A student is unlikely to move that much at once, so a larger value is treated as a typo.
+`Money.MAX_AMOUNT` (SGD 1,000,000) caps each amount a user enters. A foreign amount is checked after it is
+converted to SGD, so a large amount in a currency such as JPY can still be valid. A student is unlikely to move that much at once, so a larger value is treated as a typo.
 <!-- @@author -->
 
 #### Formatting and equality
@@ -310,7 +310,7 @@ An amount is accepted only if it:
 * matches `\d+(\.\d{1,2})?`, i.e. a plain number with at most 2 decimal places. This one
   check rejects inputs such as `-5`, `1e3`, `NaN`, `$5` and `4.555`;
 * is greater than 0;
-* is not more than `Money.MAX_AMOUNT` (1,000,000), which catches typos such as extra zeros.
+* is not more than `Money.MAX_AMOUNT` (SGD 1,000,000), which catches typos such as extra zeros.
 
 If any rule fails, the parser throws a `FinNusException`. The main loop catches it and shows the
 message to the user, so invalid input never stops the app.
@@ -778,7 +778,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 4. Otherwise, `convert()` creates a `ForeignAmount`, a record of the currency code, the amount as
    typed and the rate used, and calls its `toSgd()`, which divides the amount by the rate and
    rounds it to the nearest cent. If the result is $0.00 or above `Money.MAX_AMOUNT`
-   ($1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
+   (SGD 1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 
