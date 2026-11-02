@@ -1,0 +1,102 @@
+@startuml ChartSequenceDiagram
+' @@author nkyjStar
+title Building a cash-flow or spending chart
+skinparam shadowing false
+hide footbox
+
+actor User
+participant "ui:Ui" as Ui
+participant ":FinNUS" as App
+participant "<<class>>\nParser" as Parser
+participant "<<enum>>\nChartPeriod" as PeriodType
+participant "chart:Command" as Chart
+participant "period:ChartPeriod" as Period
+participant "transactions:TransactionList" as Ledger
+participant "<<class>>\nChartBar" as Bar
+
+App -> Ui: readCommand()
+activate Ui
+User -> Ui: chart flow ... or chart spending ...
+Ui --> App: input
+deactivate Ui
+
+App -> App: executeCommand(input)
+activate App
+App -> Parser: parse(input, today)
+activate Parser
+opt flow or dated spending
+    Parser -> PeriodType: parse(int/PERIOD)
+    activate PeriodType
+    PeriodType --> Parser: period enum constant
+    deactivate PeriodType
+end
+create Chart
+Parser -> Chart ++: new chart command(...)
+Chart --> Parser --: command
+Parser --> App: ChartFlowCommand or ChartSpendingCommand
+deactivate Parser
+
+App -> Chart: execute(transactions, ui)
+activate Chart
+Chart -> Ledger: getAll()
+activate Ledger
+Ledger --> Chart: recorded transactions
+deactivate Ledger
+
+alt cash flow
+    Chart -> Period: startOf(from)
+    activate Period
+    Period --> Chart: first period start
+    deactivate Period
+    loop until the final requested period
+        Chart -> Period: nextStart(start)
+        activate Period
+        Period --> Chart: next period start
+        deactivate Period
+    end
+    loop each dated transaction in the exact range
+        Chart -> Period: startOf(transaction date)
+        activate Period
+        Period --> Chart: bucket start
+        deactivate Period
+    end
+    note over Chart
+      Sum deposits and withdrawals by period,
+      then select four periods for the page.
+    end note
+else spending by category
+    opt dated chart
+        Chart -> Period: startOf(date)
+        activate Period
+        Period --> Chart: period start
+        deactivate Period
+        Chart -> Period: nextStart(start)
+        activate Period
+        Period --> Chart: exclusive period end
+        deactivate Period
+    end
+    note over Chart
+      Sum withdrawals by category;
+      filter by period when a date is given.
+    end note
+end
+loop each displayed total
+    Chart -> Bar: render(total, page maximum)
+    activate Bar
+    Bar --> Chart: bar and SGD total
+    deactivate Bar
+end
+Chart -> Ui: showMessage(chart lines)
+activate Ui
+Ui -> User: text chart
+Ui --> Chart: return
+deactivate Ui
+Chart --> App: return
+deactivate Chart
+note over App
+  Compare snapshots and retry pending saves.
+end note
+App --> App: false
+deactivate App
+destroy Chart
+@enduml

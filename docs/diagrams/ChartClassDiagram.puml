@@ -1,0 +1,58 @@
+@startuml ChartClassDiagram
+' @@author nkyjStar
+title Chart command classes and shared calendar period
+hide circle
+hide empty members
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+abstract class Command {
+    + {abstract} execute(transactions, ui) : void
+}
+
+class ChartFlowCommand {
+    - from : LocalDate
+    - to : LocalDate
+    - page : int
+    + execute(transactions, ui) : void
+}
+
+class ChartSpendingCommand {
+    - date : LocalDate
+    + execute(transactions, ui) : void
+}
+
+enum ChartPeriod {
+    DAY
+    WEEK
+    MONTH
+    YEAR
+    + startOf(date) : LocalDate
+    + nextStart(start) : LocalDate
+}
+
+class TransactionList
+
+class CategoryList
+
+class Transaction {
+    + getType() : TransactionType
+    + getAmount() : Money
+    + getCategory() : Optional<String>
+    + getDate() : Optional<LocalDate>
+}
+
+Command <|-- ChartFlowCommand
+Command <|-- ChartSpendingCommand
+ChartFlowCommand --> "1 " ChartPeriod : period
+ChartSpendingCommand ---> "0..1  " ChartPeriod : period
+ChartFlowCommand ..> TransactionList : reads
+ChartSpendingCommand ..> TransactionList : reads
+TransactionList *--> "1 " CategoryList : categories
+TransactionList *--> "0..* " Transaction : entries
+
+note right of ChartSpendingCommand
+  The period and date are both absent for an
+  overall chart, or both present for a dated chart.
+end note
+@enduml

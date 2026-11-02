@@ -1146,6 +1146,72 @@ For example, `withdraw 4.50` reaches `Parser#parseWithdraw()`, which rejects the
 passes its message to `Ui#showError()`, and reads the next command. Any changes still pending from an earlier command
 remain available for a later save attempt.
 
+<!-- @@author -->
+<!-- @@author nkyjStar -->
+### Financial charts
+
+`CommandWord` registers `chart` as one parser command word and supplies separate help rows for
+`chart flow` and `chart spending`. `Parser#parseChart()` selects the subcommand and rejects missing,
+duplicate, or unknown fields. Both commands read the ledger without changing it. The parser validates
+ISO dates against the same 2000-01-01 through today bounds used for transactions.
+
+Both commands use the **same `ChartPeriod` enum**. `startOf(date)` finds a calendar period's first day;
+`nextStart(start)` gives its exclusive end. Weeks start on Monday. This keeps boundary rules in one
+place while each command retains its own aggregation. The two commands use the same `ChartBar` renderer,
+which scales bars against the largest total on the displayed chart and appends the SGD figure.
+The static `ChartPeriod.parse()` returns an existing enum constant; the commands call `startOf()` and
+`nextStart()` on that constant.
+
+![Class diagram for both chart commands and their shared period](images/ChartClassDiagram.png)
+
+*Figure 16. Both chart commands use the same calendar period enum and read the ledger. A flow command
+has one period; a spending command has zero or one. Each transaction list has one category list and
+zero or more transactions. Dashed read dependencies have no multiplicity; parsing, display, and bar
+rendering appear in Figure 17. [PlantUML source](diagrams/ChartClassDiagram.puml).*
+
+#### Deposits and withdrawals: `chart flow`
+
+`chart flow from/START to/END int/PERIOD [p/PAGE]` requires `from <= to` and a positive, one-based
+page. `ChartFlowCommand` enumerates periods intersecting the inclusive requested date range, then checks
+whether the requested page exists. A page shows at most four periods in chronological order. It sums
+deposits and withdrawals separately using `Money`, filtering transactions to the exact `from` and `to`
+dates before assigning them to periods. This matters when the request starts or ends in the middle of a
+week, month, or year. Empty periods show zero totals. An undated legacy transaction cannot be assigned
+to a period, so it is excluded. Page selection is part of each command invocation; chart display does
+not enter the interactive history mode.
+
+#### Spending by category: `chart spending`
+
+`chart spending [int/PERIOD on/DATE]` accepts either no filters or both a period and a date.
+`ChartSpendingCommand` sums withdrawals by category across the full ledger or within the calendar
+period containing `on/DATE`. Overall spending includes undated legacy withdrawals; a dated chart
+cannot include them. It shows only categories with a positive total, in the order provided by
+`CategoryList`. Foreign transactions use their stored SGD amount, preserving the rate used when they
+were recorded. Deposits and the opening balance are excluded from both spending totals.
+
+![Sequence diagram for chart parsing, aggregation, and display](images/ChartSequenceDiagram.png)
+
+*Figure 17. Parsing and displaying either chart form. The `ChartPeriod` enum lifeline receives the
+static `parse()` call; `period:ChartPeriod` receives calls on the returned enum constant. The parser
+creates the chart command; its
+lifeline ends when the local command reference leaves scope, without implying immediate JVM garbage
+collection. Activation bars show execution, and dashed arrows show method returns. Snapshot comparison
+and pending-save retry are summarised; allowance handling is omitted.
+[PlantUML source](diagrams/ChartSequenceDiagram.puml).*
+
+#### Validation and logging
+
+`ParserChartTest` covers valid and invalid syntax and date bounds. `ChartCommandTest` covers period
+boundaries, four-period pagination, partial weeks, empty periods, category totals, undated legacy
+records, and withdrawal-only spending. An out-of-range page raises `FinNusException` before any
+output is shown; neither chart changes the ledger. Both chart commands log their request and display
+outcome at `FINE`. The parser logs rejected syntax for either chart form at `WARNING`, and flow logs
+an out-of-range page at `WARNING`. An empty spending chart is a valid result and remains at `FINE`.
+These messages include the selected dates, period, page, and counts, but no transaction amounts or
+category names.
+
+<!-- @@author -->
+<!-- @@author naieel04 -->
 ### Additional feature template
 
 Duplicate this subsection for any other feature that warrants a detailed explanation.
