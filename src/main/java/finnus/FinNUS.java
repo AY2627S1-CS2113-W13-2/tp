@@ -13,6 +13,7 @@ import java.util.logging.SimpleFormatter;
 
 import finnus.command.Command;
 import finnus.command.CreditAllowanceCommand;
+import finnus.command.DeleteCommand;
 import finnus.command.HistoryCommand;
 import finnus.exception.FinNusException;
 import finnus.parser.Parser;
@@ -167,7 +168,7 @@ public class FinNUS {
         ui.showWelcome();
         //@@author chancheese
         // Adds any allowance that arrived while FinNUS was closed, and warns if one cannot be added yet.
-        creditAllowance(true);
+        creditAllowance(today(), true);
         savePendingChanges();
         //@@author
         return true;
@@ -177,11 +178,12 @@ public class FinNUS {
     /**
      * Adds any allowance deposits that are due, and marks the ledger as changed if any were added.
      *
+     * @param date The date captured for startup or the current command.
      * @param showsProblems Whether to warn about a due allowance that cannot be added yet.
      */
-    private void creditAllowance(boolean showsProblems) {
+    private void creditAllowance(LocalDate date, boolean showsProblems) {
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
-        new CreditAllowanceCommand(today(), showsProblems).execute(transactions, ui);
+        new CreditAllowanceCommand(date, showsProblems).execute(transactions, ui);
         hasUnsavedChanges |= !before.equals(LedgerSnapshot.capture(transactions));
     }
     //@@author
@@ -206,22 +208,19 @@ public class FinNUS {
             return false;
         }
         //@@author
-        Command command = Parser.parse(input, today());
+        LocalDate commandDate = today();
+        Command command = Parser.parse(input, commandDate);
         assert command != null : "Parser must return a command";
+        prepareAllowance(command, commandDate);
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
         logger.fine("Executing " + command.getClass().getSimpleName());
+        command.execute(transactions, ui);
         if (command instanceof HistoryCommand historyCommand) {
-            // Include any newly due allowance before history assigns numbers to transactions.
-            creditAllowance(false);
-            historyCommand.execute(transactions, ui);
             historyView = historyCommand;
-        } else {
-            command.execute(transactions, ui);
+        } else if (!command.isExit()) {
             //@@author chancheese
-            // A new rate or a date change during the session can make a waiting allowance addable.
-            if (!command.isExit()) {
-                new CreditAllowanceCommand(today(), false).execute(transactions, ui);
-            }
+            // A new rate can release a waiting allowance; delete must consume its displayed index first.
+            creditAllowance(commandDate, false);
             //@@author
         }
         boolean changed = !before.equals(LedgerSnapshot.capture(transactions));
@@ -233,6 +232,18 @@ public class FinNUS {
             savePendingChanges();
         }
         return command.isExit();
+    }
+
+    /**
+     * Settles due allowances before commands display results, without shifting an index that delete will consume.
+     * Saving here preserves credited deposits even when the following command fails.
+     */
+    private void prepareAllowance(Command command, LocalDate date) {
+        if (command.isExit() || command instanceof DeleteCommand) {
+            return;
+        }
+        creditAllowance(date, false);
+        savePendingChanges();
     }
 
     /**
