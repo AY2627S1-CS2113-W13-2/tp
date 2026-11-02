@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
 
+import finnus.ValidationRegex;
 import finnus.exception.FinNusException;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -131,7 +132,7 @@ public class HistoryCommand extends Command {
         assert value != null : "Number text must not be null";
         assert name != null && !name.isBlank() : "Number label must not be blank";
 
-        if (!value.matches("[0-9]+")) {
+        if (!value.matches(ValidationRegex.UNSIGNED_INTEGER_REGEX)) {
             throw new FinNusException("The " + name + " must be a positive whole number.");
         }
         // Parse before narrowing to int so oversized positive numbers get a range error.
