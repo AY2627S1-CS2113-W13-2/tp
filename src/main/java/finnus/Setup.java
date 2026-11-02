@@ -39,6 +39,7 @@ public class Setup {
     }
     //@@author lololol8484
 
+    //@@author chancheese
     /**
      * Prompts for an opening balance until the user confirms it or input ends, then asks
      * for the allowance, which the user may skip.
@@ -48,7 +49,6 @@ public class Setup {
      * @param today The current date, used to work out the allowance cycle.
      * @return {@code true} if the user confirmed a balance; {@code false} if input ended first.
      */
-    //@@author chancheese
     public boolean run(Ui ui, TransactionList transactions, LocalDate today) {
         //@@author lololol8484
         assert ui != null : "UI must not be null";

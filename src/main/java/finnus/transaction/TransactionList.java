@@ -24,14 +24,14 @@ import finnus.money.Money;
 public class TransactionList {
     private static final Logger logger = Logger.getLogger(TransactionList.class.getName());
 
-    private final List<Transaction> transactions = new ArrayList<>();
-
     //@@author lololol8484
     /** Sorts undated legacy transactions first, followed by dates from oldest to newest. */
     private static final Comparator<Transaction> CHRONOLOGICAL_ORDER = Comparator.comparing(
             (Transaction transaction) -> transaction.getDate().orElse(null),
             Comparator.nullsFirst(Comparator.naturalOrder()));
     //@@author
+    
+    private final List<Transaction> transactions = new ArrayList<>();
 
     /**
      * The money the user had before recording any transactions, in SGD.

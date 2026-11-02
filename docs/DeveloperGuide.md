@@ -268,7 +268,7 @@ transactions are stored and where the balance is calculated.
   (`DEPOSIT` or `WITHDRAWAL`), a positive `Money` amount and a description.
 <!-- @@author lololol8484 -->
 * `TransactionList` keeps transactions chronologically by date, with undated legacy transactions first internally.
-<!-- @@author Nabijon Nazarov -->
+<!-- @@author nabijonzzz -->
 
 #### How a withdrawal is processed
 
