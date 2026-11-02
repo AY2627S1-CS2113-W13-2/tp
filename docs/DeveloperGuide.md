@@ -448,14 +448,14 @@ The `edit INDEX` command corrects selected fields of a deposit or withdrawal usi
    values and validates the complete replacement before changing the ledger. Invalid edits raise `FinNusException`.
 3. `TransactionList#replace()` replaces the entry and applies a stable date sort without changing the count.
    Date edits can change displayed indices; other edits retain the entry's position.
-4. The command displays the before/after entries and any saved FX rate. `FinNUS` detects the changed snapshot and
+4. The command displays the before/after entries and any saved FX rate. FinNUS detects the changed snapshot and
    attempts to save it using the existing storage format. Failed saves remain pending for retry.
 
 This sequence shows a successful `edit 1 a/6.50` on an SGD withdrawal:
 
 ![Sequence diagram of editing a withdrawal amount](images/EditSequenceDiagram.png)
 
-*Figure 7. Validating and replacing an SGD transaction. Allowance handling and automatic saving are omitted.
+*Figure 7. A successful SGD edit. Validation details, UI output, allowance handling and saving are omitted.
 [PlantUML source](diagrams/EditSequenceDiagram.puml).*
 
 Foreign amount edits retain the saved rate unless `r/` is supplied. `ForeignAmount#toSgd()` rounds half-up to cents;
