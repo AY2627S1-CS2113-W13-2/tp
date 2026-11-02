@@ -20,6 +20,7 @@ import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /** Runs edit commands against real temporary storage and checks independent restarts and reports. */
 class EditPersistenceTest {
     private static final Clock CLOCK = Clock.fixed(
@@ -88,5 +89,6 @@ class EditPersistenceTest {
         new FinNUS(second, new FileStorage(path), CLOCK).run();
         assertEquals(before, Files.readString(path));
         assertTrue(second.output().contains("No changes made."));
+        //@@author
     }
 }

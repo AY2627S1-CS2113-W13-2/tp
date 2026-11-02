@@ -20,9 +20,12 @@ class SetupTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 29);
     //@@author
 
+    //@@author naieel04
     @Test
     public void run_confirmationCallback_runsBeforeOptionalPrompts() {
+        //@@author
         TransactionList transactions = new TransactionList();
+        //@@author naieel04
         boolean[] wasSaved = {false};
         ScriptedUi ui = new ScriptedUi("67", "yes", "", "5", "500") {
             @Override
@@ -37,7 +40,9 @@ class SetupTest {
         assertTrue(new Setup().run(ui, transactions, TODAY, () -> {
             assertFalse(wasSaved[0], "Confirmation callback must run only once");
             assertEquals(Money.of(67), transactions.getOpeningBalance());
+            //@@author
             assertTrue(transactions.getAllowance().isEmpty());
+            //@@author naieel04
             wasSaved[0] = true;
         }));
 
@@ -47,10 +52,13 @@ class SetupTest {
 
     @Test
     public void run_unconfirmedBalance_doesNotInvokeCallback() {
+        //@@author
         TransactionList transactions = new TransactionList();
+        //@@author naieel04
         assertFalse(new Setup().run(new ScriptedUi("67", "no"), transactions, TODAY, () -> {
             throw new AssertionError("Unconfirmed balances must not be saved");
         }));
+        //@@author
     }
 
     //@@author lololol8484

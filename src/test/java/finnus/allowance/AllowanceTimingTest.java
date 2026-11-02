@@ -28,6 +28,7 @@ import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /** Verifies command results and deletion indices when an allowance becomes due during a session. */
 class AllowanceTimingTest {
     private static final LocalDate BEFORE_DUE = LocalDate.of(2026, 11, 4);
@@ -224,6 +225,7 @@ class AllowanceTimingTest {
         @Override
         public Instant instant() {
             return date.atStartOfDay().toInstant(ZoneOffset.UTC);
+            //@@author
         }
     }
 }

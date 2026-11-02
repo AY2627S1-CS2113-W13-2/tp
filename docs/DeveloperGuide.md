@@ -1,3 +1,5 @@
+<!-- @@author naieel04 -->
+
 # FinNUS Developer Guide
 
 FinNUS is a command-line personal finance tracker. This guide explains how to set up, understand, extend, and test it.
@@ -22,6 +24,8 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 - [Glossary](#glossary)
 - [Instructions for manual testing](#instructions-for-manual-testing)
 - [Planned enhancements](#planned-enhancements)
+
+<!-- @@author -->
 
 ---
 
@@ -71,7 +75,11 @@ The application entry point is `finnus.FinNUS`.
 
 ---
 
+<!-- @@author naieel04 -->
+
 ## Design
+
+<!-- @@author -->
 
 <!-- @@author naieel04 -->
 ### Architecture
@@ -237,6 +245,9 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 - The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, transactions,
   allowance settings, and optional spending-alert thresholds.
 <!-- @@author -->
+
+<!-- @@author naieel04 -->
+
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
@@ -244,7 +255,11 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
+<!-- @@author -->
+
 *Figure 6. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
+
+<!-- @@author naieel04 -->
 
 A complete save file can contain the following records:
 
@@ -264,21 +279,32 @@ category; predefined categories need no separate records. A `TRANSACTION` stores
 and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
 Foreign transactions place their currency code, original amount, and recorded rate before the category field.
 
+<!-- @@author -->
+
 <!-- @@author lololol8484 -->
 `SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE` stores the optional alert settings. Either value may be empty
 when the user skipped it. Files without this record load with both optional settings unset; malformed or duplicate alert
 records are skipped with a warning.
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
+
 Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
 seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
 and categories before restoring the ledger. Unsupported numbered format versions disable saving; malformed rows can be
 skipped with warnings, as described in [Automatic saving and recovery](#automatic-saving-and-recovery).
+
+<!-- @@author -->
+
 <!-- @@author -->
 
 ---
 
+<!-- @@author naieel04 -->
+
 ## Implementation
+
+<!-- @@author -->
 
 <!-- @@author nabijonzzz -->
 ### Adding a deposit or withdrawal
@@ -501,6 +527,8 @@ displayed index to the matching position in the sorted list. A backdated additio
 transactions; users should check the current `recent` or `find` output before deleting.
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
+
 ### Editing a transaction
 
 The `edit INDEX` command corrects selected fields of a deposit or withdrawal using the number shown by
@@ -531,13 +559,19 @@ Identical values print `No changes made.` without replacement; decimal scale alo
 `FinNUS#prepareAllowance()` defers allowance crediting until after an edit consumes its index. Editing an allowance
 deposit leaves its schedule and `lastCredited` unchanged. History mode requires `stop` before editing.
 
+<!-- @@author -->
+
 #### Design considerations
+
+<!-- @@author naieel04 -->
 
 Immutable replacement avoids partial updates and preserves transaction type and currency. Mutable setters would need
 rollback on validation failure; deletion and re-entry would change the position of same-day transactions.
 
 Parser, command and replacement tests cover validation, retained fields, FX rounding, balances and ordering.
 `FinNUSTest` and `EditPersistenceTest` cover allowance timing, save retries, reports and restart persistence.
+
+<!-- @@author -->
 
 ### Setting exchange rates
 
@@ -848,6 +882,8 @@ amount is capped (see [Representing money](#representing-money)).
 
 The sequence below follows the calculation and display of one `balance` request:
 
+<!-- @@author naieel04 -->
+
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
 *Figure 11. Calculating and displaying the current balance.
@@ -855,6 +891,8 @@ The sequence below follows the calculation and display of one `balance` request:
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
 Java deletion or guarantee immediate collection.
+
+<!-- @@author -->
 
 #### Design considerations
 
@@ -1557,6 +1595,8 @@ During an active view, an out-of-range page or page size reports an error withou
 <!-- @@author naieel04 -->
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
+
 ### UC-03: Correct a recorded transaction
 
 **Actor:** FinNUS user
@@ -1582,6 +1622,8 @@ The balance reflects the corrected values, and FinNUS attempts to save them.
 - **3b. All supplied values match:** FinNUS displays `No changes made.`; no edit-induced save is needed.
 - **3c. A date changes:** The corrected entry may get a different index; the user checks the list before editing again.
 - **4a. Saving fails:** FinNUS reports that the correction remains in memory and retries on a later command or at exit.
+
+<!-- @@author -->
 
 ---
 

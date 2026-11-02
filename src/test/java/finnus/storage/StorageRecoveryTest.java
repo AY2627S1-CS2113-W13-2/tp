@@ -18,15 +18,18 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.money.Money;
 
+//@@author naieel04
 /**
  * Checks recovery decisions and preservation of damaged files before later saves.
  */
 class StorageRecoveryTest {
+    //@@author
     //@@author naieel04
     @TempDir
     Path directory;
     //@@author
 
+    //@@author naieel04
     @Test
     public void load_missingFile_createsPendingSetupFile() throws IOException {
         Path path = directory.resolve("finnus.txt");
@@ -37,6 +40,7 @@ class StorageRecoveryTest {
         assertTrue(Files.exists(path));
         assertTrue(Files.readString(path).contains("SETUP_PENDING"));
         assertTrue(new FileStorage(path).load().setupRequired());
+        //@@author
     }
 
     //@@author naieel04
@@ -68,6 +72,7 @@ class StorageRecoveryTest {
     }
     //@@author
 
+    //@@author naieel04
     @Test
     public void load_corruptMain_usesValidBackupWithoutReplacingIt() throws IOException {
         Path path = Files.writeString(directory.resolve("finnus.txt"), "damaged");
@@ -88,6 +93,7 @@ class StorageRecoveryTest {
         Path path = directory.resolve("finnus.txt");
         assertEquals(Money.of("4"), new FileStorage(path).load().snapshot().openingBalance());
         assertFalse(Files.exists(path));
+        //@@author
     }
 
     //@@author naieel04
