@@ -23,7 +23,9 @@ public class HelpCommand extends Command {
     private static final String SYNTAX_HEADER = "Syntax";
     private static final int MAX_TABLE_WIDTH = 80;
     private static final int BORDER_WIDTH = 10;
-    private static final int COMMAND_WIDTH = 12;
+    //@@author nkyjStar
+    private static final int COMMAND_WIDTH = 14;
+    //@@author naieel04
     private static final int DESCRIPTION_WIDTH = 20;
     private static final int SYNTAX_WIDTH = MAX_TABLE_WIDTH - BORDER_WIDTH
             - COMMAND_WIDTH - DESCRIPTION_WIDTH;
@@ -54,7 +56,11 @@ public class HelpCommand extends Command {
         //@@author lololol8484
         for (CommandWord command : availableCommands) {
             //@@author naieel04
-            addWrappedRow(lines, command.getWord(), command.getDescription(), command.getUsage());
+            //@@author nkyjStar
+            for (CommandWord.HelpEntry entry : command.getHelpEntries()) {
+                addWrappedRow(lines, entry.command(), entry.description(), entry.usage());
+            }
+            //@@author naieel04
         }
         lines.add(border);
         lines.add("");
