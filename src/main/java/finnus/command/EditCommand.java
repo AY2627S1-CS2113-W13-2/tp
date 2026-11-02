@@ -1,9 +1,11 @@
 package finnus.command;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import finnus.currency.ForeignAmount;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
@@ -11,7 +13,7 @@ import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 import finnus.ui.Ui;
 
-/** Corrects selected fields of an SGD transaction after validating the entire replacement. */
+/** Corrects selected transaction fields after validating the entire replacement, including saved FX values. */
 public class EditCommand extends Command {
     private static final Logger logger = Logger.getLogger(EditCommand.class.getName());
 
@@ -40,9 +42,6 @@ public class EditCommand extends Command {
         }
         int position = transactions.size() - index;
         Transaction original = transactions.get(position);
-        if (original.getForeignAmount().isPresent()) {
-            throw new FinNusException("Editing foreign-currency transactions is not supported yet.");
-        }
         Transaction replacement = buildReplacement(original, transactions);
         if (hasSameValues(original, replacement)) {
             ui.showMessage("No changes made.");
@@ -51,6 +50,8 @@ public class EditCommand extends Command {
         transactions.replace(position, replacement);
         logger.info("Edited transaction at recent-list index " + index);
         ui.showMessage("Transaction updated:", "  Before: " + original, "  After:  " + replacement);
+        replacement.getForeignAmount().ifPresent(foreign -> ui.showMessage("Converted at "
+                + RateCommand.formatRate(foreign.currencyCode(), foreign.rate()) + "."));
     }
 
     private Transaction buildReplacement(Transaction original, TransactionList transactions) throws FinNusException {
@@ -63,18 +64,56 @@ public class EditCommand extends Command {
         }
         String category = fields.categoryName() == null ? original.getCategory().orElse(null)
                 : transactions.getCategories().resolve(fields.categoryName());
-        Money amount = fields.amount() == null ? original.getAmount() : fields.amount();
-        if (!amount.isPositive() || amount.compareTo(Money.MAX_AMOUNT) > 0) {
-            throw new FinNusException("Amount must be positive and must not exceed " + Money.MAX_AMOUNT.format());
-        }
         LocalDate date = fields.date() == null ? original.getDate().orElse(null) : fields.date();
+        if (original.getForeignAmount().isPresent()) {
+            ForeignAmount foreign = correctedForeignAmount(original.getForeignAmount().orElseThrow());
+            validateAmount(foreign.toSgd());
+            return new Transaction(original.getType(), foreign, description, category, date);
+        }
+        if (fields.rate() != null) {
+            throw new FinNusException("A saved exchange rate can only be edited for a foreign-currency transaction.");
+        }
+        Money amount = fields.amount() == null ? original.getAmount() : Money.of(fields.amount());
+        validateAmount(amount);
         return new Transaction(original.getType(), amount, description, category, date);
+    }
+
+    /** Uses only historical values and explicit corrections, never the global rate collection. */
+    private ForeignAmount correctedForeignAmount(ForeignAmount original) {
+        if (fields.amount() == null && fields.rate() == null) {
+            return original;
+        }
+        BigDecimal amount = fields.amount() == null ? original.amount() : fields.amount();
+        BigDecimal rate = fields.rate() == null ? original.rate() : fields.rate();
+        return new ForeignAmount(original.currencyCode(), amount, rate);
+    }
+
+    private static void validateAmount(Money amount) throws FinNusException {
+        if (!amount.isPositive()) {
+            throw new FinNusException("The resulting SGD amount must be at least $0.01.");
+        }
+        if (amount.compareTo(Money.MAX_AMOUNT) > 0) {
+            throw new FinNusException("Amount must not exceed " + Money.MAX_AMOUNT.format());
+        }
     }
 
     private static boolean hasSameValues(Transaction original, Transaction replacement) {
         return original.getAmount().equals(replacement.getAmount())
                 && original.getDescription().equals(replacement.getDescription())
                 && original.getCategory().equals(replacement.getCategory())
-                && original.getDate().equals(replacement.getDate());
+                && original.getDate().equals(replacement.getDate())
+                && hasSameForeignValues(original, replacement);
+    }
+
+    /** BigDecimal scale changes alone are not financial corrections. */
+    private static boolean hasSameForeignValues(Transaction original, Transaction replacement) {
+        if (original.getForeignAmount().isEmpty()) {
+            return replacement.getForeignAmount().isEmpty();
+        }
+        ForeignAmount before = original.getForeignAmount().orElseThrow();
+        ForeignAmount after = replacement.getForeignAmount().orElseThrow();
+        return before.currencyCode().equals(after.currencyCode())
+                && before.amount().compareTo(after.amount()) == 0
+                && before.rate().compareTo(after.rate()) == 0;
     }
 }

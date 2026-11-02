@@ -99,7 +99,7 @@ class EditCommandTest {
     @ValueSource(ints = {-1, 0, 1})
     void execute_emptyLedgerOrInvalidIndex_throws(int index) {
         TransactionList ledger = new TransactionList();
-        EditFields fields = new EditFields(Money.of("5"), null, null, null);
+        EditFields fields = new EditFields(new BigDecimal("5"), null, null, null, null);
         assertThrows(FinNusException.class, () -> new EditCommand(index, fields).execute(ledger, new ScriptedUi()));
         assertEquals(0, ledger.size());
     }
@@ -108,7 +108,7 @@ class EditCommandTest {
     void execute_noFields_throwsWithoutMutation() {
         TransactionList ledger = createLedger();
         LedgerSnapshot before = LedgerSnapshot.capture(ledger);
-        EditCommand command = new EditCommand(1, new EditFields(null, null, null, null));
+        EditCommand command = new EditCommand(1, new EditFields(null, null, null, null, null));
         assertThrows(FinNusException.class, () -> command.execute(ledger, new ScriptedUi()));
         assertEquals(before, LedgerSnapshot.capture(ledger));
     }
@@ -147,13 +147,14 @@ class EditCommandTest {
     }
 
     @Test
-    void execute_foreignEntry_rejectsUntilForeignEditingIsSupported() {
+    void execute_foreignMetadata_preservesSavedConversion() throws FinNusException {
         TransactionList ledger = new TransactionList();
         ForeignAmount foreign = new ForeignAmount("JPY", new BigDecimal("1100"), new BigDecimal("110"));
         ledger.add(new Transaction(TransactionType.DEPOSIT, foreign, "Foreign"));
-        LedgerSnapshot before = LedgerSnapshot.capture(ledger);
-        assertThrows(FinNusException.class, () -> execute("edit 1 d/Corrected", ledger));
-        assertEquals(before, LedgerSnapshot.capture(ledger));
+        execute("edit 1 d/Corrected", ledger);
+        assertEquals("Corrected", ledger.get(0).getDescription());
+        assertSame(foreign, ledger.get(0).getForeignAmount().orElseThrow());
+        assertEquals(Money.of("10"), ledger.get(0).getAmount());
     }
 
     /** Dates are already chronological so the selection cases do not depend on insertion sorting. */

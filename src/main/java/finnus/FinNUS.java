@@ -14,6 +14,7 @@ import java.util.logging.SimpleFormatter;
 import finnus.command.Command;
 import finnus.command.CreditAllowanceCommand;
 import finnus.command.DeleteCommand;
+import finnus.command.EditCommand;
 import finnus.command.HistoryCommand;
 import finnus.exception.FinNusException;
 import finnus.parser.Parser;
@@ -224,7 +225,7 @@ public class FinNUS {
             historyView = historyCommand;
         } else if (!command.isExit()) {
             //@@author chancheese
-            // A new rate can release a waiting allowance; delete must consume its displayed index first.
+            // A new rate can release a waiting allowance; indexed commands consume their displayed index first.
             creditAllowance(commandDate, false);
             //@@author
         }
@@ -240,11 +241,11 @@ public class FinNUS {
     }
 
     /**
-     * Settles due allowances before commands display results, without shifting an index that delete will consume.
+     * Settles due allowances before commands display results, without shifting indices used by edit or delete.
      * Saving here preserves credited deposits even when the following command fails.
      */
     private void prepareAllowance(Command command, LocalDate date) {
-        if (command.isExit() || command instanceof DeleteCommand) {
+        if (command.isExit() || command instanceof DeleteCommand || command instanceof EditCommand) {
             return;
         }
         creditAllowance(date, false);

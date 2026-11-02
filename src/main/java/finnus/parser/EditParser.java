@@ -1,5 +1,6 @@
 package finnus.parser;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +12,6 @@ import finnus.command.CommandWord;
 import finnus.command.EditCommand;
 import finnus.command.EditFields;
 import finnus.exception.FinNusException;
-import finnus.money.Money;
 
 /** Parses optional edit fields without confusing an omitted description with an empty one. */
 final class EditParser {
@@ -29,11 +29,13 @@ final class EditParser {
             throw invalid("Supply at least one field to edit.");
         }
         Map<String, String> values = extractFields(parts[1]);
-        Money amount = values.containsKey("a/") ? Parser.parseAmount(values.get("a/"), usage()) : null;
+        // The currency is only known at execution, so apply the SGD upper limit after conversion.
+        BigDecimal amount = values.containsKey("a/") ? Parser.parseForeignAmount(values.get("a/"), usage()) : null;
+        BigDecimal rate = values.containsKey("r/") ? Parser.parseRateValue(values.get("r/")) : null;
         String category = parseCategory(values.get("t/"));
         LocalDate date = values.containsKey("on/")
                 ? Parser.extractDate("on/" + values.get("on/"), today).date() : null;
-        return new EditCommand(index, new EditFields(amount, values.get("d/"), category, date));
+        return new EditCommand(index, new EditFields(amount, values.get("d/"), category, date, rate));
     }
 
     private static int parseIndex(String text) throws FinNusException {
@@ -72,9 +74,6 @@ final class EditParser {
     private static void addField(Map<String, String> values, String prefix, String value) throws FinNusException {
         if (prefix.equals("c/")) {
             throw invalid("Editing cannot change a transaction's currency.");
-        }
-        if (prefix.equals("r/")) {
-            throw invalid("Editing foreign exchange rates is not supported yet.");
         }
         if (values.containsKey(prefix)) {
             throw invalid("Give only one " + prefix + " field.");
