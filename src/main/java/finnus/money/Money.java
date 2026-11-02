@@ -15,7 +15,7 @@ public final class Money implements Comparable<Money> {
     /** A reusable zero amount. */
     public static final Money ZERO = new Money(BigDecimal.ZERO);
 
-    /** Largest monetary amount accepted from user input or storage. */
+    /** Largest monetary amount accepted from user input. */
     public static final Money MAX_AMOUNT = new Money(new BigDecimal("1000000"));
 
     private static final int DISPLAY_SCALE = 2;

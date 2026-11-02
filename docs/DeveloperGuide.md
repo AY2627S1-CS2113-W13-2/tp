@@ -178,6 +178,11 @@ input boundary allows `Money` to represent a withdrawal's negative effect and a 
 running balance. It also allows exact sub-cent values within the domain even though ordinary
 user input is limited to two decimal places.
 
+<!-- @@author chancheese -->
+`Money.MAX_AMOUNT` ($1,000,000) caps each amount a user enters, including foreign amounts after
+conversion. A student is unlikely to move that much at once, so a larger value is treated as a typo.
+<!-- @@author -->
+
 #### Formatting and equality
 
 Calculations retain every decimal place. `format()` rounds only the displayed value to two
@@ -567,8 +572,8 @@ Negative balances are allowed and displayed with a minus sign when their rounded
 nonzero.
 
 <!-- @@author chancheese -->
-The balance itself has no upper limit, because `BigDecimal` has no fixed size. `Money.MAX_AMOUNT`
-only limits each amount the user enters.
+The balance itself has no upper limit, because `BigDecimal` has no fixed size. Only each entered
+amount is capped (see [Representing money](#representing-money)).
 <!-- @@author -->
 
 The sequence below follows the calculation and display of one `balance` request:
