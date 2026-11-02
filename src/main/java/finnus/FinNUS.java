@@ -150,7 +150,13 @@ public class FinNUS {
             ui.showMessage(loaded.warnings());
         }
         if (loaded.setupRequired()) {
-            if (!new Setup().run(ui, transactions, today())) {
+            // Save the balance as soon as it is confirmed, so closing the app during the
+            // optional allowance questions does not make the user enter it again.
+            boolean completed = new Setup().run(ui, transactions, today(), () -> {
+                hasUnsavedChanges = true;
+                savePendingChanges();
+            });
+            if (!completed) {
                 return false;
             }
             hasUnsavedChanges = true;
@@ -185,6 +191,13 @@ public class FinNUS {
         Command command = Parser.parse(input, today());
         assert command != null : "Parser must return a command";
         LedgerSnapshot before = LedgerSnapshot.capture(transactions);
+        //@@author chancheese
+        // Add due allowances before the command runs, so the transaction numbers it shows
+        // are the same ones a later command such as delete will use.
+        if (!command.isExit()) {
+            new CreditAllowanceCommand(today(), false).execute(transactions, ui);
+        }
+        //@@author
         logger.fine("Executing " + command.getClass().getSimpleName());
         command.execute(transactions, ui);
         //@@author chancheese

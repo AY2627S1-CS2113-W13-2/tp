@@ -44,9 +44,24 @@ public class Setup {
      * @return {@code true} if the user confirmed a balance; {@code false} if input ended first.
      */
     public boolean run(Ui ui, TransactionList transactions, LocalDate today) {
+        Runnable noSave = () -> {
+        };
+        return run(ui, transactions, today, noSave);
+    }
+
+    /**
+     * Same as {@link #run(Ui, TransactionList, LocalDate)}, but also calls {@code onBalanceConfirmed}
+     * as soon as the opening balance is confirmed, before the optional allowance questions.
+     * FinNUS uses this to save the balance, so closing the app during those questions keeps it.
+     *
+     * @param onBalanceConfirmed Called once, right after the opening balance is stored.
+     * @return {@code true} if the user confirmed a balance; {@code false} if input ended first.
+     */
+    public boolean run(Ui ui, TransactionList transactions, LocalDate today, Runnable onBalanceConfirmed) {
         assert ui != null : "UI must not be null";
         assert transactions != null : "Transaction list must not be null";
         assert transactions.size() == 0 : "First-run setup must not start with transactions";
+        assert onBalanceConfirmed != null : "Confirmation callback must not be null";
         ui.showMessage("First-time setup", "Enter your current opening balance in SGD.",
                 "This is your starting balance and will not be recorded as a transaction.");
         while (true) {
@@ -75,6 +90,7 @@ public class Setup {
             assert transactions.getOpeningBalance().compareTo(amount) == 0
                     : "Setup must store the entered opening balance";
             logger.info("First-run opening balance confirmed");
+            onBalanceConfirmed.run();
             //@@author chancheese
             askForAllowance(ui, transactions, today);
             //@@author

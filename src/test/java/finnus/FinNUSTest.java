@@ -3,13 +3,16 @@ package finnus;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
@@ -168,7 +171,79 @@ class FinNUSTest {
         assertEquals(null, storage.saved.getLast().allowance());
         assertTrue(ui.output().contains("Next allowance in 7 days (5 Nov 2026)."));
     }
+
+    @Test
+    public void run_allowanceDayArrivesDuringSession_addsAllowanceBeforeNextCommand() {
+        RecordingStorage storage = new RecordingStorage();
+        MovableClock clock = new MovableClock(LocalDate.of(2026, 11, 4));
+        ScriptedUi ui = new ScriptedUi("allowance 5 a/500", "deposit 100 d/Original", "balance", "exit") {
+            @Override
+            public String readCommand() {
+                String input = super.readCommand();
+                // The app stays open past midnight of the allowance day.
+                if ("balance".equals(input)) {
+                    clock.moveTo(LocalDate.of(2026, 11, 5));
+                }
+                return input;
+            }
+        };
+
+        new FinNUS(ui, storage, clock).run();
+
+        // The allowance must already be in the ledger when balance runs, not added after it.
+        assertTrue(ui.output().contains("Your current balance is: $600.00"));
+    }
+
+    @Test
+    public void run_closedDuringAllowanceSetup_keepsConfirmedOpeningBalance() {
+        RecordingStorage storage = new RecordingStorage();
+        storage.loaded = new LoadResult(LedgerSnapshot.empty(), List.of(), true, true);
+        // Simulates closing the app: input stops at the optional allowance-day prompt.
+        ScriptedUi ui = new ScriptedUi("100", "yes") {
+            @Override
+            public String readCommand() {
+                String input = super.readCommand();
+                if (input == null) {
+                    throw new IllegalStateException("Application closed");
+                }
+                return input;
+            }
+        };
+
+        assertThrows(IllegalStateException.class, () -> new FinNUS(ui, storage).run());
+
+        assertEquals(Money.of("100"), storage.saved.getLast().toTransactionList().getOpeningBalance());
+    }
     //@@author
+
+    /** A clock whose date a test can move while FinNUS is still running. */
+    private static class MovableClock extends Clock {
+        private Instant now;
+
+        MovableClock(LocalDate date) {
+            moveTo(date);
+        }
+
+        /** Sets the clock to the start of the given day, in UTC. */
+        void moveTo(LocalDate date) {
+            now = date.atStartOfDay().toInstant(ZoneOffset.UTC);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
+    }
 
     /**
      * Records successful snapshots and fails a configurable number of saves without a mocking library.
