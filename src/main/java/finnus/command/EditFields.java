@@ -3,6 +3,7 @@ package finnus.command;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+//@@author naieel04
 /**
  * Changes requested by an edit. Null means retain the old value; an empty description
  * explicitly clears a deposit's description. Target-dependent checks happen at execution.
@@ -17,5 +18,6 @@ public record EditFields(BigDecimal amount, String description, String categoryN
     /** Returns whether at least one field was supplied. */
     public boolean hasChanges() {
         return amount != null || description != null || categoryName != null || date != null || rate != null;
+        //@@author
     }
 }

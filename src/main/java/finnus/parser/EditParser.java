@@ -13,6 +13,7 @@ import finnus.command.EditCommand;
 import finnus.command.EditFields;
 import finnus.exception.FinNusException;
 
+//@@author naieel04
 /** Parses optional edit fields without confusing an omitted description with an empty one. */
 final class EditParser {
     /** Reserved prefixes delimit fields even when they occur after a description. */
@@ -94,5 +95,6 @@ final class EditParser {
 
     private static FinNusException invalid(String message) {
         return new FinNusException(message + "\nFormat: " + usage());
+        //@@author
     }
 }

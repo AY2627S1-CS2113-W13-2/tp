@@ -205,6 +205,7 @@ public class TransactionList {
     }
     //@@author
 
+    //@@author naieel04
     /**
      * Replaces an entry without changing the count, then restores chronological order.
      * Stable sorting retains the relative order of entries with equal dates.
@@ -219,6 +220,7 @@ public class TransactionList {
         Transaction original = transactions.set(index, replacement);
         transactions.sort(CHRONOLOGICAL_ORDER);
         return original;
+        //@@author
     }
 
     /** Returns the starting balance before any transactions are applied. */

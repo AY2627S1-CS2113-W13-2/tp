@@ -7,6 +7,7 @@ import java.util.Queue;
 
 import finnus.ui.Ui;
 
+//@@author naieel04
 /**
  * Supplies deterministic input and captures messages without changing global console streams.
  */
@@ -22,6 +23,7 @@ public class ScriptedUi extends Ui {
     @Override
     public String readCommand() {
         return commands.poll();
+        //@@author
     }
 
     //@@author lololol8484
@@ -31,6 +33,7 @@ public class ScriptedUi extends Ui {
     }
     //@@author
 
+    //@@author naieel04
     @Override
     public void showMessage(String... lines) {
         messages.addAll(List.of(lines));
@@ -44,5 +47,6 @@ public class ScriptedUi extends Ui {
     /** Returns all captured messages in display order. */
     public String output() {
         return String.join("\n", messages);
+        //@@author
     }
 }

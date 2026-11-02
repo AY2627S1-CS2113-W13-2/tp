@@ -18,6 +18,7 @@ import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /** Exercises edit syntax through the public parser using a deterministic current date. */
 class EditParserTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 3);
@@ -68,5 +69,6 @@ class EditParserTest {
         ledger.add(new Transaction(TransactionType.DEPOSIT, Money.of("5"), "Old"));
         Parser.parse("edit 1 d/Work and/or scholarship", TODAY).execute(ledger, new ScriptedUi());
         assertEquals("Work and/or scholarship", ledger.get(0).getDescription());
+        //@@author
     }
 }

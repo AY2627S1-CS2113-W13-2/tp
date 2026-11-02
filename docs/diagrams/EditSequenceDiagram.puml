@@ -1,4 +1,5 @@
 @startuml EditSequenceDiagram
+' @@author naieel04
 ' Successful edit of an SGD withdrawal from $4.50 to $6.50.
 ' Assumes a valid, changed entry. Validation details, UI output, allowance handling and saving are omitted.
 hide footbox
@@ -47,4 +48,5 @@ deactivate Ledger
 Command --> App
 deactivate Command
 deactivate App
+' @@author
 @enduml

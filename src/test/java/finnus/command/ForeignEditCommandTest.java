@@ -23,6 +23,7 @@ import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /** Tests historical conversion corrections independently of global exchange-rate settings. */
 class ForeignEditCommandTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 3);
@@ -152,5 +153,6 @@ class ForeignEditCommandTest {
         ScriptedUi ui = new ScriptedUi();
         Parser.parse(input, TODAY).execute(ledger, ui);
         return ui;
+        //@@author
     }
 }

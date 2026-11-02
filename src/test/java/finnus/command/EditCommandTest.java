@@ -23,6 +23,7 @@ import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /** Checks atomic replacement, retained fields, ledger balances, and user-facing edit results. */
 class EditCommandTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 3);
@@ -173,5 +174,6 @@ class EditCommandTest {
         ScriptedUi ui = new ScriptedUi();
         Parser.parse(input, TODAY).execute(ledger, ui);
         return ui;
+        //@@author
     }
 }

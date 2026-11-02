@@ -109,7 +109,9 @@ class FileStorageTest {
 
     private LedgerSnapshot withOpening(String amount) {
         //@@author
+        //@@author naieel04
         return new LedgerSnapshot(Money.of(amount), List.of(), Map.of());
+        //@@author
     }
 
     //@@author naieel04

@@ -2,7 +2,6 @@ package finnus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -27,10 +26,6 @@ public class Setup {
     //@@author nkyjStar
     private static final Logger logger = Logger.getLogger(Setup.class.getName());
     //@@author lololol8484
-
-    private enum Confirmation {
-        CONFIRMED, NOT_CONFIRMED
-    }
 
     //@@author chancheese
     /**
@@ -75,7 +70,7 @@ public class Setup {
             return false;
         }
         onBalanceConfirmed.run();
-        configureAllowance(ui, transactions, today);
+        configureOptionalSettings(ui, transactions, today);
         return true;
     }
 
@@ -120,16 +115,19 @@ public class Setup {
             //@@author nkyjStar
             logger.info("First-run opening balance confirmed");
             //@@author lololol8484
-            //@@author lololol8484
-            Optional<Money> balanceThreshold = askForBalanceThreshold(ui);
-            boolean hasAllowanceAmount = askForAllowance(ui, transactions, today);
-            Optional<BigDecimal> allowancePercentage = hasAllowanceAmount
-                    ? askForAllowancePercentage(ui) : Optional.empty();
-            transactions.setSpendingAlert(new SpendingAlert(balanceThreshold.orElse(null),
-                    allowancePercentage.orElse(null)));
-            logger.info("Spending alert settings recorded during setup");
             return true;
         }
+    }
+
+    /** Runs optional alert and allowance questions after the confirmed balance has been checkpointed. */
+    private void configureOptionalSettings(Ui ui, TransactionList transactions, LocalDate today) {
+        Optional<Money> balanceThreshold = askForBalanceThreshold(ui);
+        boolean hasAllowanceAmount = askForAllowance(ui, transactions, today);
+        Optional<BigDecimal> allowancePercentage = hasAllowanceAmount
+                ? askForAllowancePercentage(ui) : Optional.empty();
+        transactions.setSpendingAlert(new SpendingAlert(balanceThreshold.orElse(null),
+                allowancePercentage.orElse(null)));
+        logger.info("Spending alert settings recorded during setup");
     }
 
     //@@author chancheese

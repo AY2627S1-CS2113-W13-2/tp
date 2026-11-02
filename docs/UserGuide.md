@@ -20,7 +20,11 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
 7. Refer to the Features section below for details of each command.
 
+<!-- @@author naieel04 -->
+
 ## Saving and recovering your data
+
+<!-- @@author -->
 
 FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
 file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
@@ -108,8 +112,14 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 
 * Enter the amount in SGD. It follows the same rules as for `deposit`, except that `0` is also allowed.
 * Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
+
+<!-- @@author naieel04 -->
+
 * The opening balance is not a transaction, so it does not show up in `recent` and cannot be changed with `edit`
   or removed with `delete`.
+
+<!-- @@author -->
+
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
 <!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
@@ -699,6 +709,8 @@ Transaction deleted: [27 Oct 2026] [Withdrawal] -$30.00 (BBQ) #Food
 
 ```
 
+<!-- @@author naieel04 -->
+
 ### Editing a transaction: `edit`
 Corrects the amount, description, category, date or saved exchange rate of a deposit or withdrawal. Give at least one field, in any order, without duplicates. Omitted fields keep their values;
 type and currency cannot change.
@@ -716,6 +728,8 @@ Format: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
 * Prefixes `a/`, `d/`, `t/`, `on/`, `r/` and `c/` cannot start words inside a description; `c/` is not accepted by `edit`.
 * Successful changes are saved automatically. Invalid edits leave the selected entry unchanged;
   identical values print `No changes made.`
+* A withdrawal edit that crosses a spending-alert threshold asks for confirmation before saving. This includes
+  changes to the amount, saved exchange rate, or date. Answering `no` or ending input leaves the entry unchanged.
 
 
 Examples:
@@ -746,6 +760,9 @@ Format: `help`
 Example: `help` or `help 123`
 
 Expected output:
+
+<!-- @@author -->
+
 ```text
 ____________________________________________________________
 Available commands:
@@ -809,17 +826,34 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View balance: `balance`
 * Set your monthly allowance: `allowance DAY [a/AMOUNT] [c/CURRENCY]`
 * View or stop your allowance: `allowance` or `allowance off`
+
+<!-- @@author naieel04 -->
+
 * View recent transactions: `recent [NUMBER]`
+
+<!-- @@author -->
+
 * View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
 <!-- @@author nkyjStar -->
 * Summarise cash flow: `chart flow from/START to/END int/PERIOD [p/PAGE]`
 * View spending by category: `chart spending [int/PERIOD on/DATE]`
 <!-- @@author -->
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
+
+<!-- @@author naieel04 -->
+
 * Delete a transaction: `delete INDEX`
 * Edit a transaction: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
+
+<!-- @@author -->
+
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`
+
+<!-- @@author naieel04 -->
+
 * View command usage: `help`
 * Exit the application: `exit`
+
+<!-- @@author -->

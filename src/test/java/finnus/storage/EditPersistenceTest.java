@@ -20,6 +20,7 @@ import finnus.currency.ForeignAmount;
 import finnus.money.Money;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /** Runs edit commands against real temporary storage and checks independent restarts and reports. */
 class EditPersistenceTest {
     private static final Clock CLOCK = Clock.fixed(
@@ -31,7 +32,7 @@ class EditPersistenceTest {
     @Test
     void run_editedEntries_savedBeforeShutdownAndRestoredInReports() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi first = new ScriptedUi("1000", "yes", "", "allowance 5", "rate JPY 110",
+        ScriptedUi first = new ScriptedUi("1000", "yes", "", "", "allowance 5", "rate JPY 110",
                 "deposit 2200 c/JPY d/Income on/2026-10-15",
                 "withdraw 550 c/JPY d/Lunch t/food on/2026-10-20", "deposit 5 d/Unchanged on/2026-10-10",
                 "edit 1 a/1100 r/100", "edit 2 d/Tuition r/100 on/2026-10-25") {
@@ -81,12 +82,13 @@ class EditPersistenceTest {
     @Test
     void run_failedAndUnchangedEdits_preserveSavedFile() throws Exception {
         Path path = directory.resolve("finnus.txt");
-        new FinNUS(new ScriptedUi("50", "yes", "", "deposit 5 d/Income", "exit"),
+        new FinNUS(new ScriptedUi("50", "yes", "", "", "deposit 5 d/Income", "exit"),
                 new FileStorage(path), CLOCK).run();
         String before = Files.readString(path);
         ScriptedUi second = new ScriptedUi("edit 1 a/5.00", "edit 1 a/6 t/food", "edit 1 r/100", "exit");
         new FinNUS(second, new FileStorage(path), CLOCK).run();
         assertEquals(before, Files.readString(path));
         assertTrue(second.output().contains("No changes made."));
+        //@@author
     }
 }

@@ -13,6 +13,7 @@ import finnus.transaction.TransactionList;
 import finnus.transaction.TransactionType;
 import finnus.ui.Ui;
 
+//@@author naieel04
 /** Corrects selected transaction fields after validating the entire replacement, including saved FX values. */
 public class EditCommand extends Command {
     private static final Logger logger = Logger.getLogger(EditCommand.class.getName());
@@ -45,6 +46,10 @@ public class EditCommand extends Command {
         Transaction replacement = buildReplacement(original, transactions);
         if (hasSameValues(original, replacement)) {
             ui.showMessage("No changes made.");
+            return;
+        }
+        if (replacement.getType() == TransactionType.WITHDRAWAL
+                && !transactions.getSpendingAlert().confirmEdit(transactions, position, replacement, ui)) {
             return;
         }
         transactions.replace(position, replacement);
@@ -115,5 +120,6 @@ public class EditCommand extends Command {
         return before.currencyCode().equals(after.currencyCode())
                 && before.amount().compareTo(after.amount()) == 0
                 && before.rate().compareTo(after.rate()) == 0;
+        //@@author
     }
 }
