@@ -29,10 +29,12 @@ class DepositWithdrawCommandTest {
     @Test
     public void execute_withdraw_addsWithdrawalToList() throws FinNusException {
         TransactionList transactions = new TransactionList();
+        transactions.setOpeningBalance(Money.of("10"));
+        new DepositCommand(Money.of("10")).execute(transactions, ui);
         new WithdrawCommand(Money.of("4.50"), "Lunch").execute(transactions, ui);
 
-        assertEquals(1, transactions.size());
-        Transaction added = transactions.get(0);
+        assertEquals(2, transactions.size());
+        Transaction added = transactions.get(1);
         assertEquals(TransactionType.WITHDRAWAL, added.getType());
         assertEquals(Money.of("-4.50"), added.getSignedAmount());
     }

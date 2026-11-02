@@ -36,7 +36,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_twoSessions_restoresBalanceRatesAndRecentOrdering() {
         Path path = directory.resolve("finnus.txt");
-        new FinNUS(new ScriptedUi("100.00", "yes", "", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
+        new FinNUS(new ScriptedUi("100.00", "yes", "", "", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
                 "rate JPY 110.00", "exit"), new FileStorage(path)).run();
         ScriptedUi second = new ScriptedUi("balance", "recent", "rate", "deposit 1", "delete 2", "exit");
         new FinNUS(second, new FileStorage(path)).run();
@@ -62,7 +62,7 @@ class PersistenceIntegrationTest {
         Path path = directory.resolve("finnus.txt");
         Clock clock = Clock.fixed(LocalDate.of(2026, 10, 30).atStartOfDay().toInstant(ZoneOffset.UTC),
                 ZoneOffset.UTC);
-        ScriptedUi firstRun = new ScriptedUi("100", "yes", "",
+        ScriptedUi firstRun = new ScriptedUi("100", "yes", "", "",
                 "deposit 10 d/Entry 10 on/2026-10-10",
                 "deposit 20 d/Entry 25 first on/2026-10-25",
                 "deposit 30 d/Entry 15 on/2026-10-15",
@@ -135,7 +135,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_setupConfirmation_persistsOpeningBalanceAndSkipsSetupNextTime() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi setup = new ScriptedUi("67", "yes", "", "exit");
+        ScriptedUi setup = new ScriptedUi("67", "yes", "", "", "exit");
         new FinNUS(setup, new FileStorage(path)).run();
 
         LedgerSnapshot saved = new FileStorage(path).load().snapshot();
@@ -149,8 +149,45 @@ class PersistenceIntegrationTest {
         assertFalse(nextRun.output().contains("First-time setup"));
     }
 
+    @Test
+    public void run_setupAlertSettings_persistsThresholdsAcrossRestart() {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi setup = new ScriptedUi("100", "yes", "75", "5", "500", "90", "exit");
+
+        new FinNUS(setup, new FileStorage(path)).run();
+
+        LedgerSnapshot saved = new FileStorage(path).load().snapshot();
+        assertEquals(Money.of("75"), saved.spendingAlert().balanceThreshold().orElseThrow());
+        assertEquals(new BigDecimal("90"), saved.spendingAlert().allowancePercentage().orElseThrow());
+        assertEquals(new BigDecimal("500"), saved.allowance().amount());
+
+        ScriptedUi nextRun = new ScriptedUi("withdraw 30 d/Books", "no", "exit");
+        new FinNUS(nextRun, new FileStorage(path)).run();
+        LedgerSnapshot restored = new FileStorage(path).load().snapshot();
+        assertEquals(saved.spendingAlert(), restored.spendingAlert());
+        assertTrue(nextRun.output().contains("alert threshold of $75.00"));
+        assertTrue(nextRun.output().contains("opening balance of $100.00"));
+        assertTrue(nextRun.output().contains("Withdrawal cancelled."));
+    }
+
+    @Test
+    public void run_alertCommand_updatesOptionalSettingsAndPersistsAcrossRestart() {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi firstRun = new ScriptedUi("100", "yes", "", "", "alert balance 75",
+                "alert allowance 90", "exit");
+
+        new FinNUS(firstRun, new FileStorage(path)).run();
+
+        LedgerSnapshot saved = new FileStorage(path).load().snapshot();
+        assertEquals(Money.of("75"), saved.spendingAlert().balanceThreshold().orElseThrow());
+        assertEquals(new BigDecimal("90"), saved.spendingAlert().allowancePercentage().orElseThrow());
+
+        ScriptedUi secondRun = new ScriptedUi("alert", "exit");
+        new FinNUS(secondRun, new FileStorage(path)).run();
+        assertTrue(secondRun.output().contains("Balance threshold: $75.00"));
+        assertTrue(secondRun.output().contains("Allowance threshold: 90%"));
+    }
     //@@author
-    //@@author lololol8484
     @Test
     public void run_interruptedSetup_keepsPendingMarkerAndRepeatsSetup() throws IOException {
         Path path = directory.resolve("finnus.txt");
@@ -158,7 +195,7 @@ class PersistenceIntegrationTest {
 
         assertTrue(new FileStorage(path).load().setupRequired());
 
-        ScriptedUi retry = new ScriptedUi("67", "yes", "", "exit");
+        ScriptedUi retry = new ScriptedUi("67", "yes", "", "", "exit");
         new FinNUS(retry, new FileStorage(path)).run();
         assertFalse(new FileStorage(path).load().setupRequired());
         assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
@@ -227,7 +264,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_interruptedBeforeExit_changesAreAlreadySaved() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi interrupted = new ScriptedUi("3", "yes", "", "deposit 3") {
+        ScriptedUi interrupted = new ScriptedUi("3", "yes", "", "", "deposit 3") {
             @Override
             public String readCommand() {
                 String command = super.readCommand();
