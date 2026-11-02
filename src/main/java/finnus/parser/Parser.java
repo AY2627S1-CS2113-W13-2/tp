@@ -948,7 +948,10 @@ public class Parser {
         }
         // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
         // description.
-        int lastSpace = afterPrefix.lastIndexOf(' ');
+        int lastSpace = afterPrefix.length() - 1;
+        while (lastSpace >= 0 && !Character.isWhitespace(afterPrefix.charAt(lastSpace))) {
+            lastSpace--;
+        }
         if (lastSpace == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }

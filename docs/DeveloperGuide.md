@@ -142,7 +142,7 @@ Other subclasses, private members, and parser and UI relationships are omitted.
    - The user inputs `deposit 50 d/Allowance`.
    - `Parser#parseDeposit()` verifies that `50` is a valid positive monetary value at or below `Money.MAX_AMOUNT`, extracts the optional description, and constructs a `DepositCommand(amount, description)`.
    - When `DepositCommand#execute(transactions, ui)` runs, it creates a new immutable `Transaction(TransactionType.DEPOSIT, amount, description)` and invokes `transactions.add(transaction)`.
-   - `TransactionList` stores the new `Transaction` in entry order. The `Money` value object remains shared and immutable across calculations such as `TransactionList#getBalance()`.
+   - `TransactionList` inserts the new `Transaction` by date, retaining entry order for equal dates. The `Money` value object remains shared and immutable across calculations such as `TransactionList#getBalance()`.
 <!-- @@author -->
 
 <!-- @@author nkyjStar -->
@@ -270,13 +270,14 @@ RATE|JPY|110
 CATEGORY|Meals
 ALLOWANCE|5|500||2026-10-05
 SPENDING_ALERT|100|90
-TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
-TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
+TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl||2026-10-20
+TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals|2026-10-20
 ```
 
 `OPENING` stores the starting SGD balance. `RATE` stores foreign-currency units per SGD, and `CATEGORY` declares a custom
 category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
-and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
+followed by category and date fields. The deposit's category field is empty; an unknown date is also empty.
+The descriptions above decode to `Allowance` and `Ramen`.
 Foreign transactions place their currency code, original amount, and recorded rate before the category field.
 
 <!-- @@author -->
@@ -289,8 +290,10 @@ records are skipped with a warning.
 
 <!-- @@author naieel04 -->
 
-Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
-seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
+Current SGD transaction rows have six fields and foreign rows have nine, including the date after the category.
+An empty date field represents an undated legacy entry. The decoder also accepts older five- and eight-field rows
+with categories but no dates, and four- and seven-field rows without categories, assigning legacy withdrawals to
+`Others`. It validates amounts, rates, descriptions,
 and categories before restoring the ledger. Unsupported numbered format versions disable saving; malformed rows can be
 skipped with warnings, as described in [Automatic saving and recovery](#automatic-saving-and-recovery).
 
@@ -399,14 +402,17 @@ collects and confirms this value once, before normal commands become available.
    confirmation does `Setup` execute `OpeningBalanceCommand`.
 5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
    without saving the unconfirmed amount. The pending marker remains, so setup is offered again
-   on the next run. Once the remaining setup prompts finish, `FinNUS` saves the ledger and later
-   runs skip setup.
+   on the next run. Immediately after confirmation, `Setup#run()` invokes the supplied callback and `FinNUS`
+   attempts to save the opening balance before any optional prompts. After a successful save, later runs skip setup
+   even if optional setup was interrupted. Failed saves remain pending and are retried.
 6. After confirming the opening balance, setup asks for an optional balance threshold, then the
    allowance day and optional amount. If an amount is entered, setup asks for an optional whole
    percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
    configure either setting later with `alert`.
 
 See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
+The diagram summarises the prompts; the persistence callback between balance confirmation and optional questions
+is omitted. After optional setup completes, FinNUS saves any additional changes.
 
 <!-- @@author chancheese -->
 <!-- @@author lololol8484 -->
@@ -431,6 +437,11 @@ confirmation.
 and `ForeignTransactionCommand` both call `confirmWithdrawal()`, so SGD and converted foreign withdrawals use the same
 rules. A declined confirmation or ended input returns before `TransactionList#add()`; only explicit `yes` or `y` lets the
 command continue.
+
+`EditCommand` calls `confirmEdit()` before replacing a withdrawal. The original withdrawal is accounted for in both
+balance and cycle calculations, so only the replacement's net effect is tested. A date edit compares spending in
+the destination cycle before and after replacement. Undated edits remain excluded from allowance-cycle totals,
+but still undergo balance checks. A declined confirmation or ended input leaves the original entry unchanged.
 
 `SpendingAlert#crossedBy()` compares the current ledger with the proposed result and returns every threshold crossed:
 
@@ -540,7 +551,9 @@ The `edit INDEX` command corrects selected fields of a deposit or withdrawal usi
    `EditCommand` containing immutable `EditFields`. Null fields mean "keep the old value"; empty `d/` means clear it.
 2. `EditCommand#execute()` checks the index and reads the entry at `transactions.size() - index`. It retains omitted
    values and validates the complete replacement before changing the ledger. Invalid edits raise `FinNusException`.
-3. `TransactionList#replace()` replaces the entry and applies a stable date sort without changing the count.
+3. A changed withdrawal is checked with `SpendingAlert#confirmEdit()` before mutation. If a threshold is newly crossed,
+   confirmation is required; declining or ending input leaves the entry unchanged. After approval, or if no alert
+   applies, `TransactionList#replace()` replaces the entry and applies a stable date sort without changing the count.
    Date edits can change displayed indices; other edits retain the entry's position.
 4. The command displays the before/after entries and any saved FX rate. FinNUS detects the changed snapshot and
    attempts to save it using the existing storage format. Failed saves remain pending for retry.
@@ -549,7 +562,8 @@ This sequence shows a successful `edit 1 a/6.50` on an SGD withdrawal:
 
 ![Sequence diagram of editing a withdrawal amount](images/EditSequenceDiagram.png)
 
-*Figure 7. A successful SGD edit. Validation details, UI output, allowance handling and saving are omitted.
+*Figure 7. A successful SGD edit that crosses no new alert threshold. Validation details, spending-alert confirmation,
+UI output, allowance handling and saving are omitted.
 [PlantUML source](diagrams/EditSequenceDiagram.puml).*
 
 Foreign amount edits retain the saved rate unless `r/` is supplied. `ForeignAmount#toSgd()` rounds half-up to cents;
@@ -687,7 +701,7 @@ The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` 
 allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
 
 The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
-transactions from `TransactionList` using `size - 1 - index`, leaving the stored insertion order
+transactions from `TransactionList` using `size - 1 - index`, leaving the stored chronological order
 untouched. Displayed transaction numbers are global newest-first indices, so they agree with
 `recent` and `delete`. The heading shows the visible range and total count instead of a page
 number because `n/NUMBER` preserves the first visible transaction even when that position is
@@ -741,7 +755,7 @@ resizing, invalid input, empty history, and the command restriction in the appli
 **Aspect: transaction display order**
 
 * **Alternative 1 (current choice):** display newest first, as `recent` does, while keeping
-  `TransactionList` in oldest-first insertion order.
+`TransactionList` in chronological order, with stable entry order for equal dates.
   * Pros: recent activity appears first. The global displayed indices match `recent` and `delete`,
     and adding a transaction remains a simple append to the stored list.
   * Cons: the displayed order differs from storage order, so history translates each displayed
@@ -1074,8 +1088,8 @@ the basis for features that look at spending over a period, such as a budget cyc
 
 #### How a dated withdrawal is processed
 
-1. `Parser#parse(input, today)` receives today's date as a parameter. `Parser#parse(input)`, used by the app,
-   passes `LocalDate.now()`, while tests pass a fixed date so they never depend on the real date.
+1. `FinNUS` captures today's date from its injected `Clock` and passes it to `Parser#parse(input, today)`.
+   The convenience overload `Parser#parse(input)` uses `LocalDate.now()`; tests can pass a fixed date.
 2. `Parser#extractDate()` removes `on/2026-10-20` with the same `extractPrefixedValue()` helper used for `c/` and
    `t/`, and checks the date. `LocalDate.parse()` uses the strict ISO format, so it rejects both badly formatted
    text (`2026-2-3`) and dates that do not exist (`2026-02-30`). Before that, the text must match
@@ -1113,7 +1127,7 @@ each count still means exactly one format, so older save files keep loading:
 
 Transactions loaded from rows without a date have a `null` date and are shown without one. A row with an invalid
 date is skipped with a warning, like other damaged rows. Loading uses the same format and earliest-date rules as
-the parser, so a hand-edited file cannot load a date that a command would reject.
+the parser. The loader does not compare saved dates with today's clock; future-date rejection applies to command input.
 
 #### Design considerations
 
@@ -1183,10 +1197,12 @@ FinNUS only runs while it is open, so "on the 5th" really means "the first time 
    both are added, each on its own date.
 3. A foreign amount is converted with `CurrencyRates#convert()` at the current rate. If no rate is set, `convert()`
    throws a `FinNusException`; the loop stops without moving `lastCredited`, so that date stays due.
-4. `FinNUS#executeCommand()` also runs `CreditAllowanceCommand` after every other command. This adds a waiting
-   allowance as soon as the user sets the missing rate, and handles FinNUS staying open past midnight. Only the run
-   at startup shows the warning, so it does not repeat after every command.
-5. Both runs happen before the snapshot comparison, so any added deposit is saved like any other change.
+4. Before most normal commands, `FinNUS#prepareAllowance()` credits and saves due allowances so lists and balances
+   include them. It skips `edit` and `delete` until those commands consume their displayed indices, and skips `exit`.
+   History navigation defers credits to keep its numbering stable. Successful non-exit commands outside history also
+   retry crediting afterwards, so a new rate can release a waiting allowance. The same captured command date is used
+   throughout. Only startup displays warnings about a due allowance that cannot yet be credited.
+5. Each credit updates the pending-change flag, so save failures can be retried even if the following command fails.
 
 Deleting an automatic deposit does not bring it back, because `lastCredited` has already moved past its date.
 
@@ -1205,7 +1221,7 @@ without the record load with no allowance. A record with an invalid day, amount,
 
 **Aspect: when an automatic deposit is added**
 
-* **Alternative 1 (current choice):** at startup and after each command, for every due date since `lastCredited`.
+* **Alternative 1 (current choice):** at startup and around normal commands, for every due date since `lastCredited`.
   * Pros: works even though FinNUS is not always running; missed months are added on their real dates.
   * Cons: needs the extra `lastCredited` field so the same month is never added twice.
 * **Alternative 2:** only add the allowance while FinNUS is open on the allowance day.
@@ -1520,7 +1536,8 @@ v2.1 includes:
 - automatic saving, with recovery from damaged files
 
 It includes editing deposits and withdrawals, including their historical foreign amounts and exchange rates.
-It does not include listing one cycle's spending, charts or a daily budget. See
+It also includes cash-flow and category-spending charts, plus configurable spending alerts. It does not include
+a cycle-filtered transaction list or a daily budget. See
 [Planned enhancements](#planned-enhancements).
 <!-- @@author -->
 
@@ -1531,7 +1548,8 @@ It does not include listing one cycle's spending, charts or a daily budget. See
 <!-- @@author -->
 
 <!-- @@author chancheese -->
-Listing one cycle's spending and visual charts are not implemented yet.
+Financial charts are implemented. A dedicated cycle-filtered transaction list is not implemented yet;
+`allowance` shows cycle totals, while `chart spending` supports calendar periods.
 <!-- @@author -->
 
 <!-- @@author naieel04 -->
@@ -1612,7 +1630,8 @@ The balance reflects the corrected values, and FinNUS attempts to save them.
 
 1. The user enters `recent` or `find` and chooses a displayed transaction number.
 2. The user enters an edit such as `edit 1 a/6.50 t/food`.
-3. FinNUS validates all changes and replaces the selected entry, maintaining chronological order.
+3. FinNUS validates all changes, requests confirmation for newly crossed withdrawal alert thresholds, and replaces
+   the selected entry only if approved or no confirmation is needed, maintaining chronological order.
 4. FinNUS displays the before/after entries and automatically saves the ledger.
 
 **Extensions:**
@@ -1621,6 +1640,7 @@ The balance reflects the corrected values, and FinNUS attempts to save them.
 - **3a. Invalid index, field, category, or resulting amount:** FinNUS reports the error; the selected entry is unchanged.
 - **3b. All supplied values match:** FinNUS displays `No changes made.`; no edit-induced save is needed.
 - **3c. A date changes:** The corrected entry may get a different index; the user checks the list before editing again.
+- **3d. A spending alert is declined or its input ends:** FinNUS displays `Edit cancelled.` and retains the entry.
 - **4a. Saving fails:** FinNUS reports that the correction remains in memory and retries on a later command or at exit.
 
 <!-- @@author -->

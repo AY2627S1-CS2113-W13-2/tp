@@ -289,6 +289,13 @@ class ParserTest {
         assertArrayEquals(new String[] {"500", ""}, Parser.splitAmountAndDescription("500", FORMAT));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {" ", "\t", " \t", "\t "})
+    public void splitAmountAndDescription_descriptionFirst_acceptsWhitespace(String separator) throws FinNusException {
+        assertArrayEquals(new String[]{"4.50", "Chicken rice"},
+                Parser.splitAmountAndDescription("d/Chicken rice" + separator + "4.50", FORMAT));
+    }
+
     @Test
     public void splitAmountAndDescription_slashInsideWord_notTreatedAsPrefix() throws FinNusException {
         assertArrayEquals(new String[] {"10", "food and/or drinks"},

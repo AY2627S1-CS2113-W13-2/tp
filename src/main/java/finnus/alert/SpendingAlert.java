@@ -128,6 +128,10 @@ public final class SpendingAlert {
 
     private void addAllowanceAlerts(List<String> alerts, TransactionList transactions, Transaction original,
             Transaction proposedWithdrawal) {
+        // An undated legacy entry cannot be assigned to an allowance cycle, even during an edit.
+        if (proposedWithdrawal.getDate().isEmpty()) {
+            return;
+        }
         Optional<Allowance> allowanceSetting = transactions.getAllowance();
         if (allowanceSetting.isEmpty() || !allowanceSetting.get().hasAmount()) {
             return;
@@ -137,7 +141,7 @@ public final class SpendingAlert {
         if (allowanceAmount.isEmpty()) {
             return;
         }
-        LocalDate date = proposedWithdrawal.getDate().orElseGet(LocalDate::now);
+        LocalDate date = proposedWithdrawal.getDate().orElseThrow();
         LocalDate cycleStart = allowance.cycleStart(date);
         LocalDate nextCycleStart = allowance.nextDate(date);
         Money spentBefore = Money.ZERO;

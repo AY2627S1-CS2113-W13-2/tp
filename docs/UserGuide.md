@@ -8,7 +8,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 1. Ensure that JDK 25 is installed on your computer.
    - On macOS with SDKMAN, select the project version with `sdk use java 25.0.3.fx-zulu`.
-2. Download the latest `finnus.jar` file from here.
+2. Download the latest `finnus.jar` from the [release page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases).
 3. Copy the file to the folder you want to use as the home folder for your FinNUS.
 4. Open a terminal, `cd` to the folder containing the JAR file, and run the application using the following command:
 
@@ -121,6 +121,9 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 <!-- @@author -->
 
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
+* The confirmed balance is saved before optional questions begin. If you close the application during those
+  questions after a successful save, the next run uses that balance. You can configure optional settings later
+  with `allowance` and `alert`. If saving fails, FinNUS warns you and keeps the changes in memory for retry.
 <!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
@@ -537,6 +540,8 @@ Format: `recent [NUMBER]`
 * `[NUMBER]` is optional. It is set to 5 by default.
 * If `[NUMBER]` is more than the total number of transactions, the program outputs the entire list of transactions.
 * `[NUMBER]` must be positive 
+* "Recent" uses transaction dates, not the order of commands. On the same date, the most recently entered entry
+  appears first. Undated legacy entries follow all dated entries.
 
 Examples:
 
@@ -766,30 +771,33 @@ Expected output:
 ```text
 ____________________________________________________________
 Available commands:
-+--------------+----------------------+----------------------------------------+
-| Command      | Description          | Syntax                                 |
-+--------------+----------------------+----------------------------------------+
-| deposit      | Record income        | deposit AMOUNT [d/DESCRIPTION]         |
-|              |                      | [c/CURRENCY] [on/DATE]                 |
-| withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |
-|              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |
-| recent       | Recent activity      | recent [NUMBER]                        |
-| history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |
-| find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |
++----------------+----------------------+--------------------------------------+
+| Command        | Description          | Syntax                               |
++----------------+----------------------+--------------------------------------+
+| deposit        | Record income        | deposit AMOUNT [d/DESCRIPTION]       |
+|                |                      | [c/CURRENCY] [on/DATE]               |
+| withdraw       | Record spending      | withdraw AMOUNT d/DESCRIPTION        |
+|                |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]  |
+| recent         | Recent activity      | recent [NUMBER]                      |
+| history        | Transaction history  | history [n/NUMBER] [p/PAGE]          |
 | chart flow     | Cash flow by period  | chart flow from/START to/END         |
 |                |                      | int/PERIOD [p/PAGE]                  |
 | chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |
-| delete       | Delete a record      | delete INDEX                           |
-| edit         | Edit a record        | edit INDEX [a/AMOUNT] [d/DESCRIPTION]  |
-|              |                      | [t/CATEGORY] [on/DATE] [r/RATE]        |
-| balance      | Current balance      | balance                                |
-| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
-|              |                      | [c/CURRENCY]] or off                   |
-| rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
-| category     | Manage categories    | category [NAME]                        |
-| help         | List commands        | help                                   |
-| exit         | Close FinNUS         | exit                                   |
-+--------------+----------------------+----------------------------------------+
+| find           | Search transactions  | find [KEYWORD] [t/CATEGORY]          |
+| delete         | Delete a record      | delete INDEX                         |
+| edit           | Edit a record        | edit INDEX [a/AMOUNT]                |
+|                |                      | [d/DESCRIPTION] [t/CATEGORY]         |
+|                |                      | [on/DATE] [r/RATE]                   |
+| balance        | Current balance      | balance                              |
+| allowance      | Monthly allowance    | allowance [DAY [a/AMOUNT]            |
+|                |                      | [c/CURRENCY]] or off                 |
+| alert          | Manage spending      | alert [balance AMOUNT or off] or     |
+|                | alerts               | [allowance PERCENT or off]           |
+| rate           | Manage FX rates      | rate [CURRENCY RATE]                 |
+| category       | Manage categories    | category [NAME]                      |
+| help           | List commands        | help                                 |
+| exit           | Close FinNUS         | exit                                 |
++----------------+----------------------+--------------------------------------+
 
 [] means optional.
 ____________________________________________________________
@@ -802,10 +810,12 @@ ____________________________________________________________
 **A**: Copy `finnus.txt` (and `finnus.txt.bak`, if it exists) from the folder containing `finnus.jar` into the folder
 where you put `finnus.jar` on the other computer. FinNUS loads it automatically the next time it starts.
 
-**Q**: What is the `finnus.log` file that appears next to `finnus.jar`?
+**Q**: What is the `finnus.log` file?
 
 **A**: It is a log file that records what FinNUS did, to help developers investigate problems. It is not needed to use
 FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`, not in the log.
+The log is created in the terminal's working directory, which can differ from the JAR's folder if you launch it
+using an absolute path. Saved financial data remains beside the packaged JAR.
 
 **Q**: Why does `opening` say it is not a command?
 
@@ -826,6 +836,11 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View balance: `balance`
 * Set your monthly allowance: `allowance DAY [a/AMOUNT] [c/CURRENCY]`
 * View or stop your allowance: `allowance` or `allowance off`
+
+<!-- @@author naieel04 -->
+
+* Manage spending alerts: `alert`, `alert balance AMOUNT`, `alert allowance PERCENT`,
+  `alert balance off`, or `alert allowance off`
 
 <!-- @@author naieel04 -->
 
