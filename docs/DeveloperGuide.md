@@ -1208,19 +1208,31 @@ to make allowance and campus-expense tracking straightforward, including for stu
 
 ### Release scope
 
-[Insert features included in this release and explicit exclusions here]
+<!-- @@author -->
 
-Foreign-currency transaction conversion is implemented. [Confirm whether allowance-cycle and daily-budget features
-are included in this release.]
+<!-- @@author chancheese -->
+v2.1 includes:
+
+- deposits and withdrawals, with an optional date, category and foreign currency
+- the opening balance, `balance`, `recent`, `history`, `find` and `delete`
+- exchange rates, custom categories, and a monthly allowance that is added automatically
+- automatic saving, with recovery from damaged files
+
+It does not include editing transactions, listing one cycle's spending, charts or a daily budget. See
+[Planned enhancements](#planned-enhancements).
 <!-- @@author -->
 
 ---
 
 <!-- @@author naieel04 -->
 ## User stories
+<!-- @@author -->
 
-The stories below describe product goals; some features are not implemented. Confirm release priorities and acceptance
-criteria with the team.
+<!-- @@author chancheese -->
+Listing one cycle's spending and visual charts are not implemented yet.
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
 
 | ID    | As a/an...               | I want to...                                                            | So that...                                 |
 |-------|--------------------------|-------------------------------------------------------------------------|--------------------------------------------|
@@ -1294,7 +1306,11 @@ The following quality requirements are derived from the product goals.
 | NFR-04 | Usability          | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command.                                                                                                      | Manually test documented commands, malformed inputs, and recovery with a following valid command.                                |
 | NFR-05 | Compatibility      | The application must run with Java 25 on the operating systems supported by the project.                                                                                                                                                                | Build and run the automated checks on Windows, macOS, and Linux CI environments.                                                 |
 
-[Confirm the supported operating systems and rounding policy with the team.]
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+FinNUS supports Windows, macOS and Linux. Amounts are rounded half-up to the cent for display. Foreign amounts are
+also rounded half-up to the cent when they are recorded.
 <!-- @@author -->
 
 ---
