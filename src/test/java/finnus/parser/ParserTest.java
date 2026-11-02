@@ -28,6 +28,9 @@ import finnus.command.AlertCommand;
 import finnus.command.AllowanceCommand;
 import finnus.command.BalanceCommand;
 import finnus.command.CategoryCommand;
+//@@author nkyjStar
+import finnus.command.ChartSpendingCommand;
+//@@author
 import finnus.command.Command;
 import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
@@ -63,6 +66,7 @@ class ParserTest {
             Map.entry(CommandWord.RECENT, new CommandExample("recent 3", RecentTransactionCommand.class)),
             //@@author nkyjStar
             Map.entry(CommandWord.HISTORY, new CommandExample("history n/3 p/1", HistoryCommand.class)),
+            Map.entry(CommandWord.CHART, new CommandExample("chart spending", ChartSpendingCommand.class)),
             //@@author
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),

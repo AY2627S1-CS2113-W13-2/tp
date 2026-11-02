@@ -35,22 +35,25 @@ class HelpCommandTest {
                 "____________________________________________________________",
                 "Available commands:",
                 //@@author nabijonzzz
-                "+--------------+----------------------+----------------------------------------+",
-                "| Command      | Description          | Syntax                                 |",
-                "+--------------+----------------------+----------------------------------------+",
-                "| deposit      | Record income        | deposit AMOUNT [d/DESCRIPTION]         |",
-                "|              |                      | [c/CURRENCY] [on/DATE]                 |",
-                "| withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |",
-                "|              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |",
-                "| recent       | Recent activity      | recent [NUMBER]                        |",
+                "+----------------+----------------------+--------------------------------------+",
+                "| Command        | Description          | Syntax                               |",
+                "+----------------+----------------------+--------------------------------------+",
+                "| deposit        | Record income        | deposit AMOUNT [d/DESCRIPTION]       |",
+                "|                |                      | [c/CURRENCY] [on/DATE]               |",
+                "| withdraw       | Record spending      | withdraw AMOUNT d/DESCRIPTION        |",
+                "|                |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]  |",
+                "| recent         | Recent activity      | recent [NUMBER]                      |",
                 //@@author nkyjStar
-                "| history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |",
+                "| history        | Transaction history  | history [n/NUMBER] [p/PAGE]          |",
+                "| chart flow     | Cash flow by period  | chart flow from/START to/END         |",
+                "|                |                      | int/PERIOD [p/PAGE]                  |",
+                "| chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |",
                 //@@author nabijonzzz
                 //@@author chancheese
-                "| find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |",
+                "| find           | Search transactions  | find [KEYWORD] [t/CATEGORY]          |",
                 //@@author nabijonzzz
-                "| delete       | Delete a record      | delete INDEX                           |",
-                "| balance      | Current balance      | balance                                |",
+                "| delete         | Delete a record      | delete INDEX                         |",
+                "| balance        | Current balance      | balance                              |",
                 //@@author chancheese
                 "| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |",
                 "|              |                      | [c/CURRENCY]] or off                   |",
@@ -59,11 +62,11 @@ class HelpCommandTest {
                 "|              | alerts               | [allowance PERCENT or off]             |",
                 //@@author
                 //@@author nabijonzzz
-                "| rate         | Manage FX rates      | rate [CURRENCY RATE]                   |",
-                "| category     | Manage categories    | category [NAME]                        |",
-                "| help         | List commands        | help                                   |",
-                "| exit         | Close FinNUS         | exit                                   |",
-                "+--------------+----------------------+----------------------------------------+",
+                "| rate           | Manage FX rates      | rate [CURRENCY RATE]                 |",
+                "| category       | Manage categories    | category [NAME]                      |",
+                "| help           | List commands        | help                                 |",
+                "| exit           | Close FinNUS         | exit                                 |",
+                "+----------------+----------------------+--------------------------------------+",
                 //@@author naieel04
                 "",
                 "[] means optional.",
@@ -73,7 +76,7 @@ class HelpCommandTest {
     }
 
     @Test
-    public void execute_help_containsEveryRegisteredCommandOnce() {
+    public void execute_help_containsEveryHelpEntryOnce() {
         List<String> rows = captureHelpOutput().lines()
                 .filter(line -> line.startsWith("|"))
                 .skip(1)
@@ -83,10 +86,14 @@ class HelpCommandTest {
                 .toArray(CommandWord[]::new);
         //@@author naieel04
         for (CommandWord command : commands) {
-            long matchingRows = rows.stream()
-                    .filter(row -> row.split("\\|", -1)[1].trim().equals(command.getWord()))
-                    .count();
-            assertEquals(1, matchingRows, command.getWord() + " must appear in one command row");
+            //@@author nkyjStar
+            for (CommandWord.HelpEntry entry : command.getHelpEntries()) {
+                long matchingRows = rows.stream()
+                        .filter(row -> row.split("\\|", -1)[1].trim().equals(entry.command()))
+                        .count();
+                assertEquals(1, matchingRows, entry.command() + " must appear in one command row");
+            }
+            //@@author naieel04
         }
     }
 

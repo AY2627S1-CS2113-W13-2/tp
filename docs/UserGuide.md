@@ -574,6 +574,47 @@ ____________________________________________________________
 ```
 <!-- @@author -->
 
+<!-- @@author nkyjStar -->
+### Summarising cash flow: `chart flow`
+
+`chart flow` summarises deposit and withdrawal totals over a selected date range, grouped by calendar
+period. Each period has two bars with exact SGD totals. Bars are scaled against the largest total on
+the current page, so compare their lengths within that page. The opening balance is excluded.
+
+Format: `chart flow from/START to/END int/PERIOD [p/PAGE]`
+
+* Use dates in `YYYY-MM-DD` format. Both dates are included and must be from 2000-01-01 through today;
+  `START` must not be after `END`.
+* `PERIOD` is `DAY`, `WEEK`, `MONTH`, or `YEAR`, ignoring case. Weeks run Monday through Sunday.
+* Each page shows up to four consecutive periods, earliest first. `p/PAGE` selects a page, starting at 1;
+  page 1 is the default. Repeat the command with another page to view more periods. A page outside the
+  requested range is rejected. Chart pages are separate command results, so `next`, `prev`, and `stop`
+  are only used while viewing transaction history.
+* Each period shows separate deposit and withdrawal totals, including zero totals. If the chosen dates cut
+  through a week, month, or year, only transactions within the exact requested dates count, even though
+  the label shows the complete calendar period. Older transactions without dates cannot be placed in a period.
+
+Example: `chart flow from/2026-10-01 to/2026-10-31 int/WEEK p/2`
+
+### Viewing spending by category: `chart spending`
+
+`chart spending` shows one bar per category with its recorded SGD total beside it. Bar lengths are
+scaled against the largest category total in that chart. Deposits and the opening balance are excluded.
+
+Format: `chart spending [int/PERIOD on/DATE]`
+
+* `chart spending` totals all recorded withdrawals by category, including older withdrawals without dates.
+* Give both `int/PERIOD` and `on/DATE` to show the day, week, month, or year containing that date.
+  `PERIOD` accepts `DAY`, `WEEK`, `MONTH`, or `YEAR`, ignoring case; weeks start on Monday.
+  `DATE` uses `YYYY-MM-DD` and must be from 2000-01-01 through today.
+  For example, `chart spending int/MONTH on/2026-10-21` shows October 2026 spending.
+* Categories with no spending in the selected interval are omitted. Deposits are excluded; foreign-currency
+  withdrawals use the SGD amount recorded at the time. A dated chart excludes transactions without dates.
+
+Example: `chart spending int/MONTH on/2026-10-21`
+
+<!-- @@author -->
+
 <!-- @@author nabijonzzz -->
 ### Finding transactions: `find`
 Lists the transactions whose description contains a keyword, so you can find a past transaction without scrolling
@@ -668,27 +709,30 @@ Expected output:
 ```text
 ____________________________________________________________
 Available commands:
-+--------------+----------------------+----------------------------------------+
-| Command      | Description          | Syntax                                 |
-+--------------+----------------------+----------------------------------------+
-| deposit      | Record income        | deposit AMOUNT [d/DESCRIPTION]         |
-|              |                      | [c/CURRENCY] [on/DATE]                 |
-| withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |
-|              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |
-| recent       | Recent activity      | recent [NUMBER]                        |
-| history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |
-| find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |
-| delete       | Delete a record      | delete INDEX                           |
-| balance      | Current balance      | balance                                |
-| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
-|              |                      | [c/CURRENCY]] or off                   |
-| alert        | Manage spending      | alert [balance AMOUNT or off] or        |
-|              | alerts               | [allowance PERCENT or off]              |
-| rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
-| category     | Manage categories    | category [NAME]                        |
-| help         | List commands        | help                                   |
-| exit         | Close FinNUS         | exit                                   |
-+--------------+----------------------+----------------------------------------+
++----------------+----------------------+--------------------------------------+
+| Command        | Description          | Syntax                               |
++----------------+----------------------+--------------------------------------+
+| deposit        | Record income        | deposit AMOUNT [d/DESCRIPTION]       |
+|                |                      | [c/CURRENCY] [on/DATE]               |
+| withdraw       | Record spending      | withdraw AMOUNT d/DESCRIPTION        |
+|                |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]  |
+| recent         | Recent activity      | recent [NUMBER]                      |
+| history        | Transaction history  | history [n/NUMBER] [p/PAGE]          |
+| chart flow     | Cash flow by period  | chart flow from/START to/END         |
+|                |                      | int/PERIOD [p/PAGE]                  |
+| chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |
+| find           | Search transactions  | find [KEYWORD] [t/CATEGORY]          |
+| delete         | Delete a record      | delete INDEX                         |
+| balance        | Current balance      | balance                              |
+| allowance      | Monthly allowance    | allowance [DAY [a/AMOUNT]            |
+|                |                      | [c/CURRENCY]] or off                 |
+| alert          | Manage spending      | alert [balance AMOUNT or off] or     |
+|                | alerts               | [allowance PERCENT or off]           |
+| rate           | Manage FX rates      | rate [CURRENCY RATE]                 |
+| category       | Manage categories    | category [NAME]                      |
+| help           | List commands        | help                                 |
+| exit           | Close FinNUS         | exit                                 |
++----------------+----------------------+--------------------------------------+
 
 [] means optional.
 ____________________________________________________________
@@ -727,6 +771,10 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View or stop your allowance: `allowance` or `allowance off`
 * View recent transactions: `recent [NUMBER]`
 * View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
+<!-- @@author nkyjStar -->
+* Summarise cash flow: `chart flow from/START to/END int/PERIOD [p/PAGE]`
+* View spending by category: `chart spending [int/PERIOD on/DATE]`
+<!-- @@author -->
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
 * Delete a transaction: `delete INDEX`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
