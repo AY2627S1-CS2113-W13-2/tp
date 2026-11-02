@@ -793,10 +793,21 @@ public class Parser {
         if (pattern.matcher(rest).find()) {
             throw new FinNusException(duplicateMessage);
         }
-        if (value.isEmpty()) {
+        if (value.isEmpty() || startsWithRecognisedPrefix(value)) {
             throw new FinNusException(missingMessage);
         }
         return new String[]{value, rest};
+    }
+
+    /**
+     * Recognises a prefix that was supplied where the current prefix's value should be.
+     * This prevents input such as {@code t/ d/Lunch} from reporting {@code d/Lunch} as an
+     * invalid category instead of reporting the missing category value.
+     */
+    private static boolean startsWithRecognisedPrefix(String value) {
+        return value.startsWith(DESCRIPTION_PREFIX) || value.startsWith(CURRENCY_PREFIX)
+                || value.startsWith(AMOUNT_PREFIX) || value.startsWith(CATEGORY_PREFIX)
+                || value.startsWith(DATE_PREFIX);
     }
 
     /**
@@ -938,11 +949,21 @@ public class Parser {
         }
         // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
         // description.
-        int lastSpace = afterPrefix.lastIndexOf(' ');
-        if (lastSpace == -1) {
+        int separator = findLastWhitespace(afterPrefix);
+        if (separator == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
-        return new String[]{afterPrefix.substring(lastSpace + 1), afterPrefix.substring(0, lastSpace).trim()};
+        return new String[]{afterPrefix.substring(separator + 1), afterPrefix.substring(0, separator).trim()};
+    }
+
+    /** Returns the final whitespace position, including tabs and other Java whitespace. */
+    private static int findLastWhitespace(String text) {
+        for (int index = text.length() - 1; index >= 0; index--) {
+            if (Character.isWhitespace(text.charAt(index))) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     /**

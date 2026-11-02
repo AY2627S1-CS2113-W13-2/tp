@@ -264,6 +264,16 @@ class ParserTest {
                 Parser.splitAmountAndDescription("d/Chicken rice 4.50", FORMAT));
     }
 
+    //@@author lololol8484
+    @ParameterizedTest
+    @ValueSource(strings = {"d/Chicken rice\t4.50", "d/Chicken rice 4.50\t"})
+    public void splitAmountAndDescription_descriptionFirst_acceptsWhitespaceSeparators(String input)
+            throws FinNusException {
+        assertArrayEquals(new String[] {"4.50", "Chicken rice"},
+                Parser.splitAmountAndDescription(input, FORMAT));
+    }
+    //@@author
+
     @Test
     public void splitAmountAndDescription_noPrefix_returnsEmptyDescription() throws FinNusException {
         assertArrayEquals(new String[] {"500", ""}, Parser.splitAmountAndDescription("500", FORMAT));
@@ -439,6 +449,22 @@ class ParserTest {
     public void parse_invalidForeignTransaction_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
     }
+
+    //@@author lololol8484
+    @Test
+    public void parse_descriptionFirstWithTab_acceptsTransaction() throws FinNusException {
+        assertInstanceOf(WithdrawCommand.class, Parser.parse("withdraw d/Lunch\t5"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"withdraw 5 t/ d/Lunch", "deposit 5 c/ d/Salary",
+        "allowance 5 a/ c/JPY", "deposit 5 on/ d/Salary"})
+    public void parse_emptyPrefixBeforeAnotherPrefix_reportsMissingValue(String input) {
+        FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse(input));
+        assertTrue(exception.getMessage().toLowerCase(Locale.ROOT).contains("missing"),
+                "Expected a missing-value error for: " + input);
+    }
+    //@@author
 
     @Test
     public void parseForeignAmount_aboveSgdMaximum_isAllowedBeforeConversion() throws FinNusException {
