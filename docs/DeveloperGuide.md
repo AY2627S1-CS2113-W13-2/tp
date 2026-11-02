@@ -192,7 +192,8 @@ user input is limited to two decimal places.
 
 <!-- @@author chancheese -->
 `Money.MAX_AMOUNT` (SGD 1,000,000) caps each amount a user enters. A foreign amount is checked after it is
-converted to SGD, so a large amount in a currency such as JPY can still be valid. A student is unlikely to move that much at once, so a larger value is treated as a typo.
+converted to SGD, so a large amount in a currency such as JPY can still be valid. A student is unlikely to move
+that much at once, so a larger value is treated as a typo.
 <!-- @@author -->
 
 #### Formatting and equality
