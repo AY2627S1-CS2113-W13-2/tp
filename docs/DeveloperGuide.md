@@ -377,7 +377,7 @@ See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this in
 <!-- @@author lololol8484 -->
 `Setup` asks for the optional balance threshold before the allowance prompts. The optional percentage prompt only
 appears when an allowance amount was entered. See [Spending alerts](#spending-alerts).
-<!-- @@author -->
+<!-- @@author chancheese -->
 After the threshold prompt, `Setup` asks for the allowance day and its SGD amount. Pressing Enter (or input ending)
 skips either one, and setup still counts as complete. See
 [Setting a monthly allowance](#setting-a-monthly-allowance).

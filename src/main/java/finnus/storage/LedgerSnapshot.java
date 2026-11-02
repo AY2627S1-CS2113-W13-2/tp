@@ -321,7 +321,8 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
     static void validateSpendingAlert(Money balanceThreshold, BigDecimal allowancePercentage) {
         if (balanceThreshold != null && (!balanceThreshold.isPositive()
                 || balanceThreshold.compareTo(Money.MAX_AMOUNT) > 0)) {
-            throw new IllegalArgumentException("Balance alert threshold must be positive and within the supported range");
+            throw new IllegalArgumentException("Balance alert threshold must be positive and within the "
+                    + "supported range");
         }
         if (allowancePercentage != null && (allowancePercentage.signum() <= 0
                 || allowancePercentage.compareTo(BigDecimal.valueOf(100)) > 0
