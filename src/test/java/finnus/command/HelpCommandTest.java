@@ -43,7 +43,12 @@ class HelpCommandTest {
                 "| withdraw     | Record spending      | withdraw AMOUNT d/DESCRIPTION          |",
                 "|              |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]    |",
                 "| recent       | Recent activity      | recent [NUMBER]                        |",
-                "| find         | Search descriptions  | find KEYWORD                           |",
+                //@@author nkyjStar
+                "| history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |",
+                //@@author nabijonzzz
+                //@@author chancheese
+                "| find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |",
+                //@@author nabijonzzz
                 "| delete       | Delete a record      | delete INDEX                           |",
                 "| balance      | Current balance      | balance                                |",
                 //@@author chancheese

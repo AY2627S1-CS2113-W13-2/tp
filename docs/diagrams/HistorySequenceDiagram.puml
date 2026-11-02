@@ -1,0 +1,99 @@
+@startuml HistorySequenceDiagram
+' @@author nkyjStar
+' Assumes at least five recorded transactions so next has a page to show.
+title Opening and navigating transaction history
+skinparam shadowing false
+hide footbox
+
+actor User
+participant "ui:Ui" as Ui
+participant ":FinNUS" as App
+participant "<<class>>\nParser" as Parser
+participant "transactions:TransactionList" as Ledger
+
+App -> Ui: readCommand()
+activate Ui
+User -> Ui: history n/2 p/2
+Ui --> App: input
+deactivate Ui
+App -> Parser: parse(input, today)
+activate Parser
+Parser -> Parser: parseHistory("n/2 p/2")
+activate Parser
+create "historyView:HistoryCommand" as History
+Parser -> History: new HistoryCommand(2, 2)
+activate History
+History --> Parser: command
+deactivate History
+deactivate Parser
+Parser --> App: command
+deactivate Parser
+App -> History: execute(transactions, ui)
+activate History
+History -> Ledger: size()
+activate Ledger
+Ledger --> History: total
+deactivate Ledger
+loop each visible transaction
+    History -> Ledger: get(total - 1 - index)
+    activate Ledger
+    Ledger --> History: transaction
+    deactivate Ledger
+end
+History -> Ui: showMessage(range and numbered entries)
+activate Ui
+Ui --> User: history page
+Ui --> History: return
+deactivate Ui
+History --> App: return
+deactivate History
+App -> App: historyView = command
+
+App -> Ui: readCommand()
+activate Ui
+User -> Ui: next
+Ui --> App: "next"
+deactivate Ui
+App -> History: handleInput("next", transactions, ui)
+activate History
+History -> Ledger: size()
+activate Ledger
+Ledger --> History: total
+deactivate Ledger
+History -> History: firstIndex += pageSize
+loop each visible transaction
+    History -> Ledger: get(total - 1 - index)
+    activate Ledger
+    Ledger --> History: transaction
+    deactivate Ledger
+end
+History -> Ui: showMessage(next page)
+activate Ui
+Ui --> User: next history page
+Ui --> History: return
+deactivate Ui
+History --> App: false
+deactivate History
+
+App -> Ui: readCommand()
+activate Ui
+User -> Ui: stop
+Ui --> App: "stop"
+deactivate Ui
+App -> History: handleInput("stop", transactions, ui)
+activate History
+History -> Ui: showMessage(stop confirmation)
+activate Ui
+Ui --> User: history closed
+Ui --> History: return
+deactivate Ui
+History --> App: true
+deactivate History
+App -> App: historyView = null
+destroy History
+
+note over App, Ledger
+  Snapshot comparison, allowance credit, and
+  pending-save retry are omitted for clarity.
+end note
+@enduml
