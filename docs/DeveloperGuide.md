@@ -1150,95 +1150,120 @@ remain available for a later save attempt.
 <!-- @@author nkyjStar -->
 ### Financial charts
 
-`CommandWord` registers `chart` as one parser command word and supplies separate help rows for
-`chart flow` and `chart spending`. `Parser#parseChart()` selects the subcommand and rejects missing,
-duplicate, or unknown fields. Both commands read the ledger without changing it. The parser validates
-ISO dates against the same 2000-01-01 through today bounds used for transactions.
+**Feature and status:** Financial charts — implemented. Both commands read the ledger without
+changing it.
 
-Both commands use the **same `ChartPeriod` enum**. `startOf(date)` finds a calendar period's first day;
-`nextStart(start)` gives its exclusive end. Weeks start on Monday. This keeps boundary rules in one
-place while each command retains its own aggregation. The two commands use the same `ChartBar` renderer,
-which scales bars against the largest total on the displayed chart and appends the SGD figure.
-The static `ChartPeriod.parse()` returns an existing enum constant; the commands call `startOf()` and
-`nextStart()` on that constant.
+**Commands and classes:**
+
+| Command or class | Responsibility |
+|------------------|----------------|
+| `chart flow from/START to/END int/PERIOD [p/PAGE]` → `ChartFlowCommand` | Show deposits and withdrawals for up to four calendar periods per page. |
+| `chart spending [int/PERIOD on/DATE]` → `ChartSpendingCommand` | Show withdrawal totals by category, overall or for one calendar period. |
+| `Parser`, `CommandWord` | Validate chart arguments and provide separate help rows for the two forms. |
+| `ChartPeriod`, `ChartBar` | Share calendar boundaries and render scaled text bars with exact SGD totals. |
+
+**Mechanism and walkthrough:**
+
+1. `Parser#parseChart()` chooses the form and checks its fields. `ChartPeriod.parse()` returns a
+   shared `DAY`, `WEEK`, `MONTH`, or `YEAR` constant; `startOf()` and `nextStart()` define its
+   calendar boundaries, with an exclusive end. Weeks start on Monday.
+2. For `chart flow from/2026-10-20 to/2026-10-22 int/WEEK`, `ChartFlowCommand` labels the week
+   `2026-10-19` to `2026-10-25`, but counts transactions only from 20 to 22 October. It sums
+   deposits and withdrawals separately using `Money`. Empty periods show zero. The command counts
+   all intersecting periods, then shows up to four on the requested `p/PAGE` (default 1).
+3. For `chart spending int/MONTH on/2026-10-21`, `ChartSpendingCommand` sums October withdrawals
+   by category in `CategoryList` order. With no filter, it sums all recorded withdrawals. Foreign
+   withdrawals use their stored SGD amounts; deposits and the opening balance are excluded.
+4. `ChartBar` scales each bar to the largest total in the displayed chart and prints the exact
+   amount beside it. The UI displays the result, and the command finishes without entering a mode.
 
 ![Class diagram for both chart commands and their shared period](images/ChartClassDiagram.png)
 
-*Figure 16. Both chart commands use the same calendar period enum and read the ledger. A flow command
-has one period; a spending command has zero or one. Each transaction list has one category list and
-zero or more transactions. Dashed read dependencies have no multiplicity; parsing, display, and bar
-rendering appear in Figure 17. [PlantUML source](diagrams/ChartClassDiagram.puml).*
-
-#### Deposits and withdrawals: `chart flow`
-
-`chart flow from/START to/END int/PERIOD [p/PAGE]` requires `from <= to` and a positive, one-based
-page. `ChartFlowCommand` enumerates periods intersecting the inclusive requested date range, then checks
-whether the requested page exists. A page shows at most four periods in chronological order. It sums
-deposits and withdrawals separately using `Money`, filtering transactions to the exact `from` and `to`
-dates before assigning them to periods. This matters when the request starts or ends in the middle of a
-week, month, or year. Empty periods show zero totals. An undated legacy transaction cannot be assigned
-to a period, so it is excluded. Page selection is part of each command invocation; chart display does
-not enter the interactive history mode.
-
-#### Spending by category: `chart spending`
-
-`chart spending [int/PERIOD on/DATE]` accepts either no filters or both a period and a date.
-`ChartSpendingCommand` sums withdrawals by category across the full ledger or within the calendar
-period containing `on/DATE`. Overall spending includes undated legacy withdrawals; a dated chart
-cannot include them. It shows only categories with a positive total, in the order provided by
-`CategoryList`. Foreign transactions use their stored SGD amount, preserving the rate used when they
-were recorded. Deposits and the opening balance are excluded from both spending totals.
-
-#### Design choices and alternatives
-
-**One command per chart page.** History mode keeps a `HistoryCommand` in `FinNUS#historyView` and
-routes subsequent input to its navigation handler until `stop`. A similar chart mode would make
-`next` and `prev` convenient, but would also need to retain the selected dates, period, page, and
-chart type, and would prevent normal commands from running until the user left the mode. Flow already
-has an explicit `p/PAGE` argument, while spending displays one chart. Keeping each request independent
-lets users run another command immediately and makes the selected page reproducible from the command
-text. The cost is repeating the flow command to view a different page.
-
-**Calendar periods with one shared enum.** Weeks, months, and years use calendar boundaries rather
-than rolling seven-day, 30-day, or 365-day windows. A date therefore belongs to the same named
-period in both charts, and flow labels remain predictable. Filtering flow transactions against the
-exact requested dates keeps partial first and last periods from including out-of-range amounts;
-showing empty periods preserves the timeline. `ChartPeriod` centralizes these rules for the four
-supported intervals. Separate strategy classes would add more objects and dispatch code without
-adding useful flexibility while the interval set is fixed.
-
-**Text bars with exact totals.** The application uses a console UI, so `ChartBar` produces compact
-ASCII bars without a graphical library. Bars are scaled to the largest total in the current view to
-make small differences visible within that view; a fixed scale across every possible page could make
-smaller pages hard to read. Because bar lengths on different pages do not share a scale, each bar also
-shows its exact SGD total. Flow limits output to four periods per page to keep a long date range
-readable.
-
-**Recompute from the ledger.** Each request reads the current transactions instead of storing chart
-totals between commands. This keeps later pages consistent with any ledger edits made in between and
-avoids cache invalidation. The tradeoff is scanning the ledger again when the user requests another
-page; flow also enumerates the periods in the requested range to calculate its page count.
+*Figure 16. A flow command has one `ChartPeriod`; a spending command has zero or one. Both read a
+`TransactionList`, which has one category list and zero or more transactions. Dashed dependencies
+have no multiplicity. [PlantUML source](diagrams/ChartClassDiagram.puml).*
 
 ![Sequence diagram for chart parsing, aggregation, and display](images/ChartSequenceDiagram.png)
 
-*Figure 17. Parsing and displaying either chart form. The `ChartPeriod` enum lifeline receives the
-static `parse()` call; `period:ChartPeriod` receives calls on the returned enum constant. The parser
-creates the chart command; its
-lifeline ends when the local command reference leaves scope, without implying immediate JVM garbage
-collection. Activation bars show execution, and dashed arrows show method returns. Snapshot comparison
-and pending-save retry are summarised; allowance handling is omitted.
-[PlantUML source](diagrams/ChartSequenceDiagram.puml).*
+*Figure 17. Parsing and displaying either chart form. The enum lifeline receives static `parse()`;
+`period:ChartPeriod` receives calls on the returned constant. The chart command's lifeline ends when
+its local reference leaves scope, without implying immediate garbage collection. Activation bars
+show execution; dashed arrows show returns. Snapshot comparison and pending-save retry are
+summarised; allowance handling is omitted. [PlantUML source](diagrams/ChartSequenceDiagram.puml).*
 
-#### Validation and logging
+**Design considerations:**
 
-`ParserChartTest` covers valid and invalid syntax and date bounds. `ChartCommandTest` covers period
-boundaries, four-period pagination, partial weeks, empty periods, category totals, undated legacy
-records, and withdrawal-only spending. An out-of-range page raises `FinNusException` before any
-output is shown; neither chart changes the ledger. Both chart commands log their request and display
-outcome at `FINE`. The parser logs rejected syntax for either chart form at `WARNING`, and flow logs
-an out-of-range page at `WARNING`. An empty spending chart is a valid result and remains at `FINE`.
-These messages include the selected dates, period, page, and counts, but no transaction amounts or
-category names.
+**Aspect: navigating flow pages**
+
+* **Alternative 1 (current choice):** run a separate `chart flow` command for each `p/PAGE`.
+  * Pros: users can run any normal command between pages; the full command records the selected
+    range, interval, and page without keeping view state in `FinNUS`.
+  * Cons: users must repeat the command to change pages; there are no `next` or `prev` shortcuts.
+* **Alternative 2:** keep an interactive chart mode like history mode.
+  * Pros: `next` and `prev` would make adjacent pages quicker to reach.
+  * Cons: `FinNUS` would need to retain the chart type, dates, interval, and page. If it routed
+    input like history mode, users would need `stop` before running normal commands.
+
+**Aspect: defining time intervals**
+
+* **Alternative 1 (current choice):** group by calendar day, week, month, or year.
+  * Pros: labels match familiar calendar periods, and both charts place a date in the same period.
+  * Cons: first and last flow periods can be partial, so their totals must be filtered to the
+    requested dates; months and years also have different lengths.
+* **Alternative 2:** use rolling seven-day, 30-day, and 365-day windows.
+  * Pros: each window of a given type has a fixed duration.
+  * Cons: windows depend on the chosen start date and do not align with named weeks, months, or
+    years, making the labels and category comparisons less familiar.
+
+**Aspect: sharing interval rules**
+
+* **Alternative 1 (current choice):** use one `ChartPeriod` enum for the four supported intervals.
+  * Pros: flow and spending share the same boundary calculations with little extra code.
+  * Cons: adding a new interval requires changing the enum and its methods.
+* **Alternative 2:** define a separate strategy class for each interval.
+  * Pros: new or user-defined calendars could be added as new implementations.
+  * Cons: extra classes and selection logic add complexity for a fixed set of four intervals.
+
+**Aspect: rendering the charts**
+
+* **Alternative 1 (current choice):** print ASCII bars and exact SGD totals in the console.
+  * Pros: works with the existing `Ui` and needs no graphical dependency.
+  * Cons: text bars offer less detail and interaction than graphical plots.
+* **Alternative 2:** open a graphical chart view.
+  * Pros: could provide richer plots, legends, and interactive inspection.
+  * Cons: needs a graphical interface or library beyond the current CLI.
+
+**Aspect: scaling bars across flow pages**
+
+* **Alternative 1 (current choice):** scale each page to its largest displayed total.
+  * Pros: small values remain visible even when another page contains a much larger value.
+  * Cons: bar lengths cannot be compared across pages; users must compare the printed totals.
+* **Alternative 2:** use one maximum for every page in the requested range.
+  * Pros: equal bar lengths would represent equal amounts across pages.
+  * Cons: an unusually large total could make most other bars too short to distinguish.
+
+**Aspect: obtaining chart totals**
+
+* **Alternative 1 (current choice):** recalculate from the ledger for each request.
+  * Pros: results reflect transactions added or removed between commands, without cache rules.
+  * Cons: another page scans the ledger again; flow also enumerates the range to count pages.
+* **Alternative 2:** cache totals between chart commands.
+  * Pros: repeated views of an unchanged range could be faster.
+  * Cons: the cache would need invalidation whenever transactions or their categories change,
+    adding state and a risk of showing stale totals.
+
+**Validation and limitations:**
+
+* The parser rejects missing, duplicate, and unknown fields; invalid dates; periods outside the
+  four enum values; and non-positive or oversized page numbers. Spending requires both `int/PERIOD`
+  and `on/DATE` when filtered. Dates must be from 2000-01-01 through today, with `from <= to` for
+  flow. An unavailable page raises `FinNusException` before output is shown.
+* Undated legacy transactions cannot appear in a dated chart or flow period. Overall spending
+  includes undated withdrawals. Categories with no spending are omitted; an empty spending chart
+  shows a message. Neither command changes the ledger.
+* `ParserChartTest` and `ChartCommandTest` cover syntax, boundaries, pagination, partial weeks,
+  category totals, and empty results. Both commands log requests and results at `FINE`; invalid
+  chart syntax and out-of-range flow pages log at `WARNING`. Logs omit amounts and category names.
 
 <!-- @@author -->
 <!-- @@author naieel04 -->
