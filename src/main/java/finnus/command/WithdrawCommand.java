@@ -66,6 +66,11 @@ public class WithdrawCommand extends Command {
         // categories (including custom ones) lives in the TransactionList.
         String category = transactions.getCategories().resolve(categoryName);
         Transaction withdrawal = new Transaction(TransactionType.WITHDRAWAL, amount, description, category, date);
+        //@@author lololol8484
+        if (!transactions.getSpendingAlert().confirmWithdrawal(transactions, withdrawal, ui)) {
+            return;
+        }
+        //@@author
         transactions.add(withdrawal);
         logger.info("Added " + withdrawal + ", total transactions: " + transactions.size());
         ui.showMessage("Withdrawal added:", "  " + withdrawal,

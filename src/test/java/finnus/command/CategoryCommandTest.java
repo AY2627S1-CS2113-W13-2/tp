@@ -56,9 +56,11 @@ class CategoryCommandTest {
     @Test
     public void execute_withdrawWithCustomCategory_recordsCategory() throws FinNusException {
         new CategoryCommand("Gym").execute(transactions, new Ui());
+        transactions.setOpeningBalance(Money.of("100"));
+        new DepositCommand(Money.of("100")).execute(transactions, new Ui());
         new WithdrawCommand(Money.of("30"), "Membership", "GYM").execute(transactions, new Ui());
 
-        assertEquals(Optional.of("Gym"), transactions.get(0).getCategory());
+        assertEquals(Optional.of("Gym"), transactions.get(1).getCategory());
     }
 
     /** Runs a command and returns what it printed. */

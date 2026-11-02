@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+import finnus.alert.SpendingAlert;
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
@@ -62,6 +63,9 @@ public class TransactionList {
     //@@author
 
     //@@author lololol8484
+    /** Persisted optional spending-alert thresholds configured during setup or with {@code alert}. */
+    private SpendingAlert spendingAlert = new SpendingAlert(null, null);
+
     /** Inserts a transaction by date, keeping earlier entries first and same-day entries stable. */
     public void add(Transaction transaction) {
         Objects.requireNonNull(transaction, "Transaction must not be null");
@@ -121,6 +125,19 @@ public class TransactionList {
      */
     public void setAllowance(Allowance allowance) {
         this.allowance = allowance;
+    }
+    //@@author
+
+    //@@author lololol8484
+    /** Returns the optional spending-alert thresholds. */
+    public SpendingAlert getSpendingAlert() {
+        return spendingAlert;
+    }
+
+    /** Replaces the optional spending-alert thresholds. */
+    public void setSpendingAlert(SpendingAlert spendingAlert) {
+        assert spendingAlert != null : "Spending alert settings must not be null";
+        this.spendingAlert = spendingAlert;
     }
     //@@author
 
