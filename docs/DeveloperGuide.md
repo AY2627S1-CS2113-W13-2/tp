@@ -1402,12 +1402,14 @@ Boundary cases:
 
 <!-- @@author naieel04 -->
 ## Planned enhancements
+<!-- @@author -->
 
-Keep approved future work separate from implemented behaviour. Remove this section if outside the release scope.
+<!-- @@author chancheese -->
+These features are not in v2.1.
 
-| Enhancement               | User need          | Proposed design and affected components | Target release        |
-|---------------------------|--------------------|-----------------------------------------|-----------------------|
-| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here]    | [Insert release here] |
-
-[Insert UML diagram of a proposed feature here, if applicable]
+| Enhancement | User need | Proposed design |
+|-------------|-----------|-----------------|
+| Edit a transaction | Fix a typo without deleting and re-entering it | `edit INDEX` takes the same prefixes as `withdraw` and replaces the transaction at that `recent` index. |
+| List one cycle's spending | Check every spend since the allowance arrived | A cycle filter on `history`, using the dates from `Allowance`. |
+| Daily budget | Know how much is safe to spend today | `balance` divides the balance by the days left until the next allowance. |
 <!-- @@author -->
