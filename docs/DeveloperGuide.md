@@ -369,7 +369,8 @@ collects and confirms this value once, before normal commands become available.
    runs skip setup.
 6. After confirming the opening balance, setup asks for an optional balance threshold, then the
    allowance day and optional amount. If an amount is entered, setup asks for an optional whole
-   percentage from 1 to 100. End of input or Enter skips these optional settings.
+   percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
+   configure either setting later with `alert`.
 
 See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
 
@@ -419,7 +420,17 @@ before recording a withdrawal.
 `TransactionList` owns the settings, and `LedgerSnapshot` includes them in equality-based change detection. The codec
 stores non-empty settings in `SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE`; empty fields represent skipped
 options. Older files without this row load with both options unset, and malformed or duplicate rows are reported and
-skipped. Tests cover setup, threshold crossing and re-crossing, confirmation outcomes, and persistence.
+skipped.
+
+<!-- @@author lololol8484 -->
+`AlertCommand` displays both optional settings with `alert`, sets or clears either setting, and preserves the other
+setting during an update. `Parser#parseAlert()` supports `alert balance AMOUNT` or `alert balance off`, and
+`alert allowance PERCENT` or `alert allowance off`. Balance amounts use `Parser#parseAmount()`; percentages must be
+whole values from 1 to 100. The allowance percentage may be saved before an allowance amount is configured, and
+`SpendingAlert` applies it when an allowance amount becomes available. `CommandWord` supplies the help syntax, which
+`HelpCommand` builds from the registered commands. Since `LedgerSnapshot` already includes both values, command
+updates use normal change detection and persistence. Tests cover parsing, display, set/clear behavior, preserving the
+other setting, help output, and persistence across restart.
 <!-- @@author -->
 
 <!-- @@author chancheese -->

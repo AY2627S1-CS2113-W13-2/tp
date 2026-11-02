@@ -431,8 +431,8 @@ During first-run setup, after confirming your opening balance, you can set eithe
   least that amount to below it. Press Enter to skip.
 * **Allowance percentage:** if you enter an allowance amount during setup, you can enter a whole percentage from 1 to
   100, such as `90`. FinNUS warns when withdrawals dated in an allowance cycle move from at or below that percentage
-  to above it. Press Enter to skip. If you do not enter an allowance amount, this setting is not asked for and does not
-  exist.
+  to above it. Press Enter to skip. If you skip the allowance amount, you can configure this threshold later with
+  `alert allowance PERCENT`; it remains inactive until an allowance amount is set.
 
 Three thresholds are always applied when their reference values exist: withdrawals exceeding 100% of the allowance
 amount, balance falling below the opening balance, and balance falling below `$0.00`. The 100% allowance threshold is
@@ -456,6 +456,21 @@ ____________________________________________________________
 
 Alert settings are saved with your ledger and remain in effect after restarting FinNUS. If your opening balance is zero,
 falling below the opening balance also means falling below zero, so both threshold descriptions may appear together.
+
+<!-- @@author lololol8484 -->
+You can view or change the two optional thresholds at any time:
+
+* `alert` shows both optional settings and indicates when an allowance percentage will apply.
+* `alert balance AMOUNT` sets or replaces the fixed balance threshold. `AMOUNT` must be greater than zero.
+* `alert balance off` clears the fixed balance threshold.
+* `alert allowance PERCENT` sets or replaces the allowance percentage, as a whole number from 1 to 100. It can be set
+  before an allowance amount exists and takes effect once one is configured.
+* `alert allowance off` clears the allowance percentage.
+
+Changing one optional threshold leaves the other unchanged. Clearing either optional threshold does not disable the
+automatic alerts.
+
+Examples: `alert`, `alert balance 100`, `alert allowance 90`, `alert balance off`, `alert allowance off`.
 <!-- @@author -->
 
 ### Viewing balance: `balance`
@@ -651,6 +666,8 @@ Available commands:
 | balance      | Current balance      | balance                                |
 | allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
 |              |                      | [c/CURRENCY]] or off                   |
+| alert        | Manage spending      | alert [balance AMOUNT or off] or        |
+|              | alerts               | [allowance PERCENT or off]              |
 | rate         | Manage FX rates      | rate [CURRENCY RATE]                   |
 | category     | Manage categories    | category [NAME]                        |
 | help         | List commands        | help                                   |

@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
+import finnus.command.AlertCommand;
 import finnus.command.AllowanceCommand;
 import finnus.command.BalanceCommand;
 import finnus.command.CategoryCommand;
@@ -181,6 +182,10 @@ public class Parser {
         case ALLOWANCE ->
             parseAllowance(arguments, today);
         //@@author
+        //@@author lololol8484
+        case ALERT ->
+            parseAlert(arguments);
+        //@@author
         case EXIT ->
             new ExitCommand();
         case DELETE ->
@@ -284,6 +289,52 @@ public class Parser {
                 : parseForeignAmount(amountText, CommandWord.ALLOWANCE.getUsage());
         return AllowanceCommand.set(day, amount, currencyCode, today);
     }
+
+    //@@author lololol8484
+    /** Parses {@code alert} and the optional balance or allowance threshold settings. */
+    private static Command parseAlert(String arguments) throws FinNusException {
+        if (arguments.isBlank()) {
+            return new AlertCommand();
+        }
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 2) {
+            throw invalidAlertFormat();
+        }
+        String setting = parts[0].toLowerCase(Locale.ROOT);
+        String value = parts[1];
+        if (setting.equals("balance")) {
+            return value.equalsIgnoreCase("off")
+                    ? AlertCommand.clearBalance()
+                    : AlertCommand.setBalance(parseAmount(value, CommandWord.ALERT.getUsage()));
+        }
+        if (setting.equals("allowance")) {
+            if (value.equalsIgnoreCase("off")) {
+                return AlertCommand.clearAllowancePercentage();
+            }
+            if (!value.matches("\\d{1,3}")) {
+                throw invalidAllowancePercentage();
+            }
+            int percentage = Integer.parseInt(value);
+            if (percentage < 1 || percentage > 100) {
+                throw invalidAllowancePercentage();
+            }
+            return AlertCommand.setAllowancePercentage(BigDecimal.valueOf(percentage));
+        }
+        throw invalidAlertFormat();
+    }
+
+    /** Builds the shared syntax error for malformed alert commands. */
+    private static FinNusException invalidAlertFormat() {
+        return new FinNusException("Use alert to view settings, or set one with: "
+                + "alert balance AMOUNT or off, or alert allowance PERCENT or off.\nFormat: "
+                + CommandWord.ALERT.getUsage());
+    }
+
+    /** Builds the validation error for an allowance alert percentage. */
+    private static FinNusException invalidAllowancePercentage() {
+        return new FinNusException("Allowance alert percentage must be a whole number from 1 to 100.");
+    }
+    //@@author
 
     /**
      * Converts text such as {@code "5"} into an allowance day from 1 to 31.

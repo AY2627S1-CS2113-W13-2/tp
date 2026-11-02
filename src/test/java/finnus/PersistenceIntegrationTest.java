@@ -89,6 +89,24 @@ class PersistenceIntegrationTest {
         assertTrue(nextRun.output().contains("opening balance of $100.00"));
         assertTrue(nextRun.output().contains("Withdrawal cancelled."));
     }
+
+    @Test
+    public void run_alertCommand_updatesOptionalSettingsAndPersistsAcrossRestart() {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi firstRun = new ScriptedUi("100", "yes", "", "", "alert balance 75",
+                "alert allowance 90", "exit");
+
+        new FinNUS(firstRun, new FileStorage(path)).run();
+
+        LedgerSnapshot saved = new FileStorage(path).load().snapshot();
+        assertEquals(Money.of("75"), saved.spendingAlert().balanceThreshold().orElseThrow());
+        assertEquals(new BigDecimal("90"), saved.spendingAlert().allowancePercentage().orElseThrow());
+
+        ScriptedUi secondRun = new ScriptedUi("alert", "exit");
+        new FinNUS(secondRun, new FileStorage(path)).run();
+        assertTrue(secondRun.output().contains("Balance threshold: $75.00"));
+        assertTrue(secondRun.output().contains("Allowance threshold: 90%"));
+    }
     //@@author
 
     @Test
