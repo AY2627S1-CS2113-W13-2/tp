@@ -1380,14 +1380,22 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 Use disposable test copies and stop the application before editing fixture files.
 
-| ID    | Fixture / failure                   | Procedure and expected result to complete                                                           |
-|-------|-------------------------------------|-----------------------------------------------------------------------------------------------------|
-| MT-07 | One corrupt row                     | [Insert file contents, launch steps, warning, recovered records, and resulting balance here]        |
-| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here]                       |
-| MT-09 | Unsupported version                 | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here]                |
-| MT-10 | Save failure                        | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
+<!-- @@author -->
 
-[Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
+<!-- @@author chancheese -->
+| ID    | Setup | Steps | Expected result |
+|-------|-------|-------|-----------------|
+| MT-07 | Sample ledger; add the row `TRANSACTION\|WITHDRAWAL\|abc\|eA==` to `finnus.txt` | Launch, enter `balance`, then `deposit 1`. | A warning names the skipped row, and the balance is SGD 145.50. After `deposit 1`, the damaged file is kept as `finnus.txt.corrupt-*`. |
+| MT-08 | Sample ledger; copy `finnus.txt` to `finnus.txt.bak`, then replace `finnus.txt` with the text `garbage` | Launch, then enter `balance`. | FinNUS restores the backup, and the balance is SGD 145.50. Files stay unchanged until a command changes the ledger. |
+| MT-09 | Sample ledger; change the first line of `finnus.txt` to `FINNUS\|9` | Launch, enter `deposit 5`, then `exit`. | A warning says saving is disabled. `deposit 5` shows a "Changes are in memory only" error, and `finnus.txt` is unchanged. |
+| MT-10 | Sample ledger; make the folder read-only | Launch and enter `deposit 5`. Restore write access, then enter `balance`. | `deposit 5` shows "Automatic save failed". After `balance`, the deposit is saved. |
+
+Boundary cases:
+
+- `deposit 1000000` is accepted; `deposit 1000000.01` and `deposit 0.001` are rejected.
+- `rate JPY 1000000` is accepted; `rate JPY 1000001` is rejected.
+- `recent 0`, `delete 0` and an index past the end are rejected; `recent 99` lists every transaction.
+- `find` alone and `withdraw 4.50` without a description show the expected format.
 <!-- @@author -->
 
 ---
