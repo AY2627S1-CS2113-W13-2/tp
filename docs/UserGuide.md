@@ -236,7 +236,7 @@ ____________________________________________________________
 Add `t/CATEGORY` to a `withdraw` to record what kind of spending it was, so you can later see where your money went.
 Every withdrawal has exactly one category. Deposits do not have categories.
 
-Format: `withdraw AMOUNT d/DESCRIPTION t/CATEGORY`
+Format: `withdraw AMOUNT d/DESCRIPTION [t/CATEGORY]`
 
 * These categories are always available: `Food`, `Transport`, `Housing`, `Bills`, `Shopping`, `Entertainment`,
   `Education`, `Health` and `Others`.
