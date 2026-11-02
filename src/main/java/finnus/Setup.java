@@ -97,9 +97,6 @@ public class Setup {
             //@@author nkyjStar
             logger.info("First-run opening balance confirmed");
             //@@author lololol8484
-            //@@author chancheese
-            askForAllowance(ui, transactions, today);
-            //@@author lololol8484
             return true;
         }
     }
