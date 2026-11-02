@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import finnus.alert.SpendingAlert;
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.ForeignAmount;
@@ -46,6 +47,11 @@ public class LedgerCodec {
     /** {@code ALLOWANCE|DAY|AMOUNT|CURRENCY|LAST_CREDITED}; amount and currency may be empty. */
     private static final String ALLOWANCE = "ALLOWANCE";
     private static final int ALLOWANCE_FIELDS = 5;
+    //@@author lololol8484
+    /** Optional user-configured spending thresholds, with empty fields for skipped values. */
+    private static final String SPENDING_ALERT = "SPENDING_ALERT";
+    private static final int SPENDING_ALERT_FIELDS = 3;
+    //@@author
     //@@author nabijonzzz
     /** Transactions saved since categories were added have the category as one extra, last field. */
     private static final int CATEGORY_FIELDS = 1;
@@ -65,6 +71,7 @@ public class LedgerCodec {
         //@@author
         /** The save file exists, but first-run setup has not been confirmed. */
         SETUP_PENDING,
+        //@@author naieel04
         /** Every non-blank record was valid. */
         CLEAN,
         /** Some records were recovered, but at least one warning was produced. */
@@ -111,6 +118,15 @@ public class LedgerCodec {
                     .append(allowance.lastCredited()).append('\n');
         }
         //@@author
+        //@@author lololol8484
+        SpendingAlert spendingAlert = snapshot.spendingAlert();
+        if (spendingAlert.balanceThreshold().isPresent() || spendingAlert.allowancePercentage().isPresent()) {
+            text.append(SPENDING_ALERT).append('|')
+                    .append(spendingAlert.balanceThreshold().map(Money::toPlainString).orElse("")).append('|')
+                    .append(spendingAlert.allowancePercentage().map(BigDecimal::toPlainString).orElse(""))
+                    .append('\n');
+        }
+        //@@author
         //@@author naieel04
         for (StoredTransaction transaction : snapshot.transactions()) {
             String description = Base64.getEncoder().encodeToString(
@@ -139,10 +155,12 @@ public class LedgerCodec {
         return encoded;
     }
 
+    //@@author lololol8484
     /** Encodes the persistent state used while first-run setup is incomplete. */
     public String encodeSetupPending() {
         return HEADER + '\n' + SETUP_PENDING + '\n';
     }
+    //@@author naieel04
 
     //@@author naieel04
     /**
@@ -186,6 +204,7 @@ public class LedgerCodec {
     }
 
     //@@author
+    //@@author lololol8484
     /** Checks whether the only non-blank record after the header marks interrupted setup. */
     private boolean isSetupPending(List<String> lines) {
         List<String> records = lines.subList(1, lines.size()).stream()
@@ -193,6 +212,7 @@ public class LedgerCodec {
                 .toList();
         return records.size() == 1 && SETUP_PENDING.equals(records.getFirst().trim());
     }
+    //@@author naieel04
 
     /** Dispatches one delimited line to the parser for its record type. */
     //@@author naieel04
@@ -209,6 +229,9 @@ public class LedgerCodec {
         case CATEGORY -> parseCategory(fields, records);
         //@@author chancheese
         case ALLOWANCE -> parseAllowance(fields, records);
+        //@@author naieel04
+        //@@author lololol8484
+        case SPENDING_ALERT -> parseSpendingAlert(fields, records);
         //@@author naieel04
         default -> throw new IllegalArgumentException("Unknown record type");
         }
@@ -340,6 +363,21 @@ public class LedgerCodec {
     }
     //@@author nabijonzzz
 
+    //@@author lololol8484
+    /** Reads the optional alert thresholds, rejecting malformed or duplicate settings. */
+    private void parseSpendingAlert(String[] fields, Records records) {
+        requireFields(fields, SPENDING_ALERT_FIELDS);
+        if (records.hasSpendingAlert) {
+            throw new IllegalArgumentException("Duplicate spending alert record");
+        }
+        Money balanceThreshold = fields[1].isEmpty() ? null : parseMoney(fields[1]);
+        BigDecimal allowancePercentage = fields[2].isEmpty() ? null : parseDecimal(fields[2]);
+        LedgerSnapshot.validateSpendingAlert(balanceThreshold, allowancePercentage);
+        records.spendingAlert = new SpendingAlert(balanceThreshold, allowancePercentage);
+        records.hasSpendingAlert = true;
+    }
+    //@@author
+
     /**
      * Adds a custom category, rejecting invalid or duplicate names (ignoring case,
      * including the predefined categories).
@@ -434,6 +472,10 @@ public class LedgerCodec {
         //@@author chancheese
         private Allowance allowance;
         //@@author
+        //@@author lololol8484
+        private SpendingAlert spendingAlert = new SpendingAlert(null, null);
+        private boolean hasSpendingAlert;
+        //@@author
         //@@author naieel04
         private final Map<String, BigDecimal> rates = new TreeMap<>();
         private final List<String> warnings = new ArrayList<>();
@@ -450,7 +492,7 @@ public class LedgerCodec {
                     : warnings.isEmpty() ? Status.CLEAN : Status.PARTIAL;
             //@@author
             LedgerSnapshot snapshot = new LedgerSnapshot(opening, resolved, rates, categories.getCustom(),
-                    allowance);
+                    allowance, spendingAlert);
             assert snapshot != null : "Decoded ledger snapshot must exist";
             logger.fine("Decoded ledger with status " + status + " and " + validRecords + " valid rows");
             return new DecodeResult(snapshot, warnings, status);

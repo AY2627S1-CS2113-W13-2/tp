@@ -31,6 +31,9 @@ public enum CommandWord {
     //@@author chancheese
     ALLOWANCE("allowance", "Monthly allowance", "[DAY [a/AMOUNT] [c/CURRENCY]] or off"),
     //@@author
+    //@@author lololol8484
+    ALERT("alert", "Manage spending alerts", "[balance AMOUNT or off] or [allowance PERCENT or off]"),
+    //@@author
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
     CATEGORY("category", "Manage categories", "[NAME]"),
     HELP("help", "List commands", ""),

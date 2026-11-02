@@ -24,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.command.AlertCommand;
 import finnus.command.AllowanceCommand;
 import finnus.command.BalanceCommand;
 import finnus.command.CategoryCommand;
@@ -71,6 +72,9 @@ class ParserTest {
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
             Map.entry(CommandWord.ALLOWANCE, new CommandExample("allowance 5 a/500", AllowanceCommand.class)),
+            //@@author lololol8484
+            Map.entry(CommandWord.ALERT, new CommandExample("alert", AlertCommand.class)),
+            //@@author
             Map.entry(CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class)),
             Map.entry(CommandWord.CATEGORY, new CommandExample("category", CategoryCommand.class)),
             Map.entry(CommandWord.HELP, new CommandExample("help", HelpCommand.class)),
@@ -309,6 +313,24 @@ class ParserTest {
         assertTrue(exception.getMessage().contains("Unknown command"));
     }
 
+    //@@author lololol8484
+    @ParameterizedTest
+    @ValueSource(strings = {"alert", "alert balance 100", "ALERT BALANCE OFF", "alert allowance 90",
+        "alert allowance off"})
+    public void parse_alertCommands_returnsAlertCommand(String input) throws FinNusException {
+        assertInstanceOf(AlertCommand.class, Parser.parse(input));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"alert balance", "alert balance 0", "alert balance 100 extra", "alert other 90",
+        "alert allowance 0", "alert allowance 101", "alert allowance 90.5", "alert allowance -1",
+        "alert allowance 999"})
+    public void parse_invalidAlertCommand_throwsHelpfulError(String input) {
+        FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse(input));
+        assertFalse(exception.getMessage().isBlank());
+    }
+    //@@author
+
     @Test
     public void parseNonNegativeAmount_zero_isAccepted() throws FinNusException {
         assertEquals(Money.ZERO, Parser.parseNonNegativeAmount("0", FORMAT));
@@ -525,7 +547,9 @@ class ParserTest {
         Parser.parse("category Gym").execute(transactions, ui);
         assertEquals(List.of("Gym"), transactions.getCategories().getCustom());
     }
+    //@@author nabijonzzz
 
+    //@@author lololol8484
     @ParameterizedTest
     @ValueSource(strings = {"add", "list"})
     public void parse_categoryNameMatchingFormerSubcommand_addsCategory(String name) throws FinNusException {
@@ -541,13 +565,13 @@ class ParserTest {
 
         assertEquals(List.of(name), transactions.getCategories().getCustom());
     }
+    //@@author nabijonzzz
 
+    //@@author lololol8484
     @Test
     public void parse_oldCategoryAddSyntax_isRejected() {
         assertThrows(FinNusException.class, () -> Parser.parse("category add Gym"));
     }
-    //@@author
-
     //@@author nabijonzzz
     @Test
     public void parse_findWithPhrase_returnsFindCommand() throws FinNusException {
@@ -586,6 +610,8 @@ class ParserTest {
     public void parse_findThenExecute_filtersByCategoryEndToEnd() throws FinNusException {
         LocalDate today = LocalDate.of(2026, 10, 30);
         TransactionList list = new TransactionList();
+        list.setOpeningBalance(Money.of("100"));
+        Parser.parse("deposit 100 d/Allowance", today).execute(list, new Ui());
         Parser.parse("withdraw 4.50 d/Lunch t/food", today).execute(list, new Ui());
         Parser.parse("withdraw 1.20 d/Bus t/transport", today).execute(list, new Ui());
 
@@ -598,7 +624,7 @@ class ParserTest {
             System.setOut(original);
         }
         String printed = output.toString();
-        assertTrue(printed.contains("Found 1 transaction(s) in #Food:"));
+        assertTrue(printed.contains("Found 1 transaction(s) in #Food:"), printed);
         assertTrue(printed.contains("2. [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food"));
         assertTrue(printed.contains("Spent: $4.50 in 1 withdrawal(s)."));
         assertFalse(printed.contains("Bus"));

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import finnus.alert.SpendingAlert;
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.currency.CurrencyRates;
@@ -25,13 +26,12 @@ import finnus.transaction.TransactionType;
 //@@author
 public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
                              Map<String, BigDecimal> rates, List<String> customCategories,
-                             Allowance allowance) {
+                             Allowance allowance, SpendingAlert spendingAlert) {
     //@@author naieel04
     /**
      * Copies mutable collections and rejects values that cannot represent a valid ledger.
      */
     public LedgerSnapshot {
-        //@@author
         assert transactions != null : "Transactions must not be null";
         assert rates != null : "Rates must not be null";
         //@@author naieel04
@@ -51,14 +51,26 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
                 throw new IllegalArgumentException("Unknown category " + category);
             }
         }
-        //@@author
         //@@author chancheese
         if (allowance != null) {
             validateAllowance(allowance.day(), allowance.amount(), allowance.currencyCode(),
                     allowance.lastCredited());
         }
         //@@author
+        //@@author lololol8484
+        Objects.requireNonNull(spendingAlert, "Spending alert settings must not be null");
+        validateSpendingAlert(spendingAlert.balanceThreshold().orElse(null),
+                spendingAlert.allowancePercentage().orElse(null));
+        //@@author
     }
+
+    //@@author lololol8484
+    /** Preserves the previous constructor for callers that do not specify spending alerts. */
+    public LedgerSnapshot(Money openingBalance, List<StoredTransaction> transactions,
+            Map<String, BigDecimal> rates, List<String> customCategories, Allowance allowance) {
+        this(openingBalance, transactions, rates, customCategories, allowance, new SpendingAlert(null, null));
+    }
+    //@@author
 
     //@@author chancheese
     /**
@@ -182,7 +194,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
      */
     public static LedgerSnapshot empty() {
         //@@author
-        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of(), null);
+        return new LedgerSnapshot(Money.ZERO, List.of(), Map.of(), List.of(), null, new SpendingAlert(null, null));
     }
 
     //@@author naieel04
@@ -200,13 +212,13 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         //@@author
         return new LedgerSnapshot(ledger.getOpeningBalance(), records, ledger.getRates().getAll(),
                 //@@author chancheese
-                ledger.getCategories().getCustom(), ledger.getAllowance().orElse(null));
+                ledger.getCategories().getCustom(), ledger.getAllowance().orElse(null), ledger.getSpendingAlert());
         //@@author
     }
 
     //@@author naieel04
     /**
-     * Builds a fresh mutable ledger in the original transaction order.
+     * Builds a fresh mutable ledger with transactions ordered chronologically by date.
      */
     public TransactionList toTransactionList() {
         TransactionList ledger = new TransactionList();
@@ -231,6 +243,7 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         //@@author chancheese
         ledger.setAllowance(allowance);
         //@@author
+        ledger.setSpendingAlert(spendingAlert);
         return ledger;
     }
 
@@ -297,6 +310,22 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         }
         if (lastCredited == null || lastCredited.isBefore(Parser.EARLIEST_DATE)) {
             throw new IllegalArgumentException("Invalid last credited date");
+        }
+    }
+    //@@author
+
+    //@@author lololol8484
+    /** Validates optional spending-alert values read from persistent storage. */
+    static void validateSpendingAlert(Money balanceThreshold, BigDecimal allowancePercentage) {
+        if (balanceThreshold != null && (!balanceThreshold.isPositive()
+                || balanceThreshold.compareTo(Money.MAX_AMOUNT) > 0)) {
+            throw new IllegalArgumentException("Balance alert threshold must be positive and within the "
+                    + "supported range");
+        }
+        if (allowancePercentage != null && (allowancePercentage.signum() <= 0
+                || allowancePercentage.compareTo(BigDecimal.valueOf(100)) > 0
+                || allowancePercentage.scale() > 2)) {
+            throw new IllegalArgumentException("Allowance alert percentage must be from 0 to 100");
         }
     }
     //@@author

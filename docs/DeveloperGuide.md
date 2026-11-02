@@ -191,8 +191,9 @@ running balance. It also allows exact sub-cent values within the domain even tho
 user input is limited to two decimal places.
 
 <!-- @@author chancheese -->
-`Money.MAX_AMOUNT` ($1,000,000) caps each amount a user enters, including foreign amounts after
-conversion. A student is unlikely to move that much at once, so a larger value is treated as a typo.
+`Money.MAX_AMOUNT` (SGD 1,000,000) caps each amount a user enters. A foreign amount is checked after it is
+converted to SGD, so a large amount in a currency such as JPY can still be valid. A student is unlikely to move
+that much at once, so a larger value is treated as a typo.
 <!-- @@author -->
 
 #### Formatting and equality
@@ -232,7 +233,10 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 - The main file is `finnus.txt`, beside the packaged JAR or in the working directory during development.
 - The previous-state backup is `finnus.txt.bak`.
-- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, and transactions.
+<!-- @@author lololol8484 -->
+- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, transactions,
+  allowance settings, and optional spending-alert thresholds.
+<!-- @@author -->
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
@@ -249,6 +253,8 @@ FINNUS|1
 OPENING|100
 RATE|JPY|110
 CATEGORY|Meals
+ALLOWANCE|5|500||2026-10-05
+SPENDING_ALERT|100|90
 TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
 TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
 ```
@@ -257,6 +263,12 @@ TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
 category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
 and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
 Foreign transactions place their currency code, original amount, and recorded rate before the category field.
+
+<!-- @@author lololol8484 -->
+`SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE` stores the optional alert settings. Either value may be empty
+when the user skipped it. Files without this record load with both optional settings unset; malformed or duplicate alert
+records are skipped with a warning.
+<!-- @@author -->
 
 Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
 seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
@@ -283,7 +295,9 @@ transactions are stored and where the balance is calculated.
   overrides `execute(TransactionList, Ui)`.
 * `Transaction` is an immutable record of one money movement. It stores a `TransactionType`
   (`DEPOSIT` or `WITHDRAWAL`), a positive `Money` amount and a description.
-* `TransactionList` holds all transactions in the order they were added.
+<!-- @@author lololol8484 -->
+* `TransactionList` keeps transactions chronologically by date, with undated legacy transactions first internally.
+<!-- @@author nabijonzzz -->
 
 #### How a withdrawal is processed
 
@@ -310,7 +324,7 @@ An amount is accepted only if it:
 * matches `\d+(\.\d{1,2})?`, i.e. a plain number with at most 2 decimal places. This one
   check rejects inputs such as `-5`, `1e3`, `NaN`, `$5` and `4.555`;
 * is greater than 0;
-* is not more than `Money.MAX_AMOUNT` (1,000,000), which catches typos such as extra zeros.
+* is not more than `Money.MAX_AMOUNT` (SGD 1,000,000), which catches typos such as extra zeros.
 
 If any rule fails, the parser throws a `FinNusException`. The main loop catches it and shows the
 message to the user, so invalid input never stops the app.
@@ -359,25 +373,83 @@ collects and confirms this value once, before normal commands become available.
    confirmation does `Setup` execute `OpeningBalanceCommand`.
 5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
    without saving the unconfirmed amount. The pending marker remains, so setup is offered again
-   on the next run. After successful setup, `FinNUS` saves the ledger and later runs skip setup.
+   on the next run. Once the remaining setup prompts finish, `FinNUS` saves the ledger and later
+   runs skip setup.
+6. After confirming the opening balance, setup asks for an optional balance threshold, then the
+   allowance day and optional amount. If an amount is entered, setup asks for an optional whole
+   percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
+   configure either setting later with `alert`.
+
+See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
 
 <!-- @@author chancheese -->
-After the opening balance is confirmed, `Setup` also asks for the allowance day and its SGD amount. Pressing Enter (or
-input ending) skips either one, and setup still counts as complete. See
-[Setting a monthly allowance](#setting-a-monthly-allowance).
 <!-- @@author lololol8484 -->
+`Setup` asks for the optional balance threshold before the allowance prompts. The optional percentage prompt only
+appears when an allowance amount was entered. See [Spending alerts](#spending-alerts).
+<!-- @@author chancheese -->
+After the threshold prompt, `Setup` asks for the allowance day and its SGD amount. Pressing Enter (or input ending)
+skips either one, and setup still counts as complete. See
+[Setting a monthly allowance](#setting-a-monthly-allowance).
 
 `opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
-treated as an unknown command. `SetupTest` covers valid and invalid amounts, confirmation,
-re-entry, and input ending before confirmation.
+treated as an unknown command.
+<!-- @@author lololol8484 -->
+`SetupTest` covers valid and invalid amounts, confirmation, re-entry, and input ending before
+confirmation.
+<!-- @@author -->
+
+<!-- @@author lololol8484 -->
+### Spending alerts
+
+`SpendingAlert` stores the two optional settings and evaluates a proposed withdrawal before it is added. `WithdrawCommand`
+and `ForeignTransactionCommand` both call `confirmWithdrawal()`, so SGD and converted foreign withdrawals use the same
+rules. A declined confirmation or ended input returns before `TransactionList#add()`; only explicit `yes` or `y` lets the
+command continue.
+
+`SpendingAlert#crossedBy()` compares the current ledger with the proposed result and returns every threshold crossed:
+
+1. The optional fixed balance threshold, when configured.
+2. The optional percentage of the allowance, when configured and an allowance amount exists.
+3. The fixed 100% allowance amount, when an allowance amount exists.
+4. The opening balance.
+5. Zero.
+
+The allowance thresholds sum dated withdrawals in the cycle containing the proposed transaction date. Older undated
+transactions are excluded, matching `AllowanceCommand#summarise()`. The allowance amount is converted to SGD using its
+configured currency rate when needed. Balance thresholds use the current calculated balance, including the proposed
+withdrawal. Comparisons report a threshold only when the value moves from its safe side to beyond it; if the balance
+later recovers and crosses again, a new alert is shown. A single withdrawal can cross several thresholds and produces
+one confirmation listing them all. When the opening balance is zero, the opening-balance and zero conditions coincide
+and both descriptions are included.
+
+`Confirmation#ask()` handles yes/no parsing and invalid-answer retries. It returns `YES`, `NO`, or `INPUT_ENDED`, leaving
+each caller to decide what those results mean. Setup uses it for opening-balance confirmation; spending alerts use it
+before recording a withdrawal.
+
+`TransactionList` owns the settings, and `LedgerSnapshot` includes them in equality-based change detection. The codec
+stores non-empty settings in `SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE`; empty fields represent skipped
+options. Older files without this row load with both options unset, and malformed or duplicate rows are reported and
+skipped.
+
+<!-- @@author lololol8484 -->
+`AlertCommand` displays both optional settings with `alert`, sets or clears either setting, and preserves the other
+setting during an update. `Parser#parseAlert()` supports `alert balance AMOUNT` or `alert balance off`, and
+`alert allowance PERCENT` or `alert allowance off`. Balance amounts use `Parser#parseAmount()`; percentages must be
+whole values from 1 to 100. The allowance percentage may be saved before an allowance amount is configured, and
+`SpendingAlert` applies it when an allowance amount becomes available. `CommandWord` supplies the help syntax, which
+`HelpCommand` builds from the registered commands. Since `LedgerSnapshot` already includes both values, command
+updates use normal change detection and persistence. Tests cover parsing, display, set/clear behavior, preserving the
+other setting, help output, and persistence across restart.
 <!-- @@author -->
 
 <!-- @@author chancheese -->
 ### Applying the confirmed opening balance
 
 `OpeningBalanceCommand#execute()` stores the confirmed amount with
-`TransactionList#setOpeningBalance()`. This command was implemented separately from the setup
-flow.
+`TransactionList#setOpeningBalance()`.
+<!-- @@author lololol8484 -->
+This command was implemented separately from the setup flow.
+<!-- @@author chancheese -->
 
 The opening balance is a separate field in `TransactionList`, not a `Transaction`.
 `getBalance()` uses it as the starting value when adding up all transactions, as shown in
@@ -421,10 +493,12 @@ validation and deletion behavior.
 
 #### Design considerations
 
-The transaction list remains in insertion order, oldest first. `delete` translates the
-newest-first index displayed to the user instead of rearranging stored transactions. This keeps
-adding a transaction as a simple append while making deletion indices consistent with `recent`
-and `find`.
+<!-- @@author lololol8484 -->
+`TransactionList` stores dated transactions from oldest to newest and keeps undated legacy entries at the start.
+Transactions entered on the same date retain their entry order internally. `recent` and `find` traverse the list in
+reverse, so the newest date and most recently entered same-day transaction appear first. `delete` translates the
+displayed index to the matching position in the sorted list. A backdated addition may shift the indices of other
+transactions; users should check the current `recent` or `find` output before deleting.
 <!-- @@author -->
 
 ### Setting exchange rates
@@ -474,11 +548,10 @@ Otherwise, the parser converts the argument to an `int` and rejects a malformed 
 length with `FinNusException`. The main loop shows that exception as an error and continues.
 
 The command's `execute()` method requests the selected entries from
-`TransactionList#getRecentTransactions(length)`. `TransactionList` stores entries in insertion
-order, oldest first. It finds the first selected position using
-`max(0, size - length)`, takes the sublist through the end, and returns its reversed, read-only
-view. This handles a request longer than the ledger without a separate error case. If the ledger
-is empty, it returns an empty list before attempting a sublist.
+`TransactionList#getRecentTransactions(length)`. `TransactionList` stores dated entries oldest first, with undated
+legacy entries before them, and inserts each new entry at its date-sorted position. It takes the last `length`
+entries and returns them in reverse order. This handles a request longer than the ledger without a separate error
+case. If the ledger is empty, it returns an empty list before attempting a sublist.
 
 The command then numbers the returned entries starting at 1 and uses `Transaction#toString()`
 for each line. The heading reports how many entries were actually returned, which can be less
@@ -501,12 +574,12 @@ newest-first result, not permanent transaction IDs. Adding or deleting an entry 
 
 #### Design considerations
 
-Keeping the TransactionList in insertion order makes recording a transaction a simple append. Reversing
-only the selected sublist gives `recent` the order users need without rearranging stored data.
-Another approach would store transactions newest first, but then every feature that assumes
-insertion order would need to account for that choice. `getRecentTransactions()` returns a
-read-only view so callers can display entries without directly editing the ledger. The command
-only formats data; it does not add, remove or change transactions.
+<!-- @@author lololol8484 -->
+Keeping the TransactionList in date order makes backdated entries appear in their chronological position and ensures
+`recent`, `find`, and `delete` use the same ordering. Same-date transactions retain their entry order internally,
+while the reversed view shows the newest entry first. `getRecentTransactions()` returns a read-only view, and the
+command only formats data; it does not add, remove or change transactions.
+<!-- @@author nkyjStar -->
 
 <!-- @@author -->
 <!-- @@author nkyjStar -->
@@ -636,8 +709,11 @@ category name, or both. If both are missing, it throws a `FinNusException`.
 
 `FindCommand#execute()` goes through the `TransactionList` from the newest transaction to the oldest, and keeps the
 ones whose description contains the keyword. Each result is numbered with the same index that `recent` shows and
-`delete` expects. For a transaction at position `i` in the list (oldest first, starting from 0), that index is
-`size - i`. For example, with 4 transactions, the newest one (position 3) has index 1:
+`delete` expects.
+<!-- @@author lololol8484 -->
+For a transaction at position `i` in the list (undated legacy entries first, then dated entries oldest first), its
+index is `size - i`. For example, with 4 dated transactions, the newest one (position 3) has index 1:
+<!-- @@author nabijonzzz -->
 
 ```
 find lunch
@@ -778,7 +854,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 4. Otherwise, `convert()` creates a `ForeignAmount`, a record of the currency code, the amount as
    typed and the rate used, and calls its `toSgd()`, which divides the amount by the rate and
    rounds it to the nearest cent. If the result is $0.00 or above `Money.MAX_AMOUNT`
-   ($1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
+   (SGD 1,000,000), `convert()` throws a `FinNusException`; otherwise it returns the `ForeignAmount`.
 5. The command creates a `Transaction` from the `ForeignAmount`. Its `amount` is the SGD value, so
    the balance, `recent` and `delete` work without any changes.
 
@@ -834,6 +910,7 @@ Every withdrawal belongs to exactly one category, given with the optional `t/CAT
 Without `t/CATEGORY`, the withdrawal is recorded under `Others`.
 Users can add their own categories with `category NAME` and list all categories with `category`. A name may be `add` or
 `list`; these are treated as category names, not subcommands.
+<!-- @@author nabijonzzz -->
 
 #### Classes involved
 
@@ -841,7 +918,9 @@ Users can add their own categories with `category NAME` and list all categories 
   a category ignoring case, and returns it in the spelling it was created with.
 * `TransactionList` owns the `CategoryList`, in the same way it owns `CurrencyRates`.
 * `Transaction` has a `category` field: the category name for a withdrawal, and `null` for a deposit.
+<!-- @@author lololol8484 -->
 * `CategoryCommand` handles both `category NAME` and `category`.
+<!-- @@author nabijonzzz -->
 
 The class diagram below shows how these classes are related. Only the members relevant to categories are shown.
 
@@ -900,7 +979,9 @@ field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHD
 
 **Aspect: how to handle unknown categories**
 
+<!-- @@author lololol8484 -->
 * **Alternative 1 (current choice):** reject them, and require `category NAME` to create a new one.
+<!-- @@author nabijonzzz -->
   * Pros: a typo such as `t/fod` cannot silently create a new category and split the user's spending.
   * Cons: using a new category takes one extra command.
 * **Alternative 2:** create a new category automatically.
@@ -971,12 +1052,13 @@ the parser, so a hand-edited file cannot load a date that a command would reject
 
 **Aspect: order of transactions entered with an earlier date**
 
-* **Alternative 1 (current choice):** keep the order they were entered in.
-  * Pros: the indices shown by `recent` and used by `delete` never shift when a transaction is backdated.
-  * Cons: the list is not always in date order.
-* **Alternative 2:** insert transactions in date order.
-  * Pros: the list reads like a bank statement.
-  * Cons: adding one transaction could change the index of others, so `delete` might remove the wrong one.
+<!-- @@author lololol8484 -->
+* **Alternative 1 (current choice):** insert each transaction into the list by its date.
+  * Pros: `recent` and `find` reflect the actual dates, including backdated transactions.
+  * Cons: adding a backdated transaction can shift displayed indices, so users need to check the current list before deleting.
+* **Alternative 2:** keep transactions in entry order and sort only when displaying them.
+  * Pros: adding a transaction never changes the underlying order.
+  * Cons: every feature that displays or deletes transactions must independently apply the same date ordering.
 <!-- @@author -->
 
 <!-- @@author chancheese -->
@@ -1103,6 +1185,12 @@ Loading returns a `LoadResult` containing the recovered snapshot, warnings, savi
 required. A partially valid main file contributes its valid rows directly; the backup is considered only when the main
 file is missing or unrecoverable. Invalid UTF-8 counts as damaged data, whereas other read failures disable saving to
 protect data that could not be inspected.
+
+<!-- @@author lololol8484 -->
+`LedgerSnapshot#toTransactionList()` restores each decoded transaction through `TransactionList#add()`, so an
+unsorted `finnus.txt` still starts with the transactions arranged by date. A later successful save writes the sorted
+order. Simply starting the program and running read-only commands does not rewrite the file.
+<!-- @@author naieel04 -->
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
@@ -1306,14 +1394,25 @@ Keep diagrams consistent with the code. Explain relationships, number figures, a
 `FinNUS.main()` configures `java.util.logging` to append diagnostics to `finnus.log` in the working directory. If the log
 file cannot be created, logging is disabled. Command arguments and failed input can currently appear in diagnostics.
 
-[Insert logging levels, example diagnostics, and the team's policy for financial information in logs here]
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+Routine steps use `FINE`, state changes such as an added deposit use `INFO`, and storage problems use `WARNING`.
+The log can contain amounts and descriptions, so check it before sharing it.
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
 
 ### Automated testing and continuous integration
 
 Tests are in `src/test/java/finnus`, including parser, command, model, storage, and persistence integration tests.
 Run `check` using the setup table above. GitHub Actions runs checks with Java 25 on Windows, macOS, and Linux.
 
-[Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+Storage tests use JUnit `@TempDir`, so they never touch a real `finnus.txt`. Command tests check the exact
+printed output. Each pull request needs one approving review before it is merged.
 <!-- @@author -->
 
 ---
@@ -1334,19 +1433,31 @@ to make allowance and campus-expense tracking straightforward, including for stu
 
 ### Release scope
 
-[Insert features included in this release and explicit exclusions here]
+<!-- @@author -->
 
-Foreign-currency transaction conversion is implemented. [Confirm whether allowance-cycle and daily-budget features
-are included in this release.]
+<!-- @@author chancheese -->
+v2.1 includes:
+
+- deposits and withdrawals, with an optional date, category and foreign currency
+- the opening balance, `balance`, `recent`, `history`, `find` and `delete`
+- exchange rates, custom categories, and a monthly allowance that is added automatically
+- automatic saving, with recovery from damaged files
+
+It does not include editing transactions, listing one cycle's spending, charts or a daily budget. See
+[Planned enhancements](#planned-enhancements).
 <!-- @@author -->
 
 ---
 
 <!-- @@author naieel04 -->
 ## User stories
+<!-- @@author -->
 
-The stories below describe product goals; some features are not implemented. Confirm release priorities and acceptance
-criteria with the team.
+<!-- @@author chancheese -->
+Listing one cycle's spending and visual charts are not implemented yet.
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
 
 | ID    | As a/an...               | I want to...                                                            | So that...                                 |
 |-------|--------------------------|-------------------------------------------------------------------------|--------------------------------------------|
@@ -1357,8 +1468,6 @@ criteria with the team.
 | US-05 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
 | US-06 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
 | US-07 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
-
-[Add acceptance criteria for each story selected for implementation.]
 <!-- @@author -->
 
 ---
@@ -1412,8 +1521,7 @@ During an active view, an out-of-range page or page size reports an error withou
 <!-- @@author naieel04 -->
 ## Non-functional requirements
 
-The following proposed quality requirements are derived from the product goals. Confirm their targets with the team
-before treating them as release commitments.
+The following quality requirements are derived from the product goals.
 
 | ID     | Quality            | Proposed requirement                                                                                                                                                                                                                                    | How to verify                                                                                                                    |
 |--------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
@@ -1423,7 +1531,11 @@ before treating them as release commitments.
 | NFR-04 | Usability          | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command.                                                                                                      | Manually test documented commands, malformed inputs, and recovery with a following valid command.                                |
 | NFR-05 | Compatibility      | The application must run with Java 25 on the operating systems supported by the project.                                                                                                                                                                | Build and run the automated checks on Windows, macOS, and Linux CI environments.                                                 |
 
-[Confirm the supported operating systems and rounding policy with the team.]
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+FinNUS supports Windows, macOS and Linux. Amounts are rounded half-up to the cent for display. Foreign amounts are
+also rounded half-up to the cent when they are recorded.
 <!-- @@author -->
 
 ---
@@ -1447,17 +1559,16 @@ before treating them as release commitments.
 <!-- @@author naieel04 -->
 ## Instructions for manual testing
 
-Complete and execute these draft scenarios for the target release. Record observed results separately from expectations;
-do not mark a case as passed until it has been run.
+Run each scenario on the release JAR and compare the result with the expected one.
 
 ### Test environment and sample data
 
 1. Use Java 25 and build the JAR with `shadowJar`.
 2. Copy `build/libs/finnus.jar` into a separate, empty test folder and run `java -jar finnus.jar` there.
 3. For each independent scenario, use a fresh folder unless it explicitly tests restart or recovery.
-4. Record: [Insert operating system, Java version, release, tester, and date here].
 
-On first launch, enter `100` as the opening balance and confirm it with `yes`. Then create the sample ledger with:
+On first launch, enter `100` as the opening balance and confirm it with `yes`. Press Enter to skip the balance alert
+threshold and allowance setup. Then create the sample ledger with:
 
 ```text
 deposit 50 d/Allowance
@@ -1472,7 +1583,7 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
 |-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the balance threshold and allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
 | MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
 | MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
 | MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
@@ -1481,6 +1592,12 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
 | MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
 | MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
+
+<!-- @@author lololol8484 -->
+For the spending-alert check, use a fresh folder and complete setup with opening balance `100` and balance threshold
+`90`. Skip the allowance, enter `withdraw 20 d/Books`, answer `no`, then enter `balance`. The alert lists the balance
+threshold and opening balance; the withdrawal is cancelled, so the balance remains `$100.00`.
+<!-- @@author -->
 
 <!-- @@author nkyjStar -->
 ### History navigation scenario
@@ -1495,26 +1612,36 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 Use disposable test copies and stop the application before editing fixture files.
 
-| ID    | Fixture / failure                   | Procedure and expected result to complete                                                           |
-|-------|-------------------------------------|-----------------------------------------------------------------------------------------------------|
-| MT-07 | One corrupt row                     | [Insert file contents, launch steps, warning, recovered records, and resulting balance here]        |
-| MT-08 | Unusable main file and clean backup | [Insert fixtures, restored state, warning, and file-preservation checks here]                       |
-| MT-09 | Unsupported version                 | [Insert fixture, warning, saving-disabled behaviour, and unchanged-file checks here]                |
-| MT-10 | Save failure                        | [Insert reproducible failure setup, warning, in-memory state checks, retry steps, and cleanup here] |
+<!-- @@author -->
 
-[Insert boundary cases for amount and rate limits, recent counts, empty lists, and missing arguments here]
+<!-- @@author chancheese -->
+| ID    | Setup | Steps | Expected result |
+|-------|-------|-------|-----------------|
+| MT-07 | Sample ledger; add the row `TRANSACTION\|WITHDRAWAL\|abc\|eA==` to `finnus.txt` | Launch, enter `balance`, then `deposit 1`. | A warning names the skipped row, and the balance is SGD 145.50. After `deposit 1`, the damaged file is kept as `finnus.txt.corrupt-*`. |
+| MT-08 | Sample ledger; copy `finnus.txt` to `finnus.txt.bak`, then replace `finnus.txt` with the text `garbage` | Launch, then enter `balance`. | FinNUS restores the backup, and the balance is SGD 145.50. Files stay unchanged until a command changes the ledger. |
+| MT-09 | Sample ledger; change the first line of `finnus.txt` to `FINNUS\|9` | Launch, enter `deposit 5`, then `exit`. | A warning says saving is disabled. `deposit 5` shows a "Changes are in memory only" error, and `finnus.txt` is unchanged. |
+| MT-10 | Sample ledger; remove write access to the folder, e.g. `chmod a-w .` on macOS or Linux | Launch and enter `deposit 5`. Restore write access, then enter `balance`. | `deposit 5` shows "Automatic save failed". After `balance`, the deposit is saved. |
+
+Boundary cases:
+
+- `deposit 1000000` is accepted; `deposit 1000000.01` and `deposit 0.001` are rejected.
+- `rate JPY 1000000` is accepted; `rate JPY 1000001` is rejected.
+- `recent 0`, `delete 0` and an index past the end are rejected; `recent 99` lists every transaction.
+- `find` alone and `withdraw 4.50` without a description show the expected format.
 <!-- @@author -->
 
 ---
 
 <!-- @@author naieel04 -->
 ## Planned enhancements
+<!-- @@author -->
 
-Keep approved future work separate from implemented behaviour. Remove this section if outside the release scope.
+<!-- @@author chancheese -->
+These features are not in v2.1.
 
-| Enhancement               | User need          | Proposed design and affected components | Target release        |
-|---------------------------|--------------------|-----------------------------------------|-----------------------|
-| [Insert enhancement here] | [Insert need here] | [Insert approach and tradeoffs here]    | [Insert release here] |
-
-[Insert UML diagram of a proposed feature here, if applicable]
+| Enhancement | User need | Proposed design |
+|-------------|-----------|-----------------|
+| Edit a transaction | Fix a typo without deleting and re-entering it | `edit INDEX` takes the same prefixes as `withdraw` and replaces the transaction at that `recent` index. |
+| List one cycle's spending | Check every spend since the allowance arrived | A cycle filter on `history`, using the dates from `Allowance`. |
+| Daily budget | Know how much is safe to spend today | `balance` divides the balance by the days left until the next allowance. |
 <!-- @@author -->

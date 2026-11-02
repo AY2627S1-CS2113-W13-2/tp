@@ -55,8 +55,12 @@ class HelpCommandTest {
                 "| delete         | Delete a record      | delete INDEX                         |",
                 "| balance        | Current balance      | balance                              |",
                 //@@author chancheese
-                "| allowance      | Monthly allowance    | allowance [DAY [a/AMOUNT]            |",
-                "|                |                      | [c/CURRENCY]] or off                 |",
+                "| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |",
+                "|              |                      | [c/CURRENCY]] or off                   |",
+                //@@author lololol8484
+                "| alert        | Manage spending      | alert [balance AMOUNT or off] or       |",
+                "|              | alerts               | [allowance PERCENT or off]             |",
+                //@@author
                 //@@author nabijonzzz
                 "| rate           | Manage FX rates      | rate [CURRENCY RATE]                 |",
                 "| category       | Manage categories    | category [NAME]                      |",
@@ -77,7 +81,6 @@ class HelpCommandTest {
                 .filter(line -> line.startsWith("|"))
                 .skip(1)
                 .toList();
-        //@@author lololol8484
         CommandWord[] commands = java.util.Arrays.stream(CommandWord.values())
                 .filter(command -> command != CommandWord.OPENING)
                 .toArray(CommandWord[]::new);
