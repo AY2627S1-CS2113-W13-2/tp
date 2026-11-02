@@ -59,11 +59,11 @@ class HelpCommandTest {
                 "| delete         | Delete a record      | delete INDEX                         |",
                 "| balance        | Current balance      | balance                              |",
                 //@@author chancheese
-                "| allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |",
-                "|              |                      | [c/CURRENCY]] or off                   |",
+                "| allowance      | Monthly allowance    | allowance [DAY [a/AMOUNT]            |",
+                "|                |                      | [c/CURRENCY]] or off                 |",
                 //@@author lololol8484
-                "| alert        | Manage spending      | alert [balance AMOUNT or off] or       |",
-                "|              | alerts               | [allowance PERCENT or off]             |",
+                "| alert          | Manage spending      | alert [balance AMOUNT or off] or     |",
+                "|                | alerts               | [allowance PERCENT or off]           |",
                 //@@author
                 //@@author nabijonzzz
                 "| rate           | Manage FX rates      | rate [CURRENCY RATE]                 |",

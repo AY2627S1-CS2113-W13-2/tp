@@ -191,7 +191,7 @@ public class Setup {
                 "FinNUS will ask before withdrawals in an allowance cycle exceed this percentage.",
                 "Enter a whole percentage from 1 to 100, or press Enter to skip.");
         return askUntilValid(ui, "Allowance alert percentage (1-100): ", text -> {
-            if (!text.matches("\\d{1,3}")) {
+            if (!text.matches(ValidationRegex.PERCENTAGE_REGEX)) {
                 throw new FinNusException("Enter a whole percentage from 1 to 100.");
             }
             int percentage = Integer.parseInt(text);
