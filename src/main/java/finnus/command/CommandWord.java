@@ -19,7 +19,7 @@ public enum CommandWord {
     //@@author
     //@@author nkyjStar
     CHART("chart", "Visualise finances",
-            new HelpEntry("chart flow", "Deposits and withdrawals",
+            new HelpEntry("chart flow", "Cash flow by period",
                     "chart flow from/START to/END int/PERIOD [p/PAGE]"),
             new HelpEntry("chart spending", "Spending by category",
                     "chart spending [int/PERIOD on/DATE]")),

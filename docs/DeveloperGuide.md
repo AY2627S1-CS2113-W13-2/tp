@@ -1157,7 +1157,7 @@ changing it.
 
 | Command or class | Responsibility |
 |------------------|----------------|
-| `chart flow from/START to/END int/PERIOD [p/PAGE]` → `ChartFlowCommand` | Show deposits and withdrawals for up to four calendar periods per page. |
+| `chart flow from/START to/END int/PERIOD [p/PAGE]` → `ChartFlowCommand` | Summarise deposit and withdrawal totals over a date range, up to four periods per page. |
 | `chart spending [int/PERIOD on/DATE]` → `ChartSpendingCommand` | Show withdrawal totals by category, overall or for one calendar period. |
 | `Parser`, `CommandWord` | Validate chart arguments and provide separate help rows for the two forms. |
 | `ChartPeriod`, `ChartBar` | Share calendar boundaries and render scaled text bars with exact SGD totals. |

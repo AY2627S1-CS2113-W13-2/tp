@@ -45,8 +45,8 @@ class HelpCommandTest {
                 "| recent         | Recent activity      | recent [NUMBER]                      |",
                 //@@author nkyjStar
                 "| history        | Transaction history  | history [n/NUMBER] [p/PAGE]          |",
-                "| chart flow     | Deposits and         | chart flow from/START to/END         |",
-                "|                | withdrawals          | int/PERIOD [p/PAGE]                  |",
+                "| chart flow     | Cash flow by period  | chart flow from/START to/END         |",
+                "|                |                      | int/PERIOD [p/PAGE]                  |",
                 "| chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |",
                 //@@author nabijonzzz
                 //@@author chancheese

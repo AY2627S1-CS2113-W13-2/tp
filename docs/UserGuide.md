@@ -500,11 +500,11 @@ ____________________________________________________________
 <!-- @@author -->
 
 <!-- @@author nkyjStar -->
-### Viewing deposits and withdrawals: `chart flow`
+### Summarising cash flow: `chart flow`
 
-`chart flow` shows a bar for deposits and a bar for withdrawals in each calendar period. The dollar
-figure beside each bar is the recorded SGD total. Bars are scaled against the largest total on the
-current page, so compare their lengths within that page. The opening balance is excluded.
+`chart flow` summarises deposit and withdrawal totals over a selected date range, grouped by calendar
+period. Each period has two bars with exact SGD totals. Bars are scaled against the largest total on
+the current page, so compare their lengths within that page. The opening balance is excluded.
 
 Format: `chart flow from/START to/END int/PERIOD [p/PAGE]`
 
@@ -515,7 +515,7 @@ Format: `chart flow from/START to/END int/PERIOD [p/PAGE]`
   page 1 is the default. Repeat the command with another page to view more periods. A page outside the
   requested range is rejected. Chart pages are separate command results, so `next`, `prev`, and `stop`
   are only used while viewing transaction history.
-* Both deposits and withdrawals are shown, including periods with no transactions. If the chosen dates cut
+* Each period shows separate deposit and withdrawal totals, including zero totals. If the chosen dates cut
   through a week, month, or year, only transactions within the exact requested dates count, even though
   the label shows the complete calendar period. Older transactions without dates cannot be placed in a period.
 
@@ -643,8 +643,8 @@ Available commands:
 |                |                      | [c/CURRENCY] [t/CATEGORY] [on/DATE]  |
 | recent         | Recent activity      | recent [NUMBER]                      |
 | history        | Transaction history  | history [n/NUMBER] [p/PAGE]          |
-| chart flow     | Deposits and         | chart flow from/START to/END         |
-|                | withdrawals          | int/PERIOD [p/PAGE]                  |
+| chart flow     | Cash flow by period  | chart flow from/START to/END         |
+|                |                      | int/PERIOD [p/PAGE]                  |
 | chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |
 | find           | Search transactions  | find [KEYWORD] [t/CATEGORY]          |
 | delete         | Delete a record      | delete INDEX                         |
@@ -695,7 +695,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View recent transactions: `recent [NUMBER]`
 * View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
 <!-- @@author nkyjStar -->
-* View deposits and withdrawals: `chart flow from/START to/END int/PERIOD [p/PAGE]`
+* Summarise cash flow: `chart flow from/START to/END int/PERIOD [p/PAGE]`
 * View spending by category: `chart spending [int/PERIOD on/DATE]`
 <!-- @@author -->
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
