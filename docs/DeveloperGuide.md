@@ -105,7 +105,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 14's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 15's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -437,58 +437,41 @@ transactions; users should check the current `recent` or `find` output before de
 
 ### Editing a transaction
 
-`edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]` corrects an existing deposit or
-withdrawal. The transaction keeps its type and currency. The opening balance is not editable through this command.
+The `edit INDEX` command corrects selected fields of a deposit or withdrawal using the number shown by
+`recent`, `history` or `find`. See the [User Guide](UserGuide.md#editing-a-transaction-edit) for syntax and examples.
 
-#### Parsing and execution
+#### How it works
 
-1. `Parser#parse(input, today)` dispatches to `EditParser#parse(arguments, today)`. The parser requires a positive
-   one-based index and at least one field. It rejects duplicate/reserved unsupported prefixes and missing values,
-   except that an empty `d/` represents clearing a description.
-2. The parser validates amount/rate syntax, category-name syntax, and dates using existing parser helpers. It creates
-   an immutable `EditFields(BigDecimal amount, String description, String categoryName, LocalDate date, BigDecimal rate)`.
-   Null components mean omitted fields; an empty description means an explicit clear request. Amounts remain
-   `BigDecimal` until execution because the target transaction determines their currency and applicable SGD limit.
-3. `EditCommand#execute(TransactionList, Ui)` checks the current transaction count and maps the displayed number to
-   `transactions.size() - index`. It retains omitted values and builds a complete replacement `Transaction`.
-4. Execution rejects categories on deposits, blank withdrawal descriptions, unknown categories, rates on SGD entries,
-   and resulting SGD amounts outside `$0.01` to `$1000000`. All checks finish before replacement, so rejection does
-   not partly update the selected entry.
-5. `TransactionList#replace(int index, Transaction replacement)` returns the old entry, retains the count, and restores
-   chronological order with a stable sort. Unchanged dates retain their position among same-day entries. Changing a
-   date can change displayed indices; undated legacy entries remain undated unless `on/` is supplied.
-6. The command shows the before/after entries and, for a foreign transaction, its resulting saved rate. The normal
-   `FinNUS` snapshot comparison detects the edit and invokes automatic saving. The existing transaction record format
-   already stores every edited field, so no storage migration or new record type is needed.
+1. `Parser#parse()` delegates to `EditParser#parse()`, which validates the index and field syntax, then creates an
+   `EditCommand` containing immutable `EditFields`. Null fields mean "keep the old value"; empty `d/` means clear it.
+2. `EditCommand#execute()` checks the index and reads the entry at `transactions.size() - index`. It retains omitted
+   values and validates the complete replacement before changing the ledger. Invalid edits raise `FinNusException`.
+3. `TransactionList#replace()` replaces the entry and applies a stable date sort without changing the count.
+   Date edits can change displayed indices; other edits retain the entry's position.
+4. The command displays the before/after entries and any saved FX rate. `FinNUS` detects the changed snapshot and
+   attempts to save it using the existing storage format. Failed saves remain pending for retry.
 
-`FinNUS#prepareAllowance()` defers allowance credits for both `EditCommand` and `DeleteCommand` until after the
-indexed operation consumes the displayed number. This prevents a newly due allowance from shifting the selected
-entry between listing and editing. History mode continues to accept navigation only; users enter `stop` before editing.
-Editing an automatic allowance deposit leaves its schedule and `lastCredited` cursor unchanged.
+This sequence shows a successful `edit 1 a/6.50` on an SGD withdrawal:
 
-#### Historical rates and unchanged edits
+![Sequence diagram of editing a withdrawal amount](images/EditSequenceDiagram.png)
 
-For foreign entries, `a/` is in the existing foreign currency. An amount-only edit keeps the original saved rate;
-`r/` explicitly corrects that rate. The command builds a `ForeignAmount` from the retained/corrected values and uses
-`ForeignAmount#toSgd()` for half-up cent rounding. It does not read or write the global `CurrencyRates`, so historical
-corrections also work when no global rate is configured. Metadata-only edits retain the original foreign value object.
+*Figure 7. Validating and replacing an SGD transaction. Allowance handling and automatic saving are omitted.
+[PlantUML source](diagrams/EditSequenceDiagram.puml).*
 
-`EditCommand` compares the complete replacement with the original, including foreign amount and rate. Decimal scale
-alone is ignored, but a changed historical rate counts even if the rounded SGD amount stays the same. An unchanged
-edit keeps the original object, prints `No changes made.`, and does not itself trigger a save. Previously pending
-changes can still be retried by the normal save mechanism. A failed save leaves an applied edit in memory and pending
-for retry; it does not roll back the correction or claim that it reached disk.
+Foreign amount edits retain the saved rate unless `r/` is supplied. `ForeignAmount#toSgd()` rounds half-up to cents;
+the command checks the SGD limit without using or changing global rates. Metadata-only edits retain the foreign value.
+Identical values print `No changes made.` without replacement; decimal scale alone does not count as a change.
 
-#### Design considerations and tests
+`FinNUS#prepareAllowance()` defers allowance crediting until after an edit consumes its index. Editing an allowance
+deposit leaves its schedule and `lastCredited` unchanged. History mode requires `stop` before editing.
 
-Immutable replacement preserves `Transaction`'s existing design and avoids partially applying a multi-field edit.
-Mutable setters would require rollback when a later field fails; deleting and re-adding would unnecessarily change
-the position of same-day entries. A stable sort is consistent with the ledger's existing chronological invariant.
+#### Design considerations
 
-`EditParserTest`, `EditCommandTest`, `ForeignEditCommandTest`, and `TransactionReplacementTest` cover syntax,
-target-dependent validation, balances, retained values, rounding, unchanged edits, and ordering. `FinNUSTest` covers
-save retries, history-mode restrictions, and a clock change between listing and editing. `EditPersistenceTest` checks
-real temporary files, interruption before normal shutdown, independent restarts, searches, history, and cycle totals.
+Immutable replacement avoids partial updates and preserves transaction type and currency. Mutable setters would need
+rollback on validation failure; deletion and re-entry would change the position of same-day transactions.
+
+Parser, command and replacement tests cover validation, retained fields, FX rounding, balances and ordering.
+`FinNUSTest` and `EditPersistenceTest` cover allowance timing, save retries, reports and restart persistence.
 
 ### Setting exchange rates
 
@@ -551,7 +534,7 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-*Figure 7. Retrieving and displaying up to two recent transactions.
+*Figure 8. Retrieving and displaying up to two recent transactions.
 [PlantUML source](diagrams/RecentSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -600,7 +583,7 @@ The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` 
 
 ![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
 
-*Figure 8. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
+*Figure 9. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
 allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
 
 The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
@@ -617,7 +600,7 @@ The class diagram shows the session reference and how history reads `Transaction
 
 ![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
 
-*Figure 9. History command state and its application, parser, transaction list, and UI
+*Figure 10. History command state and its application, parser, transaction list, and UI
 relationships.
 [PlantUML source](diagrams/HistoryClassDiagram.puml).*
 
@@ -801,7 +784,7 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-*Figure 10. Calculating and displaying the current balance.
+*Figure 11. Calculating and displaying the current balance.
 [PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -831,7 +814,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
-*Figure 11. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+*Figure 12. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
 [PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
@@ -915,7 +898,7 @@ The class diagram below shows how these classes are related. Only the members re
 
 ![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
 
-*Figure 12. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
+*Figure 13. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
 
 `TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
 it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
@@ -1004,7 +987,7 @@ validation are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
 
-*Figure 13. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
+*Figure 14. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
 
 The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
 description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
@@ -1160,7 +1143,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 14. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 15. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -1183,7 +1166,7 @@ order. Simply starting the program and running read-only commands does not rewri
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 15. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 16. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |

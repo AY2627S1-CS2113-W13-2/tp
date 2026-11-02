@@ -1,0 +1,75 @@
+@startuml EditSequenceDiagram
+' Successful edit of an SGD withdrawal from $4.50 to $6.50.
+' Assumes a valid index and changed values; allowance handling, logging and saving are omitted.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+participant ":FinNUS" as App
+participant "<<class>>\nParser" as Parser
+participant "<<class>>\nEditParser" as EditParser
+participant "command:EditCommand" as Command
+participant "transactions:TransactionList" as Ledger
+participant "ui:Ui" as Ui
+
+activate App
+App -> Parser : parse("edit 1 a/6.50", today)
+activate Parser
+Parser -> EditParser : parse("1 a/6.50", today)
+activate EditParser
+note over EditParser
+  Validate syntax and create EditFields.
+  Omitted fields are null.
+end note
+create Command
+EditParser -> Command : new EditCommand(1, fields)
+activate Command
+Command --> EditParser : command
+deactivate Command
+EditParser --> Parser : command
+deactivate EditParser
+Parser --> App : command
+deactivate Parser
+
+App -> Command : execute(transactions, ui)
+activate Command
+Command -> Ledger : size()
+activate Ledger
+Ledger --> Command : count
+deactivate Ledger
+Command -> Ledger : get(count - 1)
+activate Ledger
+Ledger --> Command : original
+deactivate Ledger
+
+Command -> Command : buildReplacement(original, transactions)
+activate Command
+note over Command
+  Retain omitted values.
+  Validate all changes.
+  Construct replacement Transaction.
+end note
+Command --> Command : replacement
+deactivate Command
+Command -> Command : hasSameValues(original, replacement)
+activate Command
+Command --> Command : false
+deactivate Command
+
+Command -> Ledger : replace(count - 1, replacement)
+activate Ledger
+note over Ledger
+  Keep the transaction count.
+  Restore chronological order
+  with a stable sort.
+end note
+Ledger --> Command : original
+deactivate Ledger
+Command -> Ui : showMessage(before and after entries)
+activate Ui
+Ui --> Command
+deactivate Ui
+Command --> App
+deactivate Command
+deactivate App
+@enduml
