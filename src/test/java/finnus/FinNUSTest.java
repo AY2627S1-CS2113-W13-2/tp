@@ -125,6 +125,7 @@ class FinNUSTest {
                 storage).run();
         assertEquals(1, storage.attempts);
     }
+    //@@author
 
     @Test
     public void run_failedSave_retainsStateAndRetriesAfterReadOnlyCommand() {
@@ -190,7 +191,6 @@ class FinNUSTest {
         assertTrue(ui.output().contains("1 SGD = 110 JPY"));
         assertEquals(0, storage.attempts);
     }
-
     //@@author chancheese
     /** Returns a clock that is always at the start of the given day. */
     private static Clock fixedOn(LocalDate date) {
