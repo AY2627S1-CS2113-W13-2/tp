@@ -47,6 +47,10 @@ public class EditCommand extends Command {
             ui.showMessage("No changes made.");
             return;
         }
+        if (replacement.getType() == TransactionType.WITHDRAWAL
+                && !transactions.getSpendingAlert().confirmEdit(transactions, position, replacement, ui)) {
+            return;
+        }
         transactions.replace(position, replacement);
         logger.info("Edited transaction at recent-list index " + index);
         ui.showMessage("Transaction updated:", "  Before: " + original, "  After:  " + replacement);

@@ -716,6 +716,8 @@ Format: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
 * Prefixes `a/`, `d/`, `t/`, `on/`, `r/` and `c/` cannot start words inside a description; `c/` is not accepted by `edit`.
 * Successful changes are saved automatically. Invalid edits leave the selected entry unchanged;
   identical values print `No changes made.`
+* A withdrawal edit that crosses a spending-alert threshold asks for confirmation before saving. This includes
+  changes to the amount, saved exchange rate, or date. Answering `no` or ending input leaves the entry unchanged.
 
 
 Examples:

@@ -24,10 +24,10 @@ class SetupTest {
     public void run_confirmationCallback_runsBeforeOptionalPrompts() {
         TransactionList transactions = new TransactionList();
         boolean[] wasSaved = {false};
-        ScriptedUi ui = new ScriptedUi("67", "yes", "5", "500") {
+        ScriptedUi ui = new ScriptedUi("67", "yes", "", "5", "500") {
             @Override
             public String readCommand(String prompt) {
-                if (prompt.startsWith("Allowance")) {
+                if (prompt.startsWith("Allowance") || prompt.startsWith("Balance alert")) {
                     assertTrue(wasSaved[0], "The balance checkpoint must run before optional prompts");
                 }
                 return super.readCommand(prompt);

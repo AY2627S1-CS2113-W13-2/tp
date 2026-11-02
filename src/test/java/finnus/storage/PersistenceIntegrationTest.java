@@ -56,7 +56,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_interruptedAtAllowanceAmount_restoresConfirmedBalance() {
         Path path = directory.resolve("finnus.txt");
-        ScriptedUi interrupted = new ScriptedUi("67", "yes", "5") {
+        ScriptedUi interrupted = new ScriptedUi("67", "yes", "", "5") {
             @Override
             public String readCommand(String prompt) {
                 if (prompt.startsWith("Allowance amount")) {
@@ -74,7 +74,7 @@ class PersistenceIntegrationTest {
     @Test
     public void run_allowanceSetup_persistsBalanceAndAllowance() {
         Path path = directory.resolve("finnus.txt");
-        new FinNUS(new ScriptedUi("67", "yes", "5", "500", "exit"), new FileStorage(path)).run();
+        new FinNUS(new ScriptedUi("67", "yes", "", "5", "500", "", "exit"), new FileStorage(path)).run();
 
         LedgerSnapshot restored = new FileStorage(path).load().snapshot();
         assertEquals(Money.of("67"), restored.openingBalance());
