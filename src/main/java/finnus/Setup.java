@@ -44,6 +44,15 @@ public class Setup {
      * @return {@code true} if the user confirmed a balance; {@code false} if input ended first.
      */
     public boolean run(Ui ui, TransactionList transactions, LocalDate today) {
+        if (!initializeOpeningBalance(ui, transactions)) {
+            return false;
+        }
+        configureAllowance(ui, transactions, today);
+        return true;
+    }
+
+    /** Prompts until an opening balance is confirmed or input ends. */
+    boolean initializeOpeningBalance(Ui ui, TransactionList transactions) {
         assert ui != null : "UI must not be null";
         assert transactions != null : "Transaction list must not be null";
         assert transactions.size() == 0 : "First-run setup must not start with transactions";
@@ -75,9 +84,6 @@ public class Setup {
             assert transactions.getOpeningBalance().compareTo(amount) == 0
                     : "Setup must store the entered opening balance";
             logger.info("First-run opening balance confirmed");
-            //@@author chancheese
-            askForAllowance(ui, transactions, today);
-            //@@author
             return true;
         }
     }
@@ -88,7 +94,7 @@ public class Setup {
      * and so does ending the input, since the opening balance has already been confirmed.
      * Foreign currencies need a rate first, so they can only be set later with the command.
      */
-    private void askForAllowance(Ui ui, TransactionList transactions, LocalDate today) {
+    void configureAllowance(Ui ui, TransactionList transactions, LocalDate today) {
         ui.showMessage("Optional: when does your monthly allowance arrive?",
                 "FinNUS can count the days until it arrives and add it for you each month.",
                 "Press Enter to skip; you can set it later with: " + AllowanceCommand.EXAMPLE);

@@ -159,10 +159,15 @@ public class FinNUS {
             ui.showMessage(loaded.warnings());
         }
         if (loaded.setupRequired()) {
-            if (!new Setup().run(ui, transactions, today())) {
+            Setup setup = new Setup();
+            if (!setup.initializeOpeningBalance(ui, transactions)) {
                 return false;
             }
             hasUnsavedChanges = true;
+            savePendingChanges();
+            LedgerSnapshot beforeAllowance = LedgerSnapshot.capture(transactions);
+            setup.configureAllowance(ui, transactions, today());
+            hasUnsavedChanges |= !beforeAllowance.equals(LedgerSnapshot.capture(transactions));
             savePendingChanges();
         }
         ui.showWelcome();

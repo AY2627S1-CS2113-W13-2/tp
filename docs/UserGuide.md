@@ -111,6 +111,8 @@ The first time you run FinNUS, it asks how much money you currently have, so you
   run FinNUS.
 * After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
   skip, and then normal commands begin. Afterwards, `opening` is not a command.
+* FinNUS saves the confirmed opening balance before asking about the optional allowance. If setup is interrupted
+  at those questions, the next run uses the saved balance; you can set an allowance later with `allowance`.
 
 Example of first-run setup, entering `1200.50` and then `yes`:
 ```

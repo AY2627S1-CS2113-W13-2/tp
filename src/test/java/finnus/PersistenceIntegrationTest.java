@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.money.Money;
 import finnus.storage.FileStorage;
@@ -27,6 +29,83 @@ import finnus.transaction.TransactionType;
 class PersistenceIntegrationTest {
     @TempDir
     Path directory;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"67", "0"})
+    public void run_interruptedAfterConfirmation_restoresOpeningBalance(String amount) {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi interrupted = new ScriptedUi(amount, "yes") {
+            @Override
+            public String readCommand(String prompt) {
+                if (prompt.startsWith("Allowance day")) {
+                    throw new IllegalStateException("Interrupted optional setup");
+                }
+                return super.readCommand(prompt);
+            }
+        };
+
+        assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
+
+        LoadResult restored = new FileStorage(path).load();
+        assertFalse(restored.setupRequired());
+        assertEquals(Money.of(amount), restored.snapshot().openingBalance());
+    }
+
+    @Test
+    public void run_interruptedAtAllowanceAmount_restoresConfirmedBalance() {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi interrupted = new ScriptedUi("67", "yes", "5") {
+            @Override
+            public String readCommand(String prompt) {
+                if (prompt.startsWith("Allowance amount")) {
+                    throw new IllegalStateException("Interrupted optional setup");
+                }
+                return super.readCommand(prompt);
+            }
+        };
+
+        assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
+        assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
+        assertFalse(new FileStorage(path).load().setupRequired());
+    }
+
+    @Test
+    public void run_allowanceSetup_persistsBalanceAndAllowance() {
+        Path path = directory.resolve("finnus.txt");
+        new FinNUS(new ScriptedUi("67", "yes", "5", "500", "exit"), new FileStorage(path)).run();
+
+        LedgerSnapshot restored = new FileStorage(path).load().snapshot();
+        assertEquals(Money.of("67"), restored.openingBalance());
+        assertEquals(new BigDecimal("500"), restored.allowance().amount());
+    }
+
+    @Test
+    public void run_openingSaveFails_retriesAfterOptionalSetup() {
+        Path path = directory.resolve("finnus.txt");
+        FileStorage delegate = new FileStorage(path);
+        Storage storage = new Storage() {
+            private int attempts;
+
+            @Override
+            public LoadResult load() {
+                return delegate.load();
+            }
+
+            @Override
+            public void save(LedgerSnapshot snapshot) throws IOException {
+                if (attempts++ == 0) {
+                    throw new IOException("Injected save failure");
+                }
+                delegate.save(snapshot);
+            }
+        };
+        ScriptedUi ui = new ScriptedUi("67", "yes", "", "exit");
+
+        new FinNUS(ui, storage).run();
+
+        assertTrue(ui.output().contains("Automatic save failed"));
+        assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
+    }
 
     @Test
     public void run_twoSessions_restoresBalanceRatesAndRecentOrdering() {
