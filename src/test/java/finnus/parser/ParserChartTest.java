@@ -26,7 +26,7 @@ class ParserChartTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 30);
 
     @Test
-    void parse_validChartForms() throws FinNusException {
+    void parse_validChartInputs_returnsMatchingChartCommands() throws FinNusException {
         assertInstanceOf(ChartFlowCommand.class,
                 Parser.parse("chart flow from/2026-01-01 to/2026-10-30 int/YEAR p/2", TODAY));
         assertInstanceOf(ChartFlowCommand.class,
@@ -49,12 +49,12 @@ class ParserChartTest {
         "chart spending int/WEEK", "chart spending on/2026-10-21",
         "chart spending int/WEEK on/2026-10-21 p/2",
         "chart spending int/WEEK on/2026-10-21 on/2026-10-22"})
-    void parse_invalidChartForms(String input) {
+    void parse_invalidChartInput_throwsFinNusException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input, TODAY));
     }
 
     @Test
-    void parse_invalidFlowAndSpending_logWarnings() {
+    void parse_invalidFlowAndSpendingInputs_logsWarnings() {
         Logger logger = Logger.getLogger(Parser.class.getName());
         List<LogRecord> records = new ArrayList<>();
         Handler handler = new Handler() {

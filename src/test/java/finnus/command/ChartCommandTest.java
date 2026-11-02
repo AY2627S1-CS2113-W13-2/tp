@@ -27,7 +27,7 @@ class ChartCommandTest {
     private final RecordingUi ui = new RecordingUi();
 
     @Test
-    void flow_dailyPagesIncludeEmptyPeriodsAndOnlyRequestedDates() throws FinNusException {
+    void execute_dailyFlowRange_displaysFourPeriodsPerPageAndExactTotals() throws FinNusException {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of("10.50"), "Income", null,
                 LocalDate.of(2026, 10, 1)));
@@ -57,7 +57,7 @@ class ChartCommandTest {
     }
 
     @Test
-    void flow_partialWeekOmitsTransactionsOutsideExactRange() throws FinNusException {
+    void execute_partialWeekRange_excludesTransactionsOutsideRequestedDates() throws FinNusException {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(TransactionType.DEPOSIT, Money.of("10"), "Before", null,
                 LocalDate.of(2026, 10, 19)));
@@ -71,7 +71,7 @@ class ChartCommandTest {
     }
 
     @Test
-    void spending_overallIncludesUndatedAndDatedPeriodFiltersByCategory() {
+    void execute_overallAndDatedSpending_displaysSelectedCategoryTotals() {
         TransactionList transactions = new TransactionList();
         transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("3.50"), "Old", "Food"));
         transactions.add(new Transaction(TransactionType.WITHDRAWAL, Money.of("2"), "Lunch", "Food",
@@ -97,24 +97,29 @@ class ChartCommandTest {
     }
 
     @Test
-    void spending_emptyPeriodShowsClearMessage() {
+    void execute_emptySpendingPeriod_displaysNoSpendingMessage() {
         new ChartSpendingCommand(ChartPeriod.YEAR, LocalDate.of(2026, 1, 1))
                 .execute(new TransactionList(), ui);
         assertEquals("No spending in this period.", ui.lines.get(1));
     }
 
     @Test
-    void sharedPeriodFindsCalendarBoundaries() {
+    void startOf_datesWithinPeriods_returnsCalendarStartDates() {
         LocalDate date = LocalDate.of(2026, 10, 21);
         assertEquals(LocalDate.of(2026, 10, 21), ChartPeriod.DAY.startOf(date));
         assertEquals(LocalDate.of(2026, 10, 19), ChartPeriod.WEEK.startOf(date));
         assertEquals(LocalDate.of(2026, 10, 1), ChartPeriod.MONTH.startOf(date));
         assertEquals(LocalDate.of(2026, 1, 1), ChartPeriod.YEAR.startOf(date));
+    }
+
+    @Test
+    void nextStart_yearStart_returnsFollowingYearStart() {
+        LocalDate date = LocalDate.of(2026, 10, 21);
         assertEquals(LocalDate.of(2027, 1, 1), ChartPeriod.YEAR.nextStart(ChartPeriod.YEAR.startOf(date)));
     }
 
     @Test
-    void flow_outOfRangePage_logsWarning() {
+    void execute_outOfRangeFlowPage_throwsFinNusExceptionAndLogsWarning() {
         Logger logger = Logger.getLogger(ChartFlowCommand.class.getName());
         List<LogRecord> records = new ArrayList<>();
         Handler handler = new Handler() {
