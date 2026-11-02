@@ -1145,22 +1145,6 @@ For example, `withdraw 4.50` reaches `Parser#parseWithdraw()`, which rejects the
 `FinNusException`. No command is returned or executed, so the ledger is unchanged. `FinNUS#run()` catches the exception,
 passes its message to `Ui#showError()`, and reads the next command. Any changes still pending from an earlier command
 remain available for a later save attempt.
-
-### Additional feature template
-
-Duplicate this subsection for any other feature that warrants a detailed explanation.
-
-**Feature and status:** [Insert feature name and implemented or proposed status here]
-
-**Commands and classes:** [Insert commands and responsible classes here]
-
-**Mechanism and walkthrough:** [Insert algorithm, state changes, and concrete example here]
-
-[Insert UML diagram of this feature here]
-
-**Design considerations:** [Insert chosen approach, alternatives, rationale, and tradeoffs here]
-
-**Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
 <!-- @@author -->
 
 ---
@@ -1236,8 +1220,6 @@ criteria with the team.
 | US-05 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
 | US-06 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
 | US-07 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
-
-[Add acceptance criteria for each story selected for implementation.]
 <!-- @@author -->
 
 ---
@@ -1291,8 +1273,7 @@ During an active view, an out-of-range page or page size reports an error withou
 <!-- @@author naieel04 -->
 ## Non-functional requirements
 
-The following proposed quality requirements are derived from the product goals. Confirm their targets with the team
-before treating them as release commitments.
+The following quality requirements are derived from the product goals.
 
 | ID     | Quality            | Proposed requirement                                                                                                                                                                                                                                    | How to verify                                                                                                                    |
 |--------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
@@ -1326,15 +1307,13 @@ before treating them as release commitments.
 <!-- @@author naieel04 -->
 ## Instructions for manual testing
 
-Complete and execute these draft scenarios for the target release. Record observed results separately from expectations;
-do not mark a case as passed until it has been run.
+Run each scenario on the release JAR and compare the result with the expected one.
 
 ### Test environment and sample data
 
 1. Use Java 25 and build the JAR with `shadowJar`.
 2. Copy `build/libs/finnus.jar` into a separate, empty test folder and run `java -jar finnus.jar` there.
 3. For each independent scenario, use a fresh folder unless it explicitly tests restart or recovery.
-4. Record: [Insert operating system, Java version, release, tester, and date here].
 
 On first launch, enter `100` as the opening balance and confirm it with `yes`. Then create the sample ledger with:
 
@@ -1351,12 +1330,12 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
 |-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
-| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
-| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
-| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
-| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry. [Insert exact output here]                                    |
-| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored. [Insert exact output here]                            |
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits.                              |
+| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50.                              |
+| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00.                         |
+| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. |
+| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry.                                    |
+| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored.                            |
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
 | MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
 | MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
