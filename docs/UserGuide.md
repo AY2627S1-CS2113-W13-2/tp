@@ -25,9 +25,11 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
 file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
 
+<!-- @@author lololol8484 -->
 On a first run with no existing ledger or backup, FinNUS creates a pending setup file and asks for an opening balance.
 The balance is saved only after you confirm it. If you exit or input ends before confirmation, the pending setup state
 remains and FinNUS asks you to complete setup the next time you run it.
+<!-- @@author -->
 
 If a data row is corrupt, FinNUS skips it and reports a warning; the recovered ledger may be incomplete.
 If the main file is unusable, FinNUS tries its backup. If neither can be recovered, it starts with an empty ledger in memory and leaves the original file untouched until data changes.
@@ -107,8 +109,10 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 * Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
 * The opening balance is not a transaction, so it does not show up in `recent` and cannot be removed with `delete`.
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
+<!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
+<!-- @@author -->
 * After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
   skip, and then normal commands begin. Afterwards, `opening` is not a command.
 * FinNUS saves the confirmed opening balance before asking about the optional allowance. If setup is interrupted
@@ -276,10 +280,13 @@ you can then use with `t/`.
 Formats: `category` or `category NAME`
 
 * `NAME` is one word made of letters, digits and `-`, at most 20 characters, e.g. `Gym` or `bubble-tea`.
+<!-- @@author nabijonzzz -->
 * `NAME` must not already exist, ignoring case. For example, `category FOOD` is rejected because `Food` exists.
+<!-- @@author lololol8484 -->
 * `add` and `list` are valid category names when entered alone: `category add` creates `add`, and `category list` creates `list`.
 
 Example: `category Gym`, then `withdraw 30 d/Membership t/gym`
+<!-- @@author nabijonzzz -->
 ```
 ____________________________________________________________
 Category added: #Gym
@@ -308,8 +315,16 @@ Format: `deposit AMOUNT [d/DESCRIPTION] on/DATE` or `withdraw AMOUNT d/DESCRIPTI
 * `DATE` must be on or after `2000-01-01`.
 * `DATE` cannot be in the future, since you can only record money that has already moved.
 * `on/DATE` can be given anywhere after the command word, but only once. It works together with `c/` and `t/`.
-* `recent` still lists transactions in the order you entered them, so an earlier date does not change the numbers
-  used by `delete`.
+<!-- @@author lololol8484 -->
+* Transactions are stored in calendar-date order; FinNUS does not record the time of day. `recent` and `find` show
+  the newest dates first. For transactions on the same date, the most recently entered appears first. Undated
+  transactions from older save files appear after dated transactions, with the most recently entered undated
+  transaction first.
+* Adding a backdated transaction can change the numbers shown by `recent` and `find`, so check the current list before
+  using an index with `delete`.
+* If transaction rows in `finnus.txt` are out of date order, FinNUS sorts them in memory when it starts. The file is
+  rewritten in that order the next time FinNUS saves a change; a read-only run leaves the file as it was.
+<!-- @@author nabijonzzz -->
 * Transactions saved by older versions of FinNUS have no date, and are shown without one.
 * Because `on/` marks the date, a word starting with `on/` cannot be used inside a description.
 
