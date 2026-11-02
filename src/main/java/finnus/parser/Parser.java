@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import finnus.ValidationRegex;
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
 import finnus.command.AlertCommand;
@@ -94,6 +95,18 @@ public class Parser {
     public static final String DATE_FORMAT_REGEX = "\\d{4}-\\d{2}-\\d{2}";
     //@@author
 
+    /** Separates command arguments at one or more whitespace characters. */
+    private static final String WHITESPACE_SEPARATOR_REGEX = "\\s+";
+
+    /** Non-negative amount with at most two decimal places. */
+    private static final String AMOUNT_REGEX = "\\d+(\\.\\d{1,2})?";
+
+    /** Exchange rate with at most six decimal places. */
+    private static final String RATE_REGEX = "\\d+(\\.\\d{1,6})?";
+
+    /** A negative plain decimal, used to give a specific validation error. */
+    private static final String NEGATIVE_AMOUNT_REGEX = "-\\d+(\\.\\d+)?";
+
     //@@author chancheese
     /**
      * Matches {@code c/CODE} at the start of a word, allowing whitespace after {@code c/}.
@@ -158,7 +171,7 @@ public class Parser {
         assert today != null : "Today's date must not be null";
         String trimmed = input.trim();
         // Split into the command word and everything after it (which may be empty).
-        String[] parts = trimmed.split("\\s+", 2);
+        String[] parts = trimmed.split(WHITESPACE_SEPARATOR_REGEX, 2);
         String commandWord = parts[0].toLowerCase(Locale.ROOT);
         String arguments = parts.length > 1 ? parts[1].trim() : "";
         logger.fine("Parsing command word '" + commandWord + "'");
@@ -307,7 +320,7 @@ public class Parser {
         if (arguments.isBlank()) {
             return new AlertCommand();
         }
-        String[] parts = arguments.trim().split("\\s+");
+        String[] parts = arguments.trim().split(WHITESPACE_SEPARATOR_REGEX);
         if (parts.length != 2) {
             throw invalidAlertFormat();
         }
@@ -322,7 +335,7 @@ public class Parser {
             if (value.equalsIgnoreCase("off")) {
                 return AlertCommand.clearAllowancePercentage();
             }
-            if (!value.matches("\\d{1,3}")) {
+            if (!value.matches(ValidationRegex.PERCENTAGE_REGEX)) {
                 throw invalidAllowancePercentage();
             }
             int percentage = Integer.parseInt(value);
@@ -360,7 +373,7 @@ public class Parser {
                     + CommandWord.ALLOWANCE.getUsage());
         }
         // At most 2 digits, so a huge number cannot overflow Integer.parseInt.
-        if (!day.matches("\\d{1,2}") || Integer.parseInt(day) < Allowance.MIN_DAY
+        if (!day.matches(ValidationRegex.ALLOWANCE_DAY_REGEX) || Integer.parseInt(day) < Allowance.MIN_DAY
                 || Integer.parseInt(day) > Allowance.MAX_DAY) {
             throw new FinNusException("'" + day + "' is not a valid allowance day. Use a whole number from "
                     + Allowance.MIN_DAY + " to " + Allowance.MAX_DAY + ", e.g. 5.");
@@ -414,7 +427,7 @@ public class Parser {
             return new HistoryCommand(pageSize, page);
         }
 
-        for (String rawField : arguments.split("\\s+")) {
+        for (String rawField : arguments.split(WHITESPACE_SEPARATOR_REGEX)) {
             String field = rawField.toLowerCase(Locale.ROOT);
             if (field.startsWith("n/") && !hasPageSize) {
                 pageSize = HistoryCommand.parsePositiveNumber(field.substring(2), "page size");
@@ -442,7 +455,7 @@ public class Parser {
      * @throws FinNusException If the subcommand or any field is invalid.
      */
     private static Command parseChart(String arguments, LocalDate today) throws FinNusException {
-        String[] parts = arguments.split("\\s+", 2);
+        String[] parts = arguments.split(WHITESPACE_SEPARATOR_REGEX, 2);
         String mode = parts[0].toLowerCase(Locale.ROOT);
         String fields = parts.length == 2 ? parts[1].trim() : "";
         try {
@@ -471,7 +484,7 @@ public class Parser {
         String toText = null;
         String periodText = null;
         String pageText = null;
-        for (String field : arguments.split("\\s+")) {
+        for (String field : arguments.split(WHITESPACE_SEPARATOR_REGEX)) {
             int slash = field.indexOf('/');
             String prefix = slash < 0 ? "" : field.substring(0, slash).toLowerCase(Locale.ROOT);
             String value = slash < 0 ? "" : field.substring(slash + 1);
@@ -529,7 +542,7 @@ public class Parser {
         }
         String periodText = null;
         String dateText = null;
-        for (String field : arguments.split("\\s+")) {
+        for (String field : arguments.split(WHITESPACE_SEPARATOR_REGEX)) {
             int slash = field.indexOf('/');
             String prefix = slash < 0 ? "" : field.substring(0, slash).toLowerCase(Locale.ROOT);
             String value = slash < 0 ? "" : field.substring(slash + 1);
@@ -587,7 +600,7 @@ public class Parser {
      * @throws FinNusException If the number is invalid, zero, or too large for an int.
      */
     private static int parseChartPage(String text) throws FinNusException {
-        if (!text.matches("[0-9]+") || new BigInteger(text).signum() == 0) {
+        if (!text.matches(ValidationRegex.UNSIGNED_INTEGER_REGEX) || new BigInteger(text).signum() == 0) {
             throw new FinNusException("Chart page must be a positive whole number.");
         }
         BigInteger number = new BigInteger(text);
@@ -619,7 +632,7 @@ public class Parser {
         if (arguments.isEmpty()) {
             return new RateCommand();
         }
-        String[] parts = arguments.split("\\s+");
+        String[] parts = arguments.split(WHITESPACE_SEPARATOR_REGEX);
         if (parts.length != 2) {
             throw new FinNusException("Give a currency and a rate, e.g. " + CommandWord.RATE.getWord()
                     + " JPY 110.\nFormat: " + CommandWord.RATE.getUsage());
@@ -657,7 +670,7 @@ public class Parser {
      */
     static BigDecimal parseRateValue(String text) throws FinNusException {
         // Rates need more precision than money, e.g. 1 SGD = 0.5425 GBP.
-        if (!text.matches("\\d+(\\.\\d{1,6})?")) {
+        if (!text.matches(RATE_REGEX)) {
             throw new FinNusException("'" + text + "' is not a valid rate. "
                     + "Use a number with at most 6 decimal places, e.g. 110 or 0.5425");
         }
@@ -892,7 +905,7 @@ public class Parser {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
         rejectNegativeAmount(text);
-        if (!text.matches("\\d+(\\.\\d{1,2})?")) {
+        if (!text.matches(AMOUNT_REGEX)) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a number with at most 2 decimal places, e.g. 1100");
         }
@@ -977,7 +990,7 @@ public class Parser {
         //@@author
         // Only plain decimals like 4, 4.5 or 4.50 are accepted; this rejects
         // "1e3", "NaN", "Infinity" and "$5" in one simple check.
-        if (!text.matches("\\d+(\\.\\d{1,2})?")) {
+        if (!text.matches(AMOUNT_REGEX)) {
             throw new FinNusException("'" + text + "' is not a valid amount. "
                     + "Use a number with at most 2 decimal places, e.g. 4.50");
         }
@@ -998,7 +1011,7 @@ public class Parser {
      * @throws FinNusException If the text is a number with a leading minus sign.
      */
     private static void rejectNegativeAmount(String text) throws FinNusException {
-        if (text.matches("-\\d+(\\.\\d+)?")) {
+        if (text.matches(NEGATIVE_AMOUNT_REGEX)) {
             throw new FinNusException("Amount must not be negative.");
         }
     }

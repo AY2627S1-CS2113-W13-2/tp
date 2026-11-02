@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import finnus.ValidationRegex;
 import finnus.alert.SpendingAlert;
 import finnus.allowance.Allowance;
 import finnus.category.CategoryList;
@@ -31,6 +32,17 @@ public class LedgerCodec {
     private static final Logger logger = Logger.getLogger(LedgerCodec.class.getName());
     //@@author naieel04
     private static final String HEADER = "FINNUS|1";
+    /** Recognizes another numbered version of the save-file header. */
+    private static final String VERSIONED_HEADER_REGEX = "FINNUS\\|[0-9]+";
+
+    /** Splits saved fields on a literal pipe, including empty trailing fields. */
+    private static final String FIELD_SEPARATOR_REGEX = "\\|";
+
+    /** Removes an optional byte-order mark from the start of a save file. */
+    private static final String LEADING_BOM_REGEX = "^\uFEFF";
+
+    /** Plain decimal values in saved records may have a leading minus sign. */
+    private static final String STORED_DECIMAL_REGEX = "-?\\d+(\\.\\d+)?";
     //@@author
     private static final String SETUP_PENDING = "SETUP_PENDING";
     //@@author naieel04
@@ -171,9 +183,9 @@ public class LedgerCodec {
         //@@author
         assert text != null : "Cannot decode null storage text";
         //@@author naieel04
-        List<String> lines = text.replaceFirst("^\uFEFF", "").lines().toList();
+        List<String> lines = text.replaceFirst(LEADING_BOM_REGEX, "").lines().toList();
         if (lines.isEmpty() || !HEADER.equals(lines.getFirst())) {
-            boolean newer = !lines.isEmpty() && lines.getFirst().matches("FINNUS\\|[0-9]+");
+            boolean newer = !lines.isEmpty() && lines.getFirst().matches(VERSIONED_HEADER_REGEX);
             return new DecodeResult(LedgerSnapshot.empty(), List.of("Invalid or unsupported storage header."),
                     newer ? Status.UNSUPPORTED : Status.UNRECOVERABLE);
         }
@@ -217,7 +229,7 @@ public class LedgerCodec {
     /** Dispatches one delimited line to the parser for its record type. */
     //@@author naieel04
     private void parseRecord(String line, Records records) {
-        String[] fields = line.split("\\|", -1);
+        String[] fields = line.split(FIELD_SEPARATOR_REGEX, -1);
         for (int index = 0; index < fields.length; index++) {
             fields[index] = fields[index].trim();
         }
@@ -348,7 +360,7 @@ public class LedgerCodec {
      */
     private void parseAllowance(String[] fields, Records records) {
         requireFields(fields, ALLOWANCE_FIELDS);
-        if (!fields[1].matches("\\d{1,2}")) {
+        if (!fields[1].matches(ValidationRegex.ALLOWANCE_DAY_REGEX)) {
             throw new IllegalArgumentException("Invalid allowance day");
         }
         int day = Integer.parseInt(fields[1]);
@@ -431,7 +443,7 @@ public class LedgerCodec {
     /** Parses a plain decimal value, excluding exponent notation and other formats. */
     //@@author naieel04
     private BigDecimal parseDecimal(String text) {
-        if (!text.matches("-?\\d+(\\.\\d+)?")) {
+        if (!text.matches(STORED_DECIMAL_REGEX)) {
             throw new IllegalArgumentException("Invalid decimal value");
         }
         try {
