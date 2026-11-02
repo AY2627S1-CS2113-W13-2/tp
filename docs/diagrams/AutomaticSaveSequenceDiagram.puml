@@ -12,6 +12,19 @@ note over FinNUS
 end note
 FinNUS -> Storage: save(snapshot)
 activate Storage
+' @@author lololol8484
+Storage -> Files: verify ledger fingerprint
+alt ledger changed externally
+    Files --> Storage: differs
+    Storage --> FinNUS: StorageConflictException
+    deactivate Storage
+    note over FinNUS
+        Display conflict warning and exit.
+        Do not replace the main file or backup.
+    end note
+else ledger unchanged
+    Files --> Storage: matches
+    ' @@author
 note over Storage, Files
     File operations are summarised.
     Preserve damaged files before replacement.
@@ -30,6 +43,7 @@ Storage -> Files: atomically replace main file
 Files --> Storage: return
 Storage --> FinNUS: return
 deactivate Storage
+end
 note over FinNUS
     Clear pending changes after saving.
     Failed saves remain pending for retry after

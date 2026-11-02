@@ -33,6 +33,60 @@ class PersistenceIntegrationTest {
     @TempDir
     Path directory;
 
+    //@@author lololol8484
+    @Test
+    public void run_externalChangeBeforeCommand_stopsWithoutExecutingCommand() throws IOException {
+        Path path = directory.resolve("finnus.txt");
+        LedgerCodec codec = new LedgerCodec();
+        Files.writeString(path, codec.encode(new LedgerSnapshot(Money.of("10"), List.of(), Map.of())));
+        boolean[] changed = {false};
+        FileStorage storage = new FileStorage(path) {
+            @Override
+            public void verifyUnchanged() throws IOException {
+                if (!changed[0]) {
+                    changed[0] = true;
+                    Files.writeString(path,
+                            codec.encode(new LedgerSnapshot(Money.of("20"), List.of(), Map.of())));
+                }
+                super.verifyUnchanged();
+            }
+        };
+
+        ScriptedUi ui = new ScriptedUi("deposit 5 d/ShouldNotRun", "exit");
+        new FinNUS(ui, storage).run();
+
+        assertTrue(ui.output().contains("Another FinNUS session has changed the ledger."));
+        assertFalse(ui.output().contains("Deposit added:"));
+        assertEquals(Money.of("20"), new FileStorage(path).load().snapshot().openingBalance());
+    }
+
+    @Test
+    public void run_externalChangeDuringSave_stopsWithoutReplacingNewerLedger() throws IOException {
+        Path path = directory.resolve("finnus.txt");
+        LedgerCodec codec = new LedgerCodec();
+        Files.writeString(path, codec.encode(new LedgerSnapshot(Money.of("10"), List.of(), Map.of())));
+        int[] verificationCount = {0};
+        FileStorage storage = new FileStorage(path) {
+            @Override
+            public void verifyUnchanged() throws IOException {
+                verificationCount[0]++;
+                if (verificationCount[0] == 2) {
+                    Files.writeString(path,
+                            codec.encode(new LedgerSnapshot(Money.of("20"), List.of(), Map.of())));
+                }
+                super.verifyUnchanged();
+            }
+        };
+
+        ScriptedUi ui = new ScriptedUi("deposit 5 d/NotSaved", "exit");
+        new FinNUS(ui, storage).run();
+
+        assertTrue(ui.output().contains("Another FinNUS session has changed the ledger."));
+        assertEquals(Money.of("20"), new FileStorage(path).load().snapshot().openingBalance());
+        assertEquals(0, new FileStorage(path).load().snapshot().transactions().size());
+    }
+    //@@author
+
     @Test
     public void run_twoSessions_restoresBalanceRatesAndRecentOrdering() {
         Path path = directory.resolve("finnus.txt");
@@ -286,6 +340,11 @@ class PersistenceIntegrationTest {
             @Override
             public LoadResult load() {
                 return new FileStorage(path).load();
+            }
+
+            @Override
+            public void verifyUnchanged() {
+                // This test storage injects ordinary save failures only.
             }
 
             @Override

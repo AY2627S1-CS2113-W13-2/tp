@@ -9,9 +9,13 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -44,6 +48,10 @@ public class FileStorage implements Storage {
     /** Prevents the same damaged source from being copied more than once per session. */
     //@@author naieel04
     private final Set<Path> preservedSources = new HashSet<>();
+    //@@author lololol8484
+    /** Fingerprint of the main ledger at the latest successful load or save. */
+    private String loadedFingerprint;
+    //@@author
 
     /**
      * Creates storage for the supplied file; useful for isolated tests and alternate launchers.
@@ -100,25 +108,62 @@ public class FileStorage implements Storage {
         preserveOriginal = false;
         savingAllowed = true;
         setupRequired = false;
+        //@@author lololol8484
+        loadedFingerprint = null;
+        //@@author
         //@@author naieel04
         preservedSources.clear();
         try {
             LedgerCodec.DecodeResult decoded = read(path);
             if (decoded == null) {
                 if (!Files.exists(backupPath())) {
-                    return createSetupPendingFile(new ArrayList<>());
+                    return finishLoad(createSetupPendingFile(new ArrayList<>()));
                 }
                 //@@author naieel04
-                return recoverBackup(false, new ArrayList<>());
+                return finishLoad(recoverBackup(false, new ArrayList<>()));
             }
-            return handleMainFile(decoded);
+            return finishLoad(handleMainFile(decoded));
         } catch (CharacterCodingException e) {
             preserveOriginal = true;
-            return recoverBackup(true, new ArrayList<>(List.of("Save file contains invalid UTF-8.")));
+            return finishLoad(recoverBackup(true, new ArrayList<>(List.of("Save file contains invalid UTF-8."))));
         } catch (IOException e) {
             return readFailure(path);
         }
     }
+
+    //@@author lololol8484
+    /** Records the main file version after a successful load, disabling saves if it cannot be read. */
+    private LoadResult finishLoad(LoadResult loaded) {
+        assert loaded != null : "A completed load must have a result";
+        try {
+            loadedFingerprint = fingerprint(path);
+            return loaded;
+        } catch (IOException e) {
+            savingAllowed = false;
+            logger.log(java.util.logging.Level.WARNING, "Unable to fingerprint storage file " + path, e);
+            return new LoadResult(loaded.snapshot(), loaded.warnings(), false, loaded.setupRequired());
+        }
+    }
+
+    /**
+     * Checks the main file before a command is executed, so an old session cannot continue.
+     *
+     * @throws IOException If the current file cannot be inspected.
+     * @throws StorageConflictException If the file differs from the loaded version.
+     */
+    @Override
+    public void verifyUnchanged() throws IOException {
+        if (!initialized) {
+            load();
+        }
+        String currentFingerprint = fingerprint(path);
+        if (!Objects.equals(loadedFingerprint, currentFingerprint)) {
+            logger.warning("Detected an external change to " + path);
+            throw conflict();
+        }
+        logger.fine("Verified ledger unchanged at " + path);
+    }
+    //@@author
 
     /** Applies the recovery policy for a decoded main file. */
     //@@author naieel04
@@ -265,10 +310,36 @@ public class FileStorage implements Storage {
         }
     }
 
+    //@@author lololol8484
+    /** Computes a stable fingerprint for the exact bytes currently stored at {@code source}. */
+    private String fingerprint(Path source) throws IOException {
+        assert source != null : "Storage path must not be null";
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(source);
+        } catch (NoSuchFileException e) {
+            return null;
+        }
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
+    }
+
+    /** Creates the conflict exception shared by pre-command and save-time checks. */
+    private StorageConflictException conflict() {
+        return new StorageConflictException("Another FinNUS session has changed the ledger. "
+                + "Finish that session, then restart FinNUS to continue.");
+    }
+    //@@author
+
     /**
      * Writes a complete snapshot without truncating the main file or its backup.
      *
      * @throws IOException If writing, backup rotation or atomic replacement fails.
+     * @throws StorageConflictException If another session changed the ledger before replacement.
      */
     @Override
     public void save(LedgerSnapshot snapshot) throws IOException {
@@ -283,16 +354,23 @@ public class FileStorage implements Storage {
             throw new IOException("Saving is disabled because the source could not be loaded safely");
         }
         Files.createDirectories(path.getParent());
-        if (preserveOriginal) {
-            preserveFile(path);
-        }
         Path temporary = Files.createTempFile(path.getParent(), ".finnus-", ".tmp");
         try {
             Files.writeString(temporary, codec.encode(snapshot), StandardCharsets.UTF_8);
+            //@@author lololol8484
+            // Check immediately before any backup rotation or main-file replacement.
+            verifyUnchanged();
+            //@@author
+            if (preserveOriginal) {
+                preserveFile(path);
+            }
             if (knownClean && Files.exists(path)) {
                 rotateBackup();
             }
             replacement.replace(temporary, path);
+            //@@author lololol8484
+            loadedFingerprint = fingerprint(path);
+            //@@author
             knownClean = true;
             preserveOriginal = false;
             //@@author nkyjStar

@@ -11,11 +11,17 @@ class LedgerCodec
 class LedgerSnapshot
 class LoadResult
 class "LedgerCodec.DecodeResult" as DecodeResult
+' @@author lololol8484
+class StorageConflictException
+' @@author
 
 FileStorage ..|> Storage
 FileStorage --> "1" LedgerCodec: codec
 Storage ..> LoadResult: returns
 Storage ..> LedgerSnapshot: saves
+' @@author lololol8484
+Storage ..> StorageConflictException: throws on external changes
+' @@author
 LedgerCodec ..> DecodeResult: creates
 LedgerCodec ..> LedgerSnapshot: encodes / creates
 LoadResult --> "1" LedgerSnapshot: snapshot

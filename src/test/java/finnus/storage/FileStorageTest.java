@@ -60,6 +60,26 @@ class FileStorageTest {
         assertTrue(Files.readString(path).contains("OPENING|20"));
     }
 
+    //@@author lololol8484
+    @Test
+    public void save_externalChange_rejectsStaleSessionWithoutOverwritingFiles() throws IOException {
+        Path path = directory.resolve("finnus.txt");
+        FileStorage firstSession = new FileStorage(path);
+        firstSession.save(withOpening("10"));
+
+        FileStorage secondSession = new FileStorage(path);
+        secondSession.load();
+        firstSession.save(withOpening("20"));
+        String current = Files.readString(path);
+        String backup = Files.readString(directory.resolve("finnus.txt.bak"));
+
+        assertThrows(StorageConflictException.class, () -> secondSession.save(withOpening("30")));
+        assertEquals(current, Files.readString(path));
+        assertEquals(backup, Files.readString(directory.resolve("finnus.txt.bak")));
+        assertNoTemporaryFiles(directory);
+    }
+    //@@author
+
     @Test
     public void save_backupFailure_preservesMainAndOldBackup() throws IOException {
         Path path = directory.resolve("finnus.txt");

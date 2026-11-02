@@ -745,6 +745,13 @@ ____________________________________________________________
 **A**: Copy `finnus.txt` (and `finnus.txt.bak`, if it exists) from the folder containing `finnus.jar` into the folder
 where you put `finnus.jar` on the other computer. FinNUS loads it automatically the next time it starts.
 
+<!-- @@author lololol8484 -->
+**Q**: Why did FinNUS close after another session changed the ledger?
+
+**A**: Only one session should use a ledger at a time. Finish the other session, then restart FinNUS so it can load the
+latest saved ledger. This prevents one session from overwriting the other's transactions.
+<!-- @@author -->
+
 **Q**: What is the `finnus.log` file that appears next to `finnus.jar`?
 
 **A**: It is a log file that records what FinNUS did, to help developers investigate problems. It is not needed to use

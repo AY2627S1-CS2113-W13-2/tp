@@ -20,6 +20,7 @@ import finnus.storage.FileStorage;
 import finnus.storage.LedgerSnapshot;
 import finnus.storage.LoadResult;
 import finnus.storage.Storage;
+import finnus.storage.StorageConflictException;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -44,6 +45,10 @@ public class FinNUS {
     private boolean hasUnsavedChanges;
     /** Prevents writes when loading could not establish that replacing storage is safe. */
     private boolean savingAllowed;
+    //@@author lololol8484
+    /** Prevents a stale session from saving after another session changes the ledger. */
+    private boolean sessionBlocked;
+    //@@author
     //@@author nkyjStar
     /** Active paginated history view, or null when normal commands are available. */
     private HistoryCommand historyView;
@@ -114,28 +119,49 @@ public class FinNUS {
      */
     public void run() {
         logger.info("FinNUS started");
-        if (!restoreSession()) {
-            logger.info("FinNUS stopped during setup");
-            return;
+        sessionBlocked = false;
+        try {
+            if (!restoreSession()) {
+                logger.info("FinNUS stopped during setup");
+                return;
+            }
+            boolean isExit = false;
+            while (!isExit) {
+                String input = ui.readCommand();
+                if (input == null) {
+                    logger.fine("Input ended; leaving command loop");
+                    break;
+                }
+                //@@author lololol8484
+                try {
+                    storage.verifyUnchanged();
+                } catch (StorageConflictException e) {
+                    throw e;
+                } catch (IOException e) {
+                    sessionBlocked = true;
+                    logger.log(Level.WARNING, "Unable to verify the ledger before executing a command", e);
+                    ui.showError("Unable to verify the ledger safely. Finish other sessions and restart FinNUS.");
+                    break;
+                }
+                //@@author
+                if (input.isBlank()) {
+                    continue;
+                }
+                try {
+                    isExit = executeCommand(input);
+                } catch (FinNusException e) {
+                    logger.log(Level.WARNING, "Command failed: " + e.getMessage());
+                    ui.showError(e.getMessage());
+                }
+            }
+            if (!sessionBlocked) {
+                savePendingChanges();
+            }
+        } catch (StorageConflictException e) {
+            sessionBlocked = true;
+            logger.log(Level.WARNING, "Session stopped because the ledger changed externally", e);
+            ui.showError(e.getMessage());
         }
-        boolean isExit = false;
-        while (!isExit) {
-            String input = ui.readCommand();
-            if (input == null) {
-                logger.fine("Input ended; leaving command loop");
-                break;
-            }
-            if (input.isBlank()) {
-                continue;
-            }
-            try {
-                isExit = executeCommand(input);
-            } catch (FinNusException e) {
-                logger.log(Level.WARNING, "Command failed: " + e.getMessage());
-                ui.showError(e.getMessage());
-            }
-        }
-        savePendingChanges();
         if (hasUnsavedChanges) {
             ui.showError("Unsaved changes were not written to disk and will be lost after exit.");
         }
@@ -143,7 +169,7 @@ public class FinNUS {
     }
 
     /** Loads the saved ledger, initializes session flags, and shows startup diagnostics. */
-    private boolean restoreSession() {
+    private boolean restoreSession() throws StorageConflictException {
         LoadResult loaded = storage.load();
         transactions = loaded.snapshot().toTransactionList();
         //@@author nkyjStar
@@ -193,8 +219,9 @@ public class FinNUS {
      * @param input The non-blank line entered by the user.
      * @return Whether an exit command ended the application session.
      * @throws FinNusException If parsing, history navigation, or command execution fails.
+     * @throws StorageConflictException If another session changes the ledger while this command runs.
      */
-    private boolean executeCommand(String input) throws FinNusException {
+    private boolean executeCommand(String input) throws FinNusException, StorageConflictException {
         //@@author nkyjStar
         if (historyView != null) {
             boolean stopped = historyView.handleInput(input, transactions, ui);
@@ -237,8 +264,10 @@ public class FinNUS {
 
     /**
      * Keeps failed saves dirty so a later successful command or shutdown can retry them.
+     *
+     * @throws StorageConflictException If another session changed the ledger before this save.
      */
-    private void savePendingChanges() {
+    private void savePendingChanges() throws StorageConflictException {
         if (!hasUnsavedChanges) {
             return;
         }
@@ -250,6 +279,8 @@ public class FinNUS {
             assert transactions != null : "Transactions must be initialized before saving";
             storage.save(LedgerSnapshot.capture(transactions));
             hasUnsavedChanges = false;
+        } catch (StorageConflictException e) {
+            throw e;
         } catch (IOException e) {
             logger.log(Level.WARNING, "Automatic save failed", e);
             ui.showError("Automatic save failed. Changes remain in memory and will be retried after a later "

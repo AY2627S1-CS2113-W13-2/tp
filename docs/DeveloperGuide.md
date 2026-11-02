@@ -1169,9 +1169,18 @@ and saving is allowed. A successful save clears the pending flag. An `IOExceptio
 error, allowing a later successful command or shutdown to retry. A read-only command such as `balance` can therefore
 retry an earlier failed save even though it creates no new change itself.
 
-![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
+<!-- @@author lololol8484 -->
+Before each command, `FinNUS` asks `Storage` to verify that the main ledger still has the fingerprint recorded when
+the session loaded it. If another session has changed the file, `StorageConflictException` stops the command before it
+is parsed or executed. FinNUS displays a warning and exits, so the user can finish the other session and restart this
+one with the latest ledger. `FileStorage#save()` repeats the fingerprint check immediately before backup rotation and
+atomic replacement, covering changes that happen while a command is running. A conflict at either check leaves the
+existing main file and backup untouched, and shutdown skips the final save for the blocked session.
+<!-- @@author -->
 
-*Figure 14. One successful automatic save. File operations are summarised; failure handling is described in the notes
+![Automatic saving, conflict detection, encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
+
+*Figure 14. Automatic saving with a conflict branch. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,

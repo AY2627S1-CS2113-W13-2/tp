@@ -259,6 +259,11 @@ class FinNUSTest {
         }
 
         @Override
+        public void verifyUnchanged() {
+            // In-memory test storage has no external file to change.
+        }
+
+        @Override
         public void save(LedgerSnapshot snapshot) throws IOException {
             attempts++;
             if (failuresRemaining > 0) {
