@@ -10,11 +10,12 @@ import finnus.ui.Ui;
 /**
  * Supplies deterministic input and captures messages without changing global console streams.
  */
-class ScriptedUi extends Ui {
+public class ScriptedUi extends Ui {
     private final Queue<String> commands;
     private final List<String> messages = new ArrayList<>();
 
-    ScriptedUi(String... commands) {
+    /** Creates a console stub that returns the supplied commands in order. */
+    public ScriptedUi(String... commands) {
         this.commands = new ArrayDeque<>(List.of(commands));
     }
 
@@ -38,7 +39,8 @@ class ScriptedUi extends Ui {
         messages.addAll(lines);
     }
 
-    String output() {
+    /** Returns all captured messages in display order. */
+    public String output() {
         return String.join("\n", messages);
     }
 }
