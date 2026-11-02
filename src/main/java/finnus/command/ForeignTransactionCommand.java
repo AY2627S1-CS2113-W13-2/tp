@@ -106,6 +106,12 @@ public class ForeignTransactionCommand extends Command {
         //@@author chancheese
         ForeignAmount foreignAmount = transactions.getRates().convert(amount, currencyCode);
         Transaction transaction = new Transaction(type, foreignAmount, description, category, date);
+        //@@author lololol8484
+        if (type == TransactionType.WITHDRAWAL
+                && !transactions.getSpendingAlert().confirmWithdrawal(transactions, transaction, ui)) {
+            return;
+        }
+        //@@author chancheese
         transactions.add(transaction);
         logger.info("Added " + transaction + " at rate " + foreignAmount.rate().toPlainString()
                 + ", total transactions: " + transactions.size());

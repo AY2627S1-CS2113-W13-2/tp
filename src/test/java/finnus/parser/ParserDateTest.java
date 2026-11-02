@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.command.DepositCommand;
 import finnus.exception.FinNusException;
+import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -44,9 +46,11 @@ class ParserDateTest {
     public void parse_dateWithCurrencyAndCategory_usesAllOfThem() throws FinNusException {
         TransactionList transactions = new TransactionList();
         transactions.getRates().setRate("JPY", new BigDecimal("110"));
+        transactions.setOpeningBalance(Money.of("100"));
+        new DepositCommand(Money.of("100")).execute(transactions, new Ui());
         Parser.parse("withdraw 1100 c/JPY d/Ramen t/food on/2026-10-20", TODAY).execute(transactions, new Ui());
 
-        assertEquals("[20 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Food", transactions.get(0).toString());
+        assertEquals("[20 Oct 2026] [Withdrawal] -$10.00 (Ramen) [JPY 1100] #Food", transactions.get(1).toString());
     }
 
     @Test
@@ -88,9 +92,13 @@ class ParserDateTest {
     /** Parses and runs one command on an empty ledger, and returns the transaction it added. */
     private Transaction runAndGetTransaction(String input) throws FinNusException {
         TransactionList transactions = new TransactionList();
+        if (input.startsWith("withdraw")) {
+            transactions.setOpeningBalance(Money.of("100"));
+            new DepositCommand(Money.of("100")).execute(transactions, new Ui());
+        }
         Parser.parse(input, TODAY).execute(transactions, new Ui());
-        assertEquals(1, transactions.size());
-        return transactions.get(0);
+        assertEquals(input.startsWith("withdraw") ? 2 : 1, transactions.size());
+        return transactions.get(transactions.size() - 1);
     }
 
     @Test

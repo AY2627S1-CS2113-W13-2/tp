@@ -233,7 +233,10 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 - The main file is `finnus.txt`, beside the packaged JAR or in the working directory during development.
 - The previous-state backup is `finnus.txt.bak`.
-- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, and transactions.
+<!-- @@author lololol8484 -->
+- The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, transactions,
+  allowance settings, and optional spending-alert thresholds.
+<!-- @@author -->
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
@@ -250,6 +253,8 @@ FINNUS|1
 OPENING|100
 RATE|JPY|110
 CATEGORY|Meals
+ALLOWANCE|5|500||2026-10-05
+SPENDING_ALERT|100|90
 TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
 TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
 ```
@@ -258,6 +263,12 @@ TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
 category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
 and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
 Foreign transactions place their currency code, original amount, and recorded rate before the category field.
+
+<!-- @@author lololol8484 -->
+`SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE` stores the optional alert settings. Either value may be empty
+when the user skipped it. Files without this record load with both optional settings unset; malformed or duplicate alert
+records are skipped with a warning.
+<!-- @@author -->
 
 Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
 seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
@@ -362,11 +373,22 @@ collects and confirms this value once, before normal commands become available.
    confirmation does `Setup` execute `OpeningBalanceCommand`.
 5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
    without saving the unconfirmed amount. The pending marker remains, so setup is offered again
-   on the next run. After successful setup, `FinNUS` saves the ledger and later runs skip setup.
+   on the next run. Once the remaining setup prompts finish, `FinNUS` saves the ledger and later
+   runs skip setup.
+6. After confirming the opening balance, setup asks for an optional balance threshold, then the
+   allowance day and optional amount. If an amount is entered, setup asks for an optional whole
+   percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
+   configure either setting later with `alert`.
+
+See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
 
 <!-- @@author chancheese -->
-After the opening balance is confirmed, `Setup` also asks for the allowance day and its SGD amount. Pressing Enter (or
-input ending) skips either one, and setup still counts as complete. See
+<!-- @@author lololol8484 -->
+`Setup` asks for the optional balance threshold before the allowance prompts. The optional percentage prompt only
+appears when an allowance amount was entered. See [Spending alerts](#spending-alerts).
+<!-- @@author chancheese -->
+After the threshold prompt, `Setup` asks for the allowance day and its SGD amount. Pressing Enter (or input ending)
+skips either one, and setup still counts as complete. See
 [Setting a monthly allowance](#setting-a-monthly-allowance).
 
 `opening` is marked as setup-only in `CommandWord`, so typing it in the normal command loop is
@@ -374,6 +396,50 @@ treated as an unknown command.
 <!-- @@author lololol8484 -->
 `SetupTest` covers valid and invalid amounts, confirmation, re-entry, and input ending before
 confirmation.
+<!-- @@author -->
+
+<!-- @@author lololol8484 -->
+### Spending alerts
+
+`SpendingAlert` stores the two optional settings and evaluates a proposed withdrawal before it is added. `WithdrawCommand`
+and `ForeignTransactionCommand` both call `confirmWithdrawal()`, so SGD and converted foreign withdrawals use the same
+rules. A declined confirmation or ended input returns before `TransactionList#add()`; only explicit `yes` or `y` lets the
+command continue.
+
+`SpendingAlert#crossedBy()` compares the current ledger with the proposed result and returns every threshold crossed:
+
+1. The optional fixed balance threshold, when configured.
+2. The optional percentage of the allowance, when configured and an allowance amount exists.
+3. The fixed 100% allowance amount, when an allowance amount exists.
+4. The opening balance.
+5. Zero.
+
+The allowance thresholds sum dated withdrawals in the cycle containing the proposed transaction date. Older undated
+transactions are excluded, matching `AllowanceCommand#summarise()`. The allowance amount is converted to SGD using its
+configured currency rate when needed. Balance thresholds use the current calculated balance, including the proposed
+withdrawal. Comparisons report a threshold only when the value moves from its safe side to beyond it; if the balance
+later recovers and crosses again, a new alert is shown. A single withdrawal can cross several thresholds and produces
+one confirmation listing them all. When the opening balance is zero, the opening-balance and zero conditions coincide
+and both descriptions are included.
+
+`Confirmation#ask()` handles yes/no parsing and invalid-answer retries. It returns `YES`, `NO`, or `INPUT_ENDED`, leaving
+each caller to decide what those results mean. Setup uses it for opening-balance confirmation; spending alerts use it
+before recording a withdrawal.
+
+`TransactionList` owns the settings, and `LedgerSnapshot` includes them in equality-based change detection. The codec
+stores non-empty settings in `SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE`; empty fields represent skipped
+options. Older files without this row load with both options unset, and malformed or duplicate rows are reported and
+skipped.
+
+<!-- @@author lololol8484 -->
+`AlertCommand` displays both optional settings with `alert`, sets or clears either setting, and preserves the other
+setting during an update. `Parser#parseAlert()` supports `alert balance AMOUNT` or `alert balance off`, and
+`alert allowance PERCENT` or `alert allowance off`. Balance amounts use `Parser#parseAmount()`; percentages must be
+whole values from 1 to 100. The allowance percentage may be saved before an allowance amount is configured, and
+`SpendingAlert` applies it when an allowance amount becomes available. `CommandWord` supplies the help syntax, which
+`HelpCommand` builds from the registered commands. Since `LedgerSnapshot` already includes both values, command
+updates use normal change detection and persistence. Tests cover parsing, display, set/clear behavior, preserving the
+other setting, help output, and persistence across restart.
 <!-- @@author -->
 
 <!-- @@author chancheese -->
@@ -1205,6 +1271,143 @@ For example, `withdraw 4.50` reaches `Parser#parseWithdraw()`, which rejects the
 `FinNusException`. No command is returned or executed, so the ledger is unchanged. `FinNUS#run()` catches the exception,
 passes its message to `Ui#showError()`, and reads the next command. Any changes still pending from an earlier command
 remain available for a later save attempt.
+
+<!-- @@author -->
+<!-- @@author nkyjStar -->
+### Financial charts
+
+**Feature and status:** Financial charts — implemented. Both commands read the ledger without
+changing it.
+
+**Commands and classes:**
+
+| Command or class | Responsibility |
+|------------------|----------------|
+| `chart flow from/START to/END int/PERIOD [p/PAGE]` → `ChartFlowCommand` | Summarise deposit and withdrawal totals over a date range, up to four periods per page. |
+| `chart spending [int/PERIOD on/DATE]` → `ChartSpendingCommand` | Show withdrawal totals by category, overall or for one calendar period. |
+| `Parser`, `CommandWord` | Validate chart arguments and provide separate help rows for the two forms. |
+| `ChartPeriod`, `ChartBar` | Share calendar boundaries and render scaled text bars with exact SGD totals. |
+
+**Mechanism and walkthrough:**
+
+1. `Parser#parseChart()` chooses the form and checks its fields. `ChartPeriod.parse()` returns a
+   shared `DAY`, `WEEK`, `MONTH`, or `YEAR` constant; `startOf()` and `nextStart()` define its
+   calendar boundaries, with an exclusive end. Weeks start on Monday.
+2. For `chart flow from/2026-10-20 to/2026-10-22 int/WEEK`, `ChartFlowCommand` labels the week
+   `2026-10-19` to `2026-10-25`, but counts transactions only from 20 to 22 October. It sums
+   deposits and withdrawals separately using `Money`. Empty periods show zero. The command counts
+   all intersecting periods, then shows up to four on the requested `p/PAGE` (default 1).
+3. For `chart spending int/MONTH on/2026-10-21`, `ChartSpendingCommand` sums October withdrawals
+   by category in `CategoryList` order. With no filter, it sums all recorded withdrawals. Foreign
+   withdrawals use their stored SGD amounts; deposits and the opening balance are excluded.
+4. `ChartBar` scales each bar to the largest total in the displayed chart and prints the exact
+   amount beside it. The UI displays the result, and the command finishes without entering a mode.
+
+![Class diagram for both chart commands and their shared period](images/ChartClassDiagram.png)
+
+*Figure 16. A flow command has one `ChartPeriod`; a spending command has zero or one. Both read a
+`TransactionList`, which has one category list and zero or more transactions. Dashed dependencies
+have no multiplicity. [PlantUML source](diagrams/ChartClassDiagram.puml).*
+
+![Sequence diagram for chart parsing, aggregation, and display](images/ChartSequenceDiagram.png)
+
+*Figure 17. Parsing and displaying either chart form. The enum lifeline receives static `parse()`;
+`period:ChartPeriod` receives calls on the returned constant. The chart command's lifeline ends when
+its local reference leaves scope, without implying immediate garbage collection. Activation bars
+show execution; dashed arrows show returns. Snapshot comparison and pending-save retry are
+summarised; allowance handling is omitted. [PlantUML source](diagrams/ChartSequenceDiagram.puml).*
+
+**Design considerations:**
+
+**Aspect: navigating flow pages**
+
+* **Alternative 1 (current choice):** run a separate `chart flow` command for each `p/PAGE`.
+  * Pros: users can run any normal command between pages; the full command records the selected
+    range, interval, and page without keeping view state in `FinNUS`.
+  * Cons: users must repeat the command to change pages; there are no `next` or `prev` shortcuts.
+* **Alternative 2:** keep an interactive chart mode like history mode.
+  * Pros: `next` and `prev` would make adjacent pages quicker to reach.
+  * Cons: `FinNUS` would need to retain the chart type, dates, interval, and page. If it routed
+    input like history mode, users would need `stop` before running normal commands.
+
+**Aspect: defining time intervals**
+
+* **Alternative 1 (current choice):** group by calendar day, week, month, or year.
+  * Pros: labels match familiar calendar periods, and both charts place a date in the same period.
+  * Cons: first and last flow periods can be partial, so their totals must be filtered to the
+    requested dates; months and years also have different lengths.
+* **Alternative 2:** use rolling seven-day, 30-day, and 365-day windows.
+  * Pros: each window of a given type has a fixed duration.
+  * Cons: windows depend on the chosen start date and do not align with named weeks, months, or
+    years, making the labels and category comparisons less familiar.
+
+**Aspect: sharing interval rules**
+
+* **Alternative 1 (current choice):** use one `ChartPeriod` enum for the four supported intervals.
+  * Pros: flow and spending share the same boundary calculations with little extra code.
+  * Cons: adding a new interval requires changing the enum and its methods.
+* **Alternative 2:** define a separate strategy class for each interval.
+  * Pros: new or user-defined calendars could be added as new implementations.
+  * Cons: extra classes and selection logic add complexity for a fixed set of four intervals.
+
+**Aspect: rendering the charts**
+
+* **Alternative 1 (current choice):** print ASCII bars and exact SGD totals in the console.
+  * Pros: works with the existing `Ui` and needs no graphical dependency.
+  * Cons: text bars offer less detail and interaction than graphical plots.
+* **Alternative 2:** open a graphical chart view.
+  * Pros: could provide richer plots, legends, and interactive inspection.
+  * Cons: needs a graphical interface or library beyond the current CLI.
+
+**Aspect: scaling bars across flow pages**
+
+* **Alternative 1 (current choice):** scale each page to its largest displayed total.
+  * Pros: small values remain visible even when another page contains a much larger value.
+  * Cons: bar lengths cannot be compared across pages; users must compare the printed totals.
+* **Alternative 2:** use one maximum for every page in the requested range.
+  * Pros: equal bar lengths would represent equal amounts across pages.
+  * Cons: an unusually large total could make most other bars too short to distinguish.
+
+**Aspect: obtaining chart totals**
+
+* **Alternative 1 (current choice):** recalculate from the ledger for each request.
+  * Pros: results reflect transactions added or removed between commands, without cache rules.
+  * Cons: another page scans the ledger again; flow also enumerates the range to count pages.
+* **Alternative 2:** cache totals between chart commands.
+  * Pros: repeated views of an unchanged range could be faster.
+  * Cons: the cache would need invalidation whenever transactions or their categories change,
+    adding state and a risk of showing stale totals.
+
+**Validation and limitations:**
+
+* The parser rejects missing, duplicate, and unknown fields; invalid dates; periods outside the
+  four enum values; and non-positive or oversized page numbers. Spending requires both `int/PERIOD`
+  and `on/DATE` when filtered. Dates must be from 2000-01-01 through today, with `from <= to` for
+  flow. An unavailable page raises `FinNusException` before output is shown.
+* Undated legacy transactions cannot appear in a dated chart or flow period. Overall spending
+  includes undated withdrawals. Categories with no spending are omitted; an empty spending chart
+  shows a message. Neither command changes the ledger.
+* `ParserChartTest` and `ChartCommandTest` cover syntax, boundaries, pagination, partial weeks,
+  category totals, and empty results. Both commands log requests and results at `FINE`; invalid
+  chart syntax and out-of-range flow pages log at `WARNING`. Logs omit amounts and category names.
+
+<!-- @@author -->
+<!-- @@author naieel04 -->
+### Additional feature template
+
+Duplicate this subsection for any other feature that warrants a detailed explanation.
+
+**Feature and status:** [Insert feature name and implemented or proposed status here]
+
+**Commands and classes:** [Insert commands and responsible classes here]
+
+**Mechanism and walkthrough:** [Insert algorithm, state changes, and concrete example here]
+
+[Insert UML diagram of this feature here]
+
+**Design considerations:** [Insert chosen approach, alternatives, rationale, and tradeoffs here]
+
+**Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
 <!-- @@author -->
 
 ---
@@ -1431,7 +1634,8 @@ Run each scenario on the release JAR and compare the result with the expected on
 2. Copy `build/libs/finnus.jar` into a separate, empty test folder and run `java -jar finnus.jar` there.
 3. For each independent scenario, use a fresh folder unless it explicitly tests restart or recovery.
 
-On first launch, enter `100` as the opening balance and confirm it with `yes`. Then create the sample ledger with:
+On first launch, enter `100` as the opening balance and confirm it with `yes`. Press Enter to skip the balance alert
+threshold and allowance setup. Then create the sample ledger with:
 
 ```text
 deposit 50 d/Allowance
@@ -1446,15 +1650,21 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
 |-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits.                              |
-| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50.                              |
-| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00.                         |
-| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. |
-| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry.                                    |
-| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored.                            |
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the balance threshold and allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
+| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
+| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
+| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
+| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry. [Insert exact output here]                                    |
+| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored. [Insert exact output here]                            |
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
 | MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
 | MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
+
+<!-- @@author lololol8484 -->
+For the spending-alert check, use a fresh folder and complete setup with opening balance `100` and balance threshold
+`90`. Skip the allowance, enter `withdraw 20 d/Books`, answer `no`, then enter `balance`. The alert lists the balance
+threshold and opening balance; the withdrawal is cancelled, so the balance remains `$100.00`.
+<!-- @@author -->
 
 <!-- @@author nkyjStar -->
 ### History navigation scenario

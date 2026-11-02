@@ -92,7 +92,7 @@ class SetupTest {
     @Test
     public void run_allowanceDayAndAmount_setsAllowance() {
         TransactionList transactions = new TransactionList();
-        ScriptedUi ui = new ScriptedUi("100", "yes", "5", "500");
+        ScriptedUi ui = new ScriptedUi("100", "yes", "", "5", "500");
 
         assertTrue(new Setup().run(ui, transactions, TODAY));
 
@@ -106,7 +106,7 @@ class SetupTest {
     public void run_enterAtAllowanceDay_skipsAllowance() {
         TransactionList transactions = new TransactionList();
 
-        assertTrue(new Setup().run(new ScriptedUi("100", "yes", ""), transactions, TODAY));
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "", ""), transactions, TODAY));
 
         assertTrue(transactions.getAllowance().isEmpty());
     }
@@ -115,7 +115,7 @@ class SetupTest {
     public void run_enterAtAllowanceAmount_onlyTracksDay() {
         TransactionList transactions = new TransactionList();
 
-        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "31", "   "), transactions, TODAY));
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "", "31", "   "), transactions, TODAY));
 
         assertEquals(31, transactions.getAllowance().orElseThrow().day());
         assertFalse(transactions.getAllowance().orElseThrow().hasAmount());
@@ -125,7 +125,7 @@ class SetupTest {
     public void run_invalidAllowanceAnswers_asksAgain() {
         TransactionList transactions = new TransactionList();
 
-        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "32", "five", "5", "-1", "0", "250.50"),
+        assertTrue(new Setup().run(new ScriptedUi("100", "yes", "", "32", "five", "5", "-1", "0", "250.50"),
                 transactions, TODAY));
 
         assertEquals(new BigDecimal("250.50"), transactions.getAllowance().orElseThrow().amount());
@@ -139,6 +139,45 @@ class SetupTest {
 
         assertEquals(Money.of("100"), transactions.getOpeningBalance());
         assertTrue(transactions.getAllowance().isEmpty());
+    }
+    //@@author
+
+    //@@author lololol8484
+    @Test
+    public void run_alertOptionsAndAllowanceAmount_setsBothOptionalThresholds() {
+        TransactionList transactions = new TransactionList();
+        ScriptedUi ui = new ScriptedUi("100", "yes", "75", "5", "500", "90");
+
+        assertTrue(new Setup().run(ui, transactions, TODAY));
+
+        assertEquals(Money.of("75"), transactions.getSpendingAlert().balanceThreshold().orElseThrow());
+        assertEquals(new BigDecimal("90"), transactions.getSpendingAlert().allowancePercentage().orElseThrow());
+        assertTrue(transactions.getAllowance().orElseThrow().hasAmount());
+    }
+
+    @Test
+    public void run_allowanceDayWithoutAmount_doesNotAskForPercentage() {
+        TransactionList transactions = new TransactionList();
+        ScriptedUi ui = new ScriptedUi("100", "yes", "", "5", "");
+
+        assertTrue(new Setup().run(ui, transactions, TODAY));
+
+        assertFalse(transactions.getAllowance().orElseThrow().hasAmount());
+        assertTrue(transactions.getSpendingAlert().allowancePercentage().isEmpty());
+        assertFalse(ui.output().contains("percentage of your monthly allowance"));
+    }
+
+    @Test
+    public void run_invalidAlertOptions_repromptsUntilValuesAreValid() {
+        TransactionList transactions = new TransactionList();
+        ScriptedUi ui = new ScriptedUi("100", "yes", "0", "50", "5", "500", "abc", "101", "90");
+
+        assertTrue(new Setup().run(ui, transactions, TODAY));
+
+        assertEquals(Money.of("50"), transactions.getSpendingAlert().balanceThreshold().orElseThrow());
+        assertEquals(new BigDecimal("90"), transactions.getSpendingAlert().allowancePercentage().orElseThrow());
+        assertTrue(ui.output().contains("threshold must be greater than $0.00"));
+        assertTrue(ui.output().contains("whole percentage from 1 to 100"));
     }
     //@@author
 }

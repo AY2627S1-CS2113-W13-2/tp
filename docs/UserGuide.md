@@ -114,11 +114,10 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 <!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
+* After confirmation, FinNUS asks for an optional [balance alert threshold](#spending-alerts), then asks about your
+  [allowance](#setting-your-monthly-allowance-allowance). If you enter an allowance amount, it also asks for an optional
+  percentage threshold. You can skip these settings; normal commands begin afterwards, and `opening` is not a command.
 <!-- @@author -->
-* After confirmation, FinNUS asks about your [allowance](#setting-your-monthly-allowance-allowance), which you can
-  skip, and then normal commands begin. Afterwards, `opening` is not a command.
-* FinNUS saves the confirmed opening balance before asking about the optional allowance. If setup is interrupted
-  at those questions, the next run uses the saved balance; you can set an allowance later with `allowance`.
 
 Example of first-run setup, entering `1200.50` and then `yes`:
 ```
@@ -436,6 +435,62 @@ ____________________________________________________________
 ```
 <!-- @@author -->
 
+<!-- @@author lololol8484 -->
+### Spending alerts
+
+FinNUS warns before a withdrawal crosses a spending threshold. It does not block large withdrawals or prevent your
+balance from becoming negative. When a withdrawal crosses one or more thresholds, FinNUS lists all of them and asks
+whether to proceed. Enter `yes` or `y` to record it; `no`, `n`, or end of input cancels it. An invalid answer repeats the
+confirmation prompt.
+
+During first-run setup, after confirming your opening balance, you can set either or both optional alerts:
+
+* **Balance threshold:** enter an SGD amount such as `100`. FinNUS warns when a withdrawal takes your balance from at
+  least that amount to below it. Press Enter to skip.
+* **Allowance percentage:** if you enter an allowance amount during setup, you can enter a whole percentage from 1 to
+  100, such as `90`. FinNUS warns when withdrawals dated in an allowance cycle move from at or below that percentage
+  to above it. Press Enter to skip. If you skip the allowance amount, you can configure this threshold later with
+  `alert allowance PERCENT`; it remains inactive until an allowance amount is set.
+
+Three thresholds are always applied when their reference values exist: withdrawals exceeding 100% of the allowance
+amount, balance falling below the opening balance, and balance falling below `$0.00`. The 100% allowance threshold is
+inactive when no allowance amount is set. Allowance spending is calculated in SGD from dated withdrawals in the cycle;
+older transactions without dates are excluded.
+
+Each threshold alerts only when crossed. Further withdrawals do not repeat an alert while the value remains beyond that
+threshold. If the value returns to the safe side and crosses again, FinNUS alerts again. A withdrawal can cross multiple
+thresholds at once, in which case one confirmation lists all of them. For example, with an allowance of `$500.00` and a
+90% alert, moving cycle spending from `$440.00` to `$451.00` prompts:
+
+```
+____________________________________________________________
+Spending alert:
+Withdrawals would exceed 90% of your allowance ($450.00).
+Proceed with this withdrawal? [yes/no]: no
+____________________________________________________________
+Withdrawal cancelled.
+____________________________________________________________
+```
+
+Alert settings are saved with your ledger and remain in effect after restarting FinNUS. If your opening balance is zero,
+falling below the opening balance also means falling below zero, so both threshold descriptions may appear together.
+
+<!-- @@author lololol8484 -->
+You can view or change the two optional thresholds at any time:
+
+* `alert` shows both optional settings and indicates when an allowance percentage will apply.
+* `alert balance AMOUNT` sets or replaces the fixed balance threshold. `AMOUNT` must be greater than zero.
+* `alert balance off` clears the fixed balance threshold.
+* `alert allowance PERCENT` sets or replaces the allowance percentage, as a whole number from 1 to 100. It can be set
+  before an allowance amount exists and takes effect once one is configured.
+* `alert allowance off` clears the allowance percentage.
+
+Changing one optional threshold leaves the other unchanged. Clearing either optional threshold does not disable the
+automatic alerts.
+
+Examples: `alert`, `alert balance 100`, `alert allowance 90`, `alert balance off`, `alert allowance off`.
+<!-- @@author -->
+
 ### Viewing balance: `balance`
 Shows the remaining balance of the user's account. 
 
@@ -489,8 +544,11 @@ Here is a list of the recent 2 transaction(s):
 
 <!-- @@author nkyjStar -->
 ### Viewing transaction history: `history`
-Shows every transaction in pages, newest transaction date first; undated legacy entries appear last. Same-day entries
-keep their relative order unless their dates change. The numbers match `recent` and the indices used by `edit` and `delete`.
+Shows every transaction in pages, with the newest transaction dates first, matching `recent`.
+For transactions on the same date, the most recently entered appears first. Undated transactions from older save
+files appear after dated transactions, with the most recently entered undated transaction first.
+Adding a backdated transaction can change the numbers, so check the current list before using `delete`.
+The numbers match `recent` and the indices used by `delete`.
 The opening balance is not a transaction and is not shown.
 
 Format: `history [n/NUMBER] [p/PAGE]`
@@ -519,6 +577,47 @@ Transaction history: 3-4 of 5 (2 per page):
 History controls: next, prev, p/PAGE, n/NUMBER, stop.
 ____________________________________________________________
 ```
+<!-- @@author -->
+
+<!-- @@author nkyjStar -->
+### Summarising cash flow: `chart flow`
+
+`chart flow` summarises deposit and withdrawal totals over a selected date range, grouped by calendar
+period. Each period has two bars with exact SGD totals. Bars are scaled against the largest total on
+the current page, so compare their lengths within that page. The opening balance is excluded.
+
+Format: `chart flow from/START to/END int/PERIOD [p/PAGE]`
+
+* Use dates in `YYYY-MM-DD` format. Both dates are included and must be from 2000-01-01 through today;
+  `START` must not be after `END`.
+* `PERIOD` is `DAY`, `WEEK`, `MONTH`, or `YEAR`, ignoring case. Weeks run Monday through Sunday.
+* Each page shows up to four consecutive periods, earliest first. `p/PAGE` selects a page, starting at 1;
+  page 1 is the default. Repeat the command with another page to view more periods. A page outside the
+  requested range is rejected. Chart pages are separate command results, so `next`, `prev`, and `stop`
+  are only used while viewing transaction history.
+* Each period shows separate deposit and withdrawal totals, including zero totals. If the chosen dates cut
+  through a week, month, or year, only transactions within the exact requested dates count, even though
+  the label shows the complete calendar period. Older transactions without dates cannot be placed in a period.
+
+Example: `chart flow from/2026-10-01 to/2026-10-31 int/WEEK p/2`
+
+### Viewing spending by category: `chart spending`
+
+`chart spending` shows one bar per category with its recorded SGD total beside it. Bar lengths are
+scaled against the largest category total in that chart. Deposits and the opening balance are excluded.
+
+Format: `chart spending [int/PERIOD on/DATE]`
+
+* `chart spending` totals all recorded withdrawals by category, including older withdrawals without dates.
+* Give both `int/PERIOD` and `on/DATE` to show the day, week, month, or year containing that date.
+  `PERIOD` accepts `DAY`, `WEEK`, `MONTH`, or `YEAR`, ignoring case; weeks start on Monday.
+  `DATE` uses `YYYY-MM-DD` and must be from 2000-01-01 through today.
+  For example, `chart spending int/MONTH on/2026-10-21` shows October 2026 spending.
+* Categories with no spending in the selected interval are omitted. Deposits are excluded; foreign-currency
+  withdrawals use the SGD amount recorded at the time. A dated chart excludes transactions without dates.
+
+Example: `chart spending int/MONTH on/2026-10-21`
+
 <!-- @@author -->
 
 <!-- @@author nabijonzzz -->
@@ -660,6 +759,9 @@ Available commands:
 | recent       | Recent activity      | recent [NUMBER]                        |
 | history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |
 | find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |
+| chart flow     | Cash flow by period  | chart flow from/START to/END         |
+|                |                      | int/PERIOD [p/PAGE]                  |
+| chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |
 | delete       | Delete a record      | delete INDEX                           |
 | edit         | Edit a record        | edit INDEX [a/AMOUNT] [d/DESCRIPTION]  |
 |              |                      | [t/CATEGORY] [on/DATE] [r/RATE]        |
@@ -709,6 +811,10 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View or stop your allowance: `allowance` or `allowance off`
 * View recent transactions: `recent [NUMBER]`
 * View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
+<!-- @@author nkyjStar -->
+* Summarise cash flow: `chart flow from/START to/END int/PERIOD [p/PAGE]`
+* View spending by category: `chart spending [int/PERIOD on/DATE]`
+<!-- @@author -->
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
 * Delete a transaction: `delete INDEX`
 * Edit a transaction: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`

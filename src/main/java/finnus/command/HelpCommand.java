@@ -22,7 +22,9 @@ public class HelpCommand extends Command {
     private static final String SYNTAX_HEADER = "Syntax";
     private static final int MAX_TABLE_WIDTH = 80;
     private static final int BORDER_WIDTH = 10;
-    private static final int COMMAND_WIDTH = 12;
+    //@@author nkyjStar
+    private static final int COMMAND_WIDTH = 14;
+    //@@author naieel04
     private static final int DESCRIPTION_WIDTH = 20;
     private static final int SYNTAX_WIDTH = MAX_TABLE_WIDTH - BORDER_WIDTH
             - COMMAND_WIDTH - DESCRIPTION_WIDTH;
@@ -35,7 +37,11 @@ public class HelpCommand extends Command {
      */
     private static final String[] HELP_LINES = createHelpLines();
 
-    /** Builds an ASCII table with lines no wider than 80 columns. */
+    /**
+     * Builds an ASCII table with lines no wider than 80 columns.
+     *
+     * @return The help text, with each table row stored as one line.
+     */
     private static String[] createHelpLines() {
         List<CommandWord> availableCommands = Arrays.stream(CommandWord.values())
                 .filter(CommandWord::isAvailableAfterSetup)
@@ -51,7 +57,11 @@ public class HelpCommand extends Command {
         lines.add(border);
         for (CommandWord command : availableCommands) {
             //@@author naieel04
-            addWrappedRow(lines, command.getWord(), command.getDescription(), command.getUsage());
+            //@@author nkyjStar
+            for (CommandWord.HelpEntry entry : command.getHelpEntries()) {
+                addWrappedRow(lines, entry.command(), entry.description(), entry.usage());
+            }
+            //@@author naieel04
         }
         lines.add(border);
         lines.add("");
@@ -59,7 +69,14 @@ public class HelpCommand extends Command {
         return lines.toArray(String[]::new);
     }
 
-    /** Adds a row, using blank cells on continuation lines when a value wraps. */
+    /**
+     * Adds a row, using blank cells on continuation lines when a value wraps.
+     *
+     * @param lines The help output being built.
+     * @param command The command label for the first column.
+     * @param description The short description for the second column.
+     * @param syntax The command syntax for the third column.
+     */
     private static void addWrappedRow(List<String> lines, String command, String description, String syntax) {
         List<String> commandLines = wrap(command, COMMAND_WIDTH);
         List<String> descriptionLines = wrap(description, DESCRIPTION_WIDTH);
@@ -71,7 +88,13 @@ public class HelpCommand extends Command {
         }
     }
 
-    /** Wraps text at spaces and hard-wraps any token wider than its column. */
+    /**
+     * Wraps text at spaces and hard-wraps any token wider than its column.
+     *
+     * @param text The text to fit within the column.
+     * @param width The maximum number of characters per line.
+     * @return The text split into lines that fit the column.
+     */
     static List<String> wrap(String text, int width) {
         List<String> lines = new ArrayList<>();
         StringBuilder line = new StringBuilder();
