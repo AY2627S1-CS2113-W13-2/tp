@@ -1186,8 +1186,8 @@ Run `check` using the setup table above. GitHub Actions runs checks with Java 25
 <!-- @@author -->
 
 <!-- @@author chancheese -->
-Storage tests use JUnit `@TempDir`, so they never touch a real `finnus.txt`. Command tests capture `System.out` to
-check the exact output. Each pull request needs one approving review before it is merged.
+Storage tests use JUnit `@TempDir`, so they never touch a real `finnus.txt`. Command tests check the exact
+printed output. Each pull request needs one approving review before it is merged.
 <!-- @@author -->
 
 ---
@@ -1388,7 +1388,7 @@ Use disposable test copies and stop the application before editing fixture files
 | MT-07 | Sample ledger; add the row `TRANSACTION\|WITHDRAWAL\|abc\|eA==` to `finnus.txt` | Launch, enter `balance`, then `deposit 1`. | A warning names the skipped row, and the balance is SGD 145.50. After `deposit 1`, the damaged file is kept as `finnus.txt.corrupt-*`. |
 | MT-08 | Sample ledger; copy `finnus.txt` to `finnus.txt.bak`, then replace `finnus.txt` with the text `garbage` | Launch, then enter `balance`. | FinNUS restores the backup, and the balance is SGD 145.50. Files stay unchanged until a command changes the ledger. |
 | MT-09 | Sample ledger; change the first line of `finnus.txt` to `FINNUS\|9` | Launch, enter `deposit 5`, then `exit`. | A warning says saving is disabled. `deposit 5` shows a "Changes are in memory only" error, and `finnus.txt` is unchanged. |
-| MT-10 | Sample ledger; make the folder read-only | Launch and enter `deposit 5`. Restore write access, then enter `balance`. | `deposit 5` shows "Automatic save failed". After `balance`, the deposit is saved. |
+| MT-10 | Sample ledger; remove write access to the folder, e.g. `chmod a-w .` on macOS or Linux | Launch and enter `deposit 5`. Restore write access, then enter `balance`. | `deposit 5` shows "Automatic save failed". After `balance`, the deposit is saved. |
 
 Boundary cases:
 
