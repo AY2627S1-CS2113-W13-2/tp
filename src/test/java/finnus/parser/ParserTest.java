@@ -31,6 +31,7 @@ import finnus.command.Command;
 import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
+import finnus.command.EditCommand;
 import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
@@ -65,6 +66,7 @@ class ParserTest {
             //@@author
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
+            Map.entry(CommandWord.EDIT, new CommandExample("edit 1 a/5", EditCommand.class)),
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
             Map.entry(CommandWord.ALLOWANCE, new CommandExample("allowance 5 a/500", AllowanceCommand.class)),
             Map.entry(CommandWord.RATE, new CommandExample("rate JPY 110", RateCommand.class)),

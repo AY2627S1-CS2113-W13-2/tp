@@ -184,6 +184,8 @@ public class Parser {
             new ExitCommand();
         case DELETE ->
             parseDelete(arguments);
+        case EDIT ->
+            EditParser.parse(arguments, today);
         case RATE ->
             parseRate(arguments);
         case CATEGORY ->

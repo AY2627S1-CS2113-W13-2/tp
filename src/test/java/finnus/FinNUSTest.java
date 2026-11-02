@@ -27,6 +27,29 @@ import finnus.storage.Storage;
  */
 class FinNUSTest {
     @Test
+    public void run_editChangedValues_savesReplacementWithoutAddingEntry() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("deposit 50 d/Income", "edit 1 a/60", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        assertEquals(2, storage.saved.size());
+        LedgerSnapshot last = storage.saved.getLast();
+        assertEquals(1, last.transactions().size());
+        assertEquals(Money.of("60"), last.toTransactionList().getBalance());
+        assertEquals("Income", last.transactions().getFirst().description());
+    }
+
+    @Test
+    public void run_invalidAndUnchangedEdits_doNotSaveAgain() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("deposit 50 d/Income", "edit 1 a/50.00", "edit 2 a/60",
+                "edit 1 a/60 t/food", "edit 1 on/2026-11-04", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        assertEquals(1, storage.attempts);
+        assertEquals(Money.of("50"), storage.saved.getLast().toTransactionList().getBalance());
+        assertTrue(ui.output().contains("No changes made."));
+    }
+
+    @Test
     public void run_mutatingCommands_savesEachChangedSnapshot() {
         RecordingStorage storage = new RecordingStorage();
         ScriptedUi ui = new ScriptedUi("deposit 50", "withdraw 5 d/Lunch",

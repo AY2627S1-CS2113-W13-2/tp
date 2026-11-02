@@ -188,6 +188,22 @@ public class TransactionList {
     }
     //@@author
 
+    /**
+     * Replaces an entry without changing the count, then restores chronological order.
+     * Stable sorting retains the relative order of entries with equal dates.
+     *
+     * @param index The zero-based position of the original transaction.
+     * @param replacement The fully validated replacement; must not be null.
+     * @return The original transaction.
+     * @throws IndexOutOfBoundsException If the index is outside the ledger.
+     */
+    public Transaction replace(int index, Transaction replacement) {
+        Objects.requireNonNull(replacement, "Replacement transaction must not be null");
+        Transaction original = transactions.set(index, replacement);
+        transactions.sort(CHRONOLOGICAL_ORDER);
+        return original;
+    }
+
     /** Returns the starting balance before any transactions are applied. */
     public Money getOpeningBalance() {
         return openingBalance;

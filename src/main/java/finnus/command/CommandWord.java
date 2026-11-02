@@ -16,6 +16,7 @@ public enum CommandWord {
     //@@author
     FIND("find", "Search transactions", "[KEYWORD] [t/CATEGORY]"),
     DELETE("delete", "Delete a record", "INDEX"),
+    EDIT("edit", "Edit a record", "INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE]"),
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
     BALANCE("balance", "Current balance", ""),
     //@@author chancheese
