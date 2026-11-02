@@ -489,8 +489,11 @@ Here is a list of the recent 2 transaction(s):
 
 <!-- @@author nkyjStar -->
 ### Viewing transaction history: `history`
-Shows every transaction in pages, newest transaction date first; undated legacy entries appear last. Same-day entries
-keep their relative order unless their dates change. The numbers match `recent` and the indices used by `edit` and `delete`.
+Shows every transaction in pages, with the newest transaction dates first, matching `recent`.
+For transactions on the same date, the most recently entered appears first. Undated transactions from older save
+files appear after dated transactions, with the most recently entered undated transaction first.
+Adding a backdated transaction can change the numbers, so check the current list before using `delete`.
+The numbers match `recent` and the indices used by `delete`.
 The opening balance is not a transaction and is not shown.
 
 Format: `history [n/NUMBER] [p/PAGE]`
