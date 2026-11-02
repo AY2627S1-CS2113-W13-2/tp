@@ -1189,6 +1189,36 @@ cannot include them. It shows only categories with a positive total, in the orde
 `CategoryList`. Foreign transactions use their stored SGD amount, preserving the rate used when they
 were recorded. Deposits and the opening balance are excluded from both spending totals.
 
+#### Design choices and alternatives
+
+**One command per chart page.** History mode keeps a `HistoryCommand` in `FinNUS#historyView` and
+routes subsequent input to its navigation handler until `stop`. A similar chart mode would make
+`next` and `prev` convenient, but would also need to retain the selected dates, period, page, and
+chart type, and would prevent normal commands from running until the user left the mode. Flow already
+has an explicit `p/PAGE` argument, while spending displays one chart. Keeping each request independent
+lets users run another command immediately and makes the selected page reproducible from the command
+text. The cost is repeating the flow command to view a different page.
+
+**Calendar periods with one shared enum.** Weeks, months, and years use calendar boundaries rather
+than rolling seven-day, 30-day, or 365-day windows. A date therefore belongs to the same named
+period in both charts, and flow labels remain predictable. Filtering flow transactions against the
+exact requested dates keeps partial first and last periods from including out-of-range amounts;
+showing empty periods preserves the timeline. `ChartPeriod` centralizes these rules for the four
+supported intervals. Separate strategy classes would add more objects and dispatch code without
+adding useful flexibility while the interval set is fixed.
+
+**Text bars with exact totals.** The application uses a console UI, so `ChartBar` produces compact
+ASCII bars without a graphical library. Bars are scaled to the largest total in the current view to
+make small differences visible within that view; a fixed scale across every possible page could make
+smaller pages hard to read. Because bar lengths on different pages do not share a scale, each bar also
+shows its exact SGD total. Flow limits output to four periods per page to keep a long date range
+readable.
+
+**Recompute from the ledger.** Each request reads the current transactions instead of storing chart
+totals between commands. This keeps later pages consistent with any ledger edits made in between and
+avoids cache invalidation. The tradeoff is scanning the ledger again when the user requests another
+page; flow also enumerates the periods in the requested range to calculate its page count.
+
 ![Sequence diagram for chart parsing, aggregation, and display](images/ChartSequenceDiagram.png)
 
 *Figure 17. Parsing and displaying either chart form. The `ChartPeriod` enum lifeline receives the

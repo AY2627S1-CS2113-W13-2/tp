@@ -513,7 +513,8 @@ Format: `chart flow from/START to/END int/PERIOD [p/PAGE]`
 * `PERIOD` is `DAY`, `WEEK`, `MONTH`, or `YEAR`, ignoring case. Weeks run Monday through Sunday.
 * Each page shows up to four consecutive periods, earliest first. `p/PAGE` selects a page, starting at 1;
   page 1 is the default. Repeat the command with another page to view more periods. A page outside the
-  requested range is rejected.
+  requested range is rejected. Chart pages are separate command results, so `next`, `prev`, and `stop`
+  are only used while viewing transaction history.
 * Both deposits and withdrawals are shown, including periods with no transactions. If the chosen dates cut
   through a week, month, or year, only transactions within the exact requested dates count, even though
   the label shows the complete calendar period. Older transactions without dates cannot be placed in a period.
