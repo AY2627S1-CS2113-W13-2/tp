@@ -24,6 +24,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
 file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
+Successful transaction edits are saved automatically too; an unchanged edit does not create a new save by itself.
 
 <!-- @@author lololol8484 -->
 On a first run with no existing ledger or backup, FinNUS creates a pending setup file and asks for an opening balance.
@@ -107,7 +108,8 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 
 * Enter the amount in SGD. It follows the same rules as for `deposit`, except that `0` is also allowed.
 * Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
-* The opening balance is not a transaction, so it does not show up in `recent` and cannot be removed with `delete`.
+* The opening balance is not a transaction, so it does not show up in `recent` and cannot be changed with `edit`
+  or removed with `delete`.
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
 <!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
@@ -212,6 +214,7 @@ Format: `deposit AMOUNT [d/DESCRIPTION] c/CURRENCY` or `withdraw AMOUNT d/DESCRI
 * `AMOUNT` is in `CURRENCY` and must be a positive number with at most 2 decimal places. After converting, it is rounded to the nearest cent, and must be at least `$0.01` and at most `$1000000`.
 * `c/CURRENCY` can be given anywhere after the command word, but only once. `c/SGD` is the same as leaving it out.
 * The rate is saved with the transaction, so changing a rate later does not change transactions you have already recorded.
+  To correct a recorded transaction's rate, use [`edit INDEX r/RATE`](#editing-a-transaction-edit).
 * Because `c/` marks the currency, a word starting with `c/` cannot be used inside a description.
 
 Examples:
@@ -321,7 +324,7 @@ Format: `deposit AMOUNT [d/DESCRIPTION] on/DATE` or `withdraw AMOUNT d/DESCRIPTI
   transactions from older save files appear after dated transactions, with the most recently entered undated
   transaction first.
 * Adding a backdated transaction can change the numbers shown by `recent` and `find`, so check the current list before
-  using an index with `delete`.
+  using an index with `edit` or `delete`.
 * If transaction rows in `finnus.txt` are out of date order, FinNUS sorts them in memory when it starts. The file is
   rewritten in that order the next time FinNUS saves a change; a read-only run leaves the file as it was.
 <!-- @@author nabijonzzz -->
@@ -377,6 +380,8 @@ How the allowance is added:
 * An amount in another currency is converted at the exchange rate set at the time it is added. If no rate is set,
   FinNUS waits and adds it once you set one with `rate`.
 * If you delete an allowance deposit, it is not added again. Changing the amount only affects later deposits.
+* Editing an allowance deposit changes only that recorded entry. It does not change the allowance setting or cause
+  the deposit to be added again. Use `allowance DAY a/AMOUNT` to change future allowances.
 
 The summary counts deposits and withdrawals dated in the current cycle, in SGD. Transactions saved by older versions of
 FinNUS have no date, so they are not counted.
@@ -484,8 +489,8 @@ Here is a list of the recent 2 transaction(s):
 
 <!-- @@author nkyjStar -->
 ### Viewing transaction history: `history`
-Shows every transaction in pages, most recently recorded entry first. A transaction's date does not change its
-position. The numbers match `recent` and the indices used by `delete`.
+Shows every transaction in pages, newest transaction date first; undated legacy entries appear last. Same-day entries
+keep their relative order unless their dates change. The numbers match `recent` and the indices used by `edit` and `delete`.
 The opening balance is not a transaction and is not shown.
 
 Format: `history [n/NUMBER] [p/PAGE]`
@@ -500,7 +505,7 @@ Format: `history [n/NUMBER] [p/PAGE]`
     * `p/PAGE` jumps to a page. Page 1 begins with the newest transaction.
     * `n/NUMBER` changes the page size and keeps the current page's first transaction at the top. A later `p/PAGE`
       jump uses page boundaries counted from transaction 1 at the new page size.
-    * `stop` leaves history mode. Use it before other commands, including `exit`.
+    * `stop` leaves history mode. Use it before other commands, including `edit`, `delete`, and `exit`.
 * At either end of the history, `next` or `prev` reports that there is no further page and keeps the current page.
   An empty history shows an empty-list message; `stop` remains available.
 
@@ -526,8 +531,8 @@ Format: `find [KEYWORD] [t/CATEGORY]`
 * The search is not case-sensitive, and matches part of a word, e.g. `lun` matches `Lunch`.
 * `KEYWORD` can be more than one word. The whole phrase is searched, e.g. `find chicken rice`.
 * Only descriptions are searched, not amounts.
-* Results are shown from the most recent. Each one has the same number as in `recent`, so you can remove it straight
-  away with `delete`.
+* Results are shown from the most recent. Each one has the same number as in `recent`, so you can use it directly
+  with `edit` or `delete`. These are global transaction numbers, not positions within the filtered results.
 
 Examples:
 
@@ -595,6 +600,81 @@ Transaction deleted: [27 Oct 2026] [Withdrawal] -$30.00 (BBQ) #Food
 
 ```
 
+### Editing a transaction: `edit`
+
+Corrects selected fields of a deposit or withdrawal without deleting and re-entering it.
+
+Format: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
+
+* `INDEX` is a positive whole number shown by `recent`, `history`, or `find`. Use the displayed number even when
+  search results omit other transactions. Leave history mode with `stop` before editing.
+* Supply at least one field. Omitted fields keep their values. Fields may appear in any order, but only once each.
+* `a/AMOUNT` changes the amount in the transaction's existing currency. Use a positive plain decimal with at most
+  2 decimal places. The resulting SGD amount must be at least `$0.01` and at most `$1000000`.
+* `d/DESCRIPTION` changes the description and can contain spaces. Empty `d/` clears a deposit's description, but is
+  rejected for a withdrawal, which must have a nonblank description.
+* `t/CATEGORY` changes a withdrawal's category to an existing category, ignoring case. Use `t/Others` to reset it.
+  Deposits cannot have categories. Add a new category with `category NAME` before using it.
+* `on/DATE` follows the [existing date rules](#recording-the-date-of-a-transaction-on). Omitting it keeps the old date,
+  including an unknown date on a legacy entry. Changing a date may change transaction numbers because the list
+  remains chronological. Check `recent` again before another indexed command.
+* `r/RATE` corrects the saved rate of a foreign transaction: foreign-currency units per SGD, positive, at most
+  6 decimal places, and no greater than `1000000`. It is rejected for an SGD transaction.
+* An amount-only foreign edit keeps the transaction's saved rate. An explicit `r/` works even without a configured
+  global rate and does not change global rates or other transactions. SGD conversion rounds half-up to the cent.
+* Transaction type and currency stay fixed; `c/CURRENCY` is rejected. Reserved prefixes `a/`, `d/`, `t/`, `on/`,
+  `r/`, and `c/` at the start of a word cannot be used literally inside an edit description.
+* FinNUS validates all supplied fields before applying an edit. An invalid edit changes nothing in the selected
+  transaction. Successful edits are saved automatically and reflected in balances, searches, and cycle totals.
+* If all supplied values already match, FinNUS prints `No changes made.` without changing the transaction.
+
+Examples (each refers to the current displayed transaction number):
+
+* `edit 1 a/6.50` corrects an amount.
+* `edit 2 d/Scholarship allowance` corrects a description.
+* `edit 1 t/food on/2026-10-25` corrects a withdrawal's category and date.
+* `edit 3 a/55000 r/100` corrects a foreign amount and its historical rate together.
+* `edit 2 d/` clears a deposit's description.
+
+If transaction 1 is `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others`, `edit 1 a/6.50` prints:
+
+```text
+____________________________________________________________
+Transaction updated:
+  Before: [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others
+  After:  [30 Oct 2026] [Withdrawal] -$6.50 (Lunch) #Others
+____________________________________________________________
+```
+
+If transaction 1 is a deposit of JPY 55000 recorded at 110 JPY per SGD on 30 Oct 2026, `edit 1 r/100` prints:
+
+```text
+____________________________________________________________
+Transaction updated:
+  Before: [30 Oct 2026] [Deposit] +$500.00 (Allowance) [JPY 55000]
+  After:  [30 Oct 2026] [Deposit] +$550.00 (Allowance) [JPY 55000]
+____________________________________________________________
+____________________________________________________________
+Converted at 1 SGD = 100 JPY.
+____________________________________________________________
+```
+
+Repeating the same edit prints:
+
+```text
+____________________________________________________________
+No changes made.
+____________________________________________________________
+```
+
+For a withdrawal, `edit 1 d/` is rejected:
+
+```text
+____________________________________________________________
+Error: A withdrawal needs a description so you know what you spent on.
+____________________________________________________________
+```
+
 ### Viewing command usage: `help`
 Displays a table of command names, descriptions and syntax so you can look up how to use them.
 
@@ -621,6 +701,8 @@ Available commands:
 | history      | Transaction history  | history [n/NUMBER] [p/PAGE]            |
 | find         | Search transactions  | find [KEYWORD] [t/CATEGORY]            |
 | delete       | Delete a record      | delete INDEX                           |
+| edit         | Edit a record        | edit INDEX [a/AMOUNT] [d/DESCRIPTION]  |
+|              |                      | [t/CATEGORY] [on/DATE] [r/RATE]        |
 | balance      | Current balance      | balance                                |
 | allowance    | Monthly allowance    | allowance [DAY [a/AMOUNT]              |
 |              |                      | [c/CURRENCY]] or off                   |
@@ -669,6 +751,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
 * Delete a transaction: `delete INDEX`
+* Edit a transaction: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`

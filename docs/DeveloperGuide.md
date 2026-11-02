@@ -435,6 +435,61 @@ displayed index to the matching position in the sorted list. A backdated additio
 transactions; users should check the current `recent` or `find` output before deleting.
 <!-- @@author -->
 
+### Editing a transaction
+
+`edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]` corrects an existing deposit or
+withdrawal. The transaction keeps its type and currency. The opening balance is not editable through this command.
+
+#### Parsing and execution
+
+1. `Parser#parse(input, today)` dispatches to `EditParser#parse(arguments, today)`. The parser requires a positive
+   one-based index and at least one field. It rejects duplicate/reserved unsupported prefixes and missing values,
+   except that an empty `d/` represents clearing a description.
+2. The parser validates amount/rate syntax, category-name syntax, and dates using existing parser helpers. It creates
+   an immutable `EditFields(BigDecimal amount, String description, String categoryName, LocalDate date, BigDecimal rate)`.
+   Null components mean omitted fields; an empty description means an explicit clear request. Amounts remain
+   `BigDecimal` until execution because the target transaction determines their currency and applicable SGD limit.
+3. `EditCommand#execute(TransactionList, Ui)` checks the current transaction count and maps the displayed number to
+   `transactions.size() - index`. It retains omitted values and builds a complete replacement `Transaction`.
+4. Execution rejects categories on deposits, blank withdrawal descriptions, unknown categories, rates on SGD entries,
+   and resulting SGD amounts outside `$0.01` to `$1000000`. All checks finish before replacement, so rejection does
+   not partly update the selected entry.
+5. `TransactionList#replace(int index, Transaction replacement)` returns the old entry, retains the count, and restores
+   chronological order with a stable sort. Unchanged dates retain their position among same-day entries. Changing a
+   date can change displayed indices; undated legacy entries remain undated unless `on/` is supplied.
+6. The command shows the before/after entries and, for a foreign transaction, its resulting saved rate. The normal
+   `FinNUS` snapshot comparison detects the edit and invokes automatic saving. The existing transaction record format
+   already stores every edited field, so no storage migration or new record type is needed.
+
+`FinNUS#prepareAllowance()` defers allowance credits for both `EditCommand` and `DeleteCommand` until after the
+indexed operation consumes the displayed number. This prevents a newly due allowance from shifting the selected
+entry between listing and editing. History mode continues to accept navigation only; users enter `stop` before editing.
+Editing an automatic allowance deposit leaves its schedule and `lastCredited` cursor unchanged.
+
+#### Historical rates and unchanged edits
+
+For foreign entries, `a/` is in the existing foreign currency. An amount-only edit keeps the original saved rate;
+`r/` explicitly corrects that rate. The command builds a `ForeignAmount` from the retained/corrected values and uses
+`ForeignAmount#toSgd()` for half-up cent rounding. It does not read or write the global `CurrencyRates`, so historical
+corrections also work when no global rate is configured. Metadata-only edits retain the original foreign value object.
+
+`EditCommand` compares the complete replacement with the original, including foreign amount and rate. Decimal scale
+alone is ignored, but a changed historical rate counts even if the rounded SGD amount stays the same. An unchanged
+edit keeps the original object, prints `No changes made.`, and does not itself trigger a save. Previously pending
+changes can still be retried by the normal save mechanism. A failed save leaves an applied edit in memory and pending
+for retry; it does not roll back the correction or claim that it reached disk.
+
+#### Design considerations and tests
+
+Immutable replacement preserves `Transaction`'s existing design and avoids partially applying a multi-field edit.
+Mutable setters would require rollback when a later field fails; deleting and re-adding would unnecessarily change
+the position of same-day entries. A stable sort is consistent with the ledger's existing chronological invariant.
+
+`EditParserTest`, `EditCommandTest`, `ForeignEditCommandTest`, and `TransactionReplacementTest` cover syntax,
+target-dependent validation, balances, retained values, rounding, unchanged edits, and ordering. `FinNUSTest` covers
+save retries, history-mode restrictions, and a clock change between listing and editing. `EditPersistenceTest` checks
+real temporary files, interruption before normal shutdown, independent restarts, searches, history, and cycle totals.
+
 ### Setting exchange rates
 
 The `rate` command stores exchange rates used to convert foreign-currency transactions
@@ -1236,11 +1291,12 @@ to make allowance and campus-expense tracking straightforward, including for stu
 v2.1 includes:
 
 - deposits and withdrawals, with an optional date, category and foreign currency
-- the opening balance, `balance`, `recent`, `history`, `find` and `delete`
+- the opening balance, `balance`, `recent`, `history`, `find`, `edit` and `delete`
 - exchange rates, custom categories, and a monthly allowance that is added automatically
 - automatic saving, with recovery from damaged files
 
-It does not include editing transactions, listing one cycle's spending, charts or a daily budget. See
+It includes editing deposits and withdrawals, including their historical foreign amounts and exchange rates.
+It does not include listing one cycle's spending, charts or a daily budget. See
 [Planned enhancements](#planned-enhancements).
 <!-- @@author -->
 
@@ -1265,6 +1321,8 @@ Listing one cycle's spending and visual charts are not implemented yet.
 | US-05 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
 | US-06 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
 | US-07 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
+| US-08 | careless user            | edit a deposit's amount, description, date, or saved exchange rate       | a mistyped entry does not distort my balance |
+| US-09 | distracted user          | edit a withdrawal, including its category and saved exchange rate        | my spending records stay accurate          |
 <!-- @@author -->
 
 ---
@@ -1304,7 +1362,7 @@ Listing one cycle's spending and visual charts are not implemented yet.
 
 **Main success scenario:**
 
-1. The user enters `history n/2`. FinNUS displays the two most recently recorded transactions.
+1. The user enters `history n/2`. FinNUS displays the two transactions with the newest dates first.
 2. The user enters `next`. FinNUS displays the next two transactions, if available.
 3. The user enters `stop`. FinNUS returns to the normal command loop.
 
@@ -1312,6 +1370,32 @@ Listing one cycle's spending and visual charts are not implemented yet.
 During an active view, an out-of-range page or page size reports an error without changing the current view.
 <!-- @@author naieel04 -->
 <!-- @@author -->
+
+### UC-03: Correct a recorded transaction
+
+**Actor:** FinNUS user
+
+**Related stories:** US-08 and US-09 in this guide.
+
+**Preconditions:** Setup is complete, at least one transaction exists, and history mode is inactive.
+
+**Postconditions:** The selected entry is corrected without changing its type, currency, or the transaction count.
+The balance reflects the corrected values, and FinNUS attempts to save them.
+
+**Main success scenario:**
+
+1. The user enters `recent` or `find` and chooses a displayed transaction number.
+2. The user enters an edit such as `edit 1 a/6.50 t/food`.
+3. FinNUS validates all changes and replaces the selected entry, maintaining chronological order.
+4. FinNUS displays the before/after entries and automatically saves the ledger.
+
+**Extensions:**
+
+- **2a. History is active:** The user must enter `stop` before `edit` is accepted.
+- **3a. Invalid index, field, category, or resulting amount:** FinNUS reports the error; the selected entry is unchanged.
+- **3b. All supplied values match:** FinNUS displays `No changes made.`; no edit-induced save is needed.
+- **3c. A date changes:** The corrected entry may get a different index; the user checks the list before editing again.
+- **4a. Saving fails:** FinNUS reports that the correction remains in memory and retries on a later command or at exit.
 
 ---
 
@@ -1398,6 +1482,23 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 | MT-15 | Saved sample ledger; restart FinNUS | Enter `history p/10000000000000000`. | FinNUS reports `History page is out of range.` |
 <!-- @@author naieel04 -->
 
+### Transaction editing scenarios
+
+Run each case independently from the sample ledger above unless it says to restart the same session.
+
+| ID | Steps / input | Expected result |
+|----|---------------|-----------------|
+| MT-16 | Enter `recent`, `edit 1 a/6.50 t/food`, then `balance` and `find t/food`. | Lunch changes to SGD 6.50 in Food; the deposit is unchanged, count remains 2, and balance is SGD 143.50. |
+| MT-17 | Enter `deposit 55000 c/JPY d/Foreign allowance`, `rate JPY 120`, `edit 1 r/100`, `edit 1 a/60000`, then `rate` and `balance`. Exit, restart, and enter `recent` and `balance`. | The foreign deposit changes from SGD 500 to 550, then 600. Its saved rate remains 100 for the amount-only edit, global JPY stays 120, count is 3, and balance is SGD 745.50 before and after restart. |
+| MT-18 | Enter `edit 1 a/6.50 t/Unknown`, `edit 1 d/`, `edit 2 t/food`, `edit 99 a/1`, then `edit 1 a/4.50` and `balance`. | The first four edits report errors without changing entries. The fifth reports `No changes made.` Balance remains SGD 145.50 and count remains 2. |
+| MT-19 | Enter `edit 1 on/2000-01-01`, then `recent`. Exit, restart, and enter `history` and `stop`. | Lunch moves behind the newer deposit and has index 2 in both views. Its date survives restart; balance stays SGD 145.50. |
+| MT-20 | Use the folder permission procedure in MT-10, but issue `edit 1 a/6.50`. Restore write access, enter `balance`, then exit and restart. | The edit first reports an automatic-save failure while remaining visible in memory. After retry and restart, Lunch is SGD 6.50 and balance is SGD 143.50. |
+| MT-21 | Enter `edit 2 d/`, then `recent`, `history`, `edit 1 a/6.50`, `stop`, and `balance`. | The deposit description is cleared. History rejects the edit until `stop`; Lunch stays SGD 4.50 and balance stays SGD 145.50. |
+
+Also check `edit 1 a/0`, duplicate fields, an empty `r/`, `c/SGD`, and an SGD entry with `r/100`.
+For a foreign transaction, a correction that rounds to SGD zero or exceeds SGD 1000000 must be rejected atomically.
+The corresponding automated boundary and rounding cases are in `ForeignEditCommandTest`.
+
 ### Storage and recovery scenarios
 
 Use disposable test copies and stop the application before editing fixture files.
@@ -1431,7 +1532,6 @@ These features are not in v2.1.
 
 | Enhancement | User need | Proposed design |
 |-------------|-----------|-----------------|
-| Edit a transaction | Fix a typo without deleting and re-entering it | `edit INDEX` takes the same prefixes as `withdraw` and replaces the transaction at that `recent` index. |
 | List one cycle's spending | Check every spend since the allowance arrived | A cycle filter on `history`, using the dates from `Allowance`. |
 | Daily budget | Know how much is safe to spend today | `balance` divides the balance by the days left until the next allowance. |
 <!-- @@author -->
