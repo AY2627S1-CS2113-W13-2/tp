@@ -20,6 +20,39 @@ class SetupTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 29);
     //@@author
 
+    @Test
+    public void run_confirmationCallback_runsBeforeOptionalPrompts() {
+        TransactionList transactions = new TransactionList();
+        boolean[] wasSaved = {false};
+        ScriptedUi ui = new ScriptedUi("67", "yes", "5", "500") {
+            @Override
+            public String readCommand(String prompt) {
+                if (prompt.startsWith("Allowance")) {
+                    assertTrue(wasSaved[0], "The balance checkpoint must run before optional prompts");
+                }
+                return super.readCommand(prompt);
+            }
+        };
+
+        assertTrue(new Setup().run(ui, transactions, TODAY, () -> {
+            assertFalse(wasSaved[0], "Confirmation callback must run only once");
+            assertEquals(Money.of(67), transactions.getOpeningBalance());
+            assertTrue(transactions.getAllowance().isEmpty());
+            wasSaved[0] = true;
+        }));
+
+        assertTrue(wasSaved[0]);
+        assertEquals(new BigDecimal("500"), transactions.getAllowance().orElseThrow().amount());
+    }
+
+    @Test
+    public void run_unconfirmedBalance_doesNotInvokeCallback() {
+        TransactionList transactions = new TransactionList();
+        assertFalse(new Setup().run(new ScriptedUi("67", "no"), transactions, TODAY, () -> {
+            throw new AssertionError("Unconfirmed balances must not be saved");
+        }));
+    }
+
     //@@author lololol8484
     @Test
     public void run_confirmedAmount_setsOpeningBalanceWithoutTransaction() {

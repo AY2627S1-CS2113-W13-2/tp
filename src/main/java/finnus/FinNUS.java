@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -160,15 +161,16 @@ public class FinNUS {
             ui.showMessage(loaded.warnings());
         }
         if (loaded.setupRequired()) {
-            Setup setup = new Setup();
-            if (!setup.initializeOpeningBalance(ui, transactions)) {
+            // The callback records the checkpoint so optional steps only trigger a save when state changes.
+            AtomicReference<LedgerSnapshot> setupCheckpoint = new AtomicReference<>();
+            if (!new Setup().run(ui, transactions, today(), () -> {
+                setupCheckpoint.set(LedgerSnapshot.capture(transactions));
+                hasUnsavedChanges = true;
+                savePendingChanges();
+            })) {
                 return false;
             }
-            hasUnsavedChanges = true;
-            savePendingChanges();
-            LedgerSnapshot beforeAllowance = LedgerSnapshot.capture(transactions);
-            setup.configureAllowance(ui, transactions, today());
-            hasUnsavedChanges |= !beforeAllowance.equals(LedgerSnapshot.capture(transactions));
+            hasUnsavedChanges |= !setupCheckpoint.get().equals(LedgerSnapshot.capture(transactions));
             savePendingChanges();
         }
         ui.showWelcome();
