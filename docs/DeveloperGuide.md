@@ -1169,14 +1169,25 @@ Keep diagrams consistent with the code. Explain relationships, number figures, a
 `FinNUS.main()` configures `java.util.logging` to append diagnostics to `finnus.log` in the working directory. If the log
 file cannot be created, logging is disabled. Command arguments and failed input can currently appear in diagnostics.
 
-[Insert logging levels, example diagnostics, and the team's policy for financial information in logs here]
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+Routine steps use `FINE`, state changes such as an added deposit use `INFO`, and storage problems use `WARNING`.
+The log can contain amounts and descriptions, so check it before sharing it.
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
 
 ### Automated testing and continuous integration
 
 Tests are in `src/test/java/finnus`, including parser, command, model, storage, and persistence integration tests.
 Run `check` using the setup table above. GitHub Actions runs checks with Java 25 on Windows, macOS, and Linux.
 
-[Insert important fixtures, isolated storage setup, known coverage gaps, and team review or release workflow here]
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+Storage tests use JUnit `@TempDir`, so they never touch a real `finnus.txt`. Command tests capture `System.out` to
+check the exact output. Each pull request needs one approving review before it is merged.
 <!-- @@author -->
 
 ---
