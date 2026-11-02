@@ -601,77 +601,37 @@ Transaction deleted: [27 Oct 2026] [Withdrawal] -$30.00 (BBQ) #Food
 ```
 
 ### Editing a transaction: `edit`
-
-Corrects selected fields of a deposit or withdrawal without deleting and re-entering it.
+Corrects the amount, description, category, date or saved exchange rate of a deposit or withdrawal. Give at least one field, in any order, without duplicates. Omitted fields keep their values;
+type and currency cannot change.
 
 Format: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
 
-* `INDEX` is a positive whole number shown by `recent`, `history`, or `find`. Use the displayed number even when
-  search results omit other transactions. Leave history mode with `stop` before editing.
-* Supply at least one field. Omitted fields keep their values. Fields may appear in any order, but only once each.
-* `a/AMOUNT` changes the amount in the transaction's existing currency. Use a positive plain decimal with at most
-  2 decimal places. The resulting SGD amount must be at least `$0.01` and at most `$1000000`.
-* `d/DESCRIPTION` changes the description and can contain spaces. Empty `d/` clears a deposit's description, but is
-  rejected for a withdrawal, which must have a nonblank description.
-* `t/CATEGORY` changes a withdrawal's category to an existing category, ignoring case. Use `t/Others` to reset it.
-  Deposits cannot have categories. Add a new category with `category NAME` before using it.
-* `on/DATE` follows the [existing date rules](#recording-the-date-of-a-transaction-on). Omitting it keeps the old date,
-  including an unknown date on a legacy entry. Changing a date may change transaction numbers because the list
-  remains chronological. Check `recent` again before another indexed command.
-* `r/RATE` corrects the saved rate of a foreign transaction: foreign-currency units per SGD, positive, at most
-  6 decimal places, and no greater than `1000000`. It is rejected for an SGD transaction.
-* An amount-only foreign edit keeps the transaction's saved rate. An explicit `r/` works even without a configured
-  global rate and does not change global rates or other transactions. SGD conversion rounds half-up to the cent.
-* Transaction type and currency stay fixed; `c/CURRENCY` is rejected. Reserved prefixes `a/`, `d/`, `t/`, `on/`,
-  `r/`, and `c/` at the start of a word cannot be used literally inside an edit description.
-* FinNUS validates all supplied fields before applying an edit. An invalid edit changes nothing in the selected
-  transaction. Successful edits are saved automatically and reflected in balances, searches, and cycle totals.
-* If all supplied values already match, FinNUS prints `No changes made.` without changing the transaction.
+* `INDEX` must be a valid positive whole number from `recent`, `history` or `find`.
+* `AMOUNT` is in the existing currency: positive, with at most 2 decimal places.
+* `DESCRIPTION` can contain spaces. Empty `d/` clears a deposit's description but withdrawals require a nonblank description.
+* `CATEGORY` must already exist and applies only to withdrawals. Use `t/Others` to reset it; names ignore case.
+* `DATE` follows the [date rules](#recording-the-date-of-a-transaction-on). Changing it may change transaction numbers and require
+  checking `recent` again before another edit or deletion.
+* `RATE` applies only to foreign transactions and follows the [rate rules](#setting-an-exchange-rate-rate).
+  Amount-only edits keep the saved rate; `r/` changes it without needing or changing a global rate.
+* Prefixes `a/`, `d/`, `t/`, `on/`, `r/` and `c/` cannot start words inside a description; `c/` is not accepted by `edit`.
+* Successful changes are saved automatically. Invalid edits leave the selected entry unchanged;
+  identical values print `No changes made.`
 
-Examples (each refers to the current displayed transaction number):
 
-* `edit 1 a/6.50` corrects an amount.
-* `edit 2 d/Scholarship allowance` corrects a description.
-* `edit 1 t/food on/2026-10-25` corrects a withdrawal's category and date.
-* `edit 3 a/55000 r/100` corrects a foreign amount and its historical rate together.
-* `edit 2 d/` clears a deposit's description.
+Examples:
 
-If transaction 1 is `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others`, `edit 1 a/6.50` prints:
+* `edit 1 a/6.50`
+* `edit 2 d/Scholarship allowance`
+* `edit 1 t/food on/2026-10-25`
+* `edit 3 a/55000 r/100`
 
+Expected output for `edit 1 a/6.50` when transaction 1 is a withdrawal of $4.50 for Lunch:
 ```text
 ____________________________________________________________
 Transaction updated:
   Before: [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others
   After:  [30 Oct 2026] [Withdrawal] -$6.50 (Lunch) #Others
-____________________________________________________________
-```
-
-If transaction 1 is a deposit of JPY 55000 recorded at 110 JPY per SGD on 30 Oct 2026, `edit 1 r/100` prints:
-
-```text
-____________________________________________________________
-Transaction updated:
-  Before: [30 Oct 2026] [Deposit] +$500.00 (Allowance) [JPY 55000]
-  After:  [30 Oct 2026] [Deposit] +$550.00 (Allowance) [JPY 55000]
-____________________________________________________________
-____________________________________________________________
-Converted at 1 SGD = 100 JPY.
-____________________________________________________________
-```
-
-Repeating the same edit prints:
-
-```text
-____________________________________________________________
-No changes made.
-____________________________________________________________
-```
-
-For a withdrawal, `edit 1 d/` is rejected:
-
-```text
-____________________________________________________________
-Error: A withdrawal needs a description so you know what you spent on.
 ____________________________________________________________
 ```
 
