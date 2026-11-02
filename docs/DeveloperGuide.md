@@ -105,7 +105,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 9's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 14's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -154,6 +154,18 @@ create values through `Money.of(BigDecimal)`, `Money.of(String)`, or `Money.of(l
 returns the shared `Money.ZERO` instance for any numerical zero; it creates a new `Money` for a
 nonzero result. This means two references to zero need not identify two different objects.
 
+The class diagram shows where monetary values are stored. Each `Transaction` has one `Money`
+amount, each `TransactionList` has one `Money` opening balance and zero or more transactions, and
+each `Money` wraps one `BigDecimal`. The associations show references rather than exclusive
+ownership: an immutable `Money` instance may be shared. The diagram lists every `Money` method,
+including its private constructor, but omits its private formatting constants and unrelated
+members of `Transaction` and `TransactionList`.
+
+![Class diagram of Money and its stored references](images/MoneyClassDiagram.png)
+
+*Figure 4. Money's internal value and its references from transactions and the transaction list.
+[PlantUML source](diagrams/MoneyClassDiagram.puml).*
+
 Arithmetic does not change either operand. `add()` adds the wrapped `BigDecimal` values and
 returns the result through `Money.of()`. `negate()` similarly returns the value with its sign
 reversed. For example, if `first` represents `10.005` and `second` represents `0.10`,
@@ -168,7 +180,7 @@ inputs and the nonzero sum are distinct objects:
 
 ![Sequence diagram for invoking Money methods](images/MoneySequenceDiagram.png)
 
-*Figure 4. Exact addition, display rounding, and preservation of the original monetary value.
+*Figure 5. Exact addition, display rounding, and preservation of the original monetary value.
 [PlantUML source](diagrams/MoneySequenceDiagram.puml).*
 
 `Money` does not require every value to be positive or below `Money.MAX_AMOUNT`.
@@ -226,7 +238,7 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
-*Figure 5. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
+*Figure 6. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
 
 A complete save file can contain the following records:
 
@@ -511,7 +523,7 @@ newest-first ordering. The opening balance is not a transaction, so it never app
 
 #### How it works
 
-`FinNUS#run()` reads a line and passes it to `Parser#parse()`. For `recent`, the parser calls
+`FinNUS#run()` reads a line and passes it to `executeCommand()`, which calls `Parser#parse()`. For `recent`, the parser calls
 `parseRecent()`. Blank arguments create a `RecentTransactionCommand` with a default length of five.
 Otherwise, the parser converts the argument to an `int` and rejects a malformed or non-positive
 length with `FinNusException`. The main loop shows that exception as an error and continues.
@@ -532,7 +544,7 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-*Figure 6. Retrieving and displaying up to two recent transactions.
+*Figure 7. Retrieving and displaying up to two recent transactions.
 [PlantUML source](diagrams/RecentSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -551,13 +563,131 @@ insertion order would need to account for that choice. `getRecentTransactions()`
 read-only view so callers can display entries without directly editing the ledger. The command
 only formats data; it does not add, remove or change transactions.
 
+<!-- @@author -->
+<!-- @@author nkyjStar -->
+### Viewing paginated transaction history
+
+`history [n/NUMBER] [p/PAGE]` opens a newest-first view of all recorded transactions. The parser
+accepts the two optional fields in either order, rejects duplicates, and creates a `HistoryCommand`.
+Both fields use `HistoryCommand#parsePositiveNumber()`: malformed or non-positive text is rejected
+as invalid, while a positive number above `Integer.MAX_VALUE` is reported as out of range. Its
+defaults are five transactions per page and page 1. A page size larger than the transaction
+count is valid; page 1 then displays all available entries. `HistoryCommand#execute()` checks that the
+requested page exists before the application enters history mode, so an invalid initial page
+leaves normal commands available.
+
+`FinNUS` retains the active `HistoryCommand` in `historyView`. While it is active, the main loop
+sends every non-blank line to `HistoryCommand#handleInput()` rather than the normal parser. That
+method switches on `next`, `prev`, and `stop`, then checks the `p/` and `n/` prefixes. All other
+commands, including `exit`, produce a mode-specific error. `stop` clears `historyView`. History
+navigation does not modify `TransactionList`, but the loop still retries any pending save after a
+successful input. The command logs successful navigation at `FINE`. Internal state assumptions
+use assertions, while invalid user input produces `FinNusException`.
+
+History controls only read transactions and update the viewing position; they create no new
+transaction changes to save. This keeps the displayed indices stable during navigation. The saved
+transaction list can still change if the application retries a save that failed before the view.
+Opening `history` also runs the normal automatic allowance check, which may add a due deposit.
+
+The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` session:
+
+![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
+
+*Figure 8. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
+allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
+
+The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
+transactions from `TransactionList` using `size - 1 - index`, leaving the stored insertion order
+untouched. Displayed transaction numbers are global newest-first indices, so they agree with
+`recent` and `delete`. The heading shows the visible range and total count instead of a page
+number because `n/NUMBER` preserves the first visible transaction even when that position is
+not aligned to a page boundary. `next` and `prev` move by the new page size from that position;
+`p/PAGE` returns to boundaries counted from the newest transaction. Out-of-range navigation
+keeps the current position. With no recorded transactions, page 1 shows an empty-list message
+and `stop` remains available.
+
+The class diagram shows the session reference and how history reads `TransactionList` for display:
+
+![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
+
+*Figure 9. History command state and its application, parser, transaction list, and UI
+relationships.
+[PlantUML source](diagrams/HistoryClassDiagram.puml).*
+
+The multiplicities describe an active session: `FinNUS` has one `Ui`, one `TransactionList`,
+and at most one active `HistoryCommand`. A `TransactionList` holds zero or more transactions.
+Dashed dependencies represent method calls or construction, so they have no multiplicity.
+
+`HistoryCommandTest`, `ParserTest`, and `FinNUSTest` cover page ordering, number consistency,
+resizing, invalid input, empty history, and the command restriction in the application loop.
+
+#### Design considerations
+
+**Aspect: how to present the full history**
+
+* **Alternative 1 (current choice):** show a page at a time, with a configurable page size and
+  navigation commands.
+  * Pros: each response stays readable as the transaction list grows, while every entry remains
+    reachable. The user can choose how much to see at once.
+  * Cons: reviewing distant entries takes more commands, and the command must keep track of the
+    current position.
+* **Alternative 2:** print the entire history in one response.
+  * Pros: simple to implement and easy to scan when there are few entries.
+  * Cons: a long history can flood the terminal and make a particular entry hard to find.
+
+**Aspect: which commands are available while viewing history**
+
+* **Alternative 1 (current choice):** accept only history controls until `stop`.
+  * Pros: inputs have one meaning in this mode, and the displayed positions remain stable because
+    transactions cannot be added or deleted during navigation.
+  * Cons: the user must leave the view even to run a read-only command such as `recent` or `balance`.
+* **Alternative 2:** allow normal commands alongside history controls.
+  * Pros: the user could check a balance or recent activity without leaving the view.
+  * Cons: command dispatch becomes more complex. A command that changes the transaction list could
+    shift the current page and its displayed indices, so the view would need a rule for refreshing
+    or resetting its position. Allowing only read-only commands would avoid that shift but still
+    require a separate rule for which normal commands are permitted.
+
+**Aspect: transaction display order**
+
+* **Alternative 1 (current choice):** display newest first, as `recent` does, while keeping
+  `TransactionList` in oldest-first insertion order.
+  * Pros: recent activity appears first. The global displayed indices match `recent` and `delete`,
+    and adding a transaction remains a simple append to the stored list.
+  * Cons: the displayed order differs from storage order, so history translates each displayed
+    position to a list index.
+* **Alternative 2:** display oldest first, matching storage order.
+  * Pros: follows the chronology of transactions and needs no reverse index lookup.
+  * Cons: a user must navigate toward the end to see recent activity, and the displayed indices
+    would differ from those used by `recent` and `delete`.
+
+**Aspect: what happens when the page size changes**
+
+* **Alternative 1 (current choice):** keep the first visible transaction at the top after `n/NUMBER`.
+  * Pros: the user keeps their place while adjusting how many entries are visible.
+  * Cons: the new view may start between page boundaries, so the heading shows a transaction range
+    rather than a page number; `p/PAGE` returns to boundaries for the new size.
+* **Alternative 2:** return to the first page after changing the size.
+  * Pros: page numbering stays straightforward.
+  * Cons: the user loses their place and may need to navigate back to the same transaction.
+
+<!-- @@author -->
 <!-- @@author nabijonzzz -->
 ### Finding transactions
 
 `find KEYWORD` lists the transactions whose description contains `KEYWORD`, ignoring case.
+<!-- @@author -->
 
-The parser treats everything after the command word as the keyword, so `find chicken rice` searches for the
-whole phrase, and returns a `FindCommand`. A missing keyword is rejected with the usual `FinNusException`.
+<!-- @@author chancheese -->
+`find t/CATEGORY` lists the withdrawals in one category, and `find KEYWORD t/CATEGORY` combines both.
+
+The parser first removes an optional `t/CATEGORY` with `Parser#extractCategory()`, the same method `withdraw`
+uses, so category names follow the same rules and give the same errors. The rest is the keyword, so
+`find chicken rice` still searches for the whole phrase. The parser returns a `FindCommand` with the keyword, the
+category name, or both. If both are missing, it throws a `FinNusException`.
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
 
 `FindCommand#execute()` goes through the `TransactionList` from the newest transaction to the oldest, and keeps the
 ones whose description contains the keyword. Each result is numbered with the same index that `recent` shows and
@@ -571,6 +701,20 @@ find lunch
 ```
 
 The command only reads the list, so searching never changes any transaction.
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+With a category, `execute()` first resolves the name through `CategoryList#resolve()`, as `WithdrawCommand` does. This
+turns `food` into `Food`, and rejects a category that does not exist. A transaction then matches only if it meets
+every criterion given. Deposits have no category, so they never match a category search.
+
+Below the results, `FindCommand` shows `Received:` and `Spent:` totals, worded as in the `allowance` summary. Both
+commands count with the same small `TransactionTotal` class, which adds up the SGD amounts with `Money#add()` and
+counts the transactions. Foreign transactions count at the SGD value stored when they were recorded. A category
+search leaves out the `Received:` line, because it can never include a deposit.
+<!-- @@author -->
+
+<!-- @@author nabijonzzz -->
 
 #### Design considerations
 
@@ -585,12 +729,24 @@ The command only reads the list, so searching never changes any transaction.
 
 **Aspect: what is searched**
 
-* **Alternative 1 (current choice):** the description only.
+* **Alternative 1 (current choice):** the description, plus the category when `t/CATEGORY` is given.
   * Pros: simple and predictable; a keyword such as `5` will not match every amount containing a 5.
-  * Cons: cannot search by category or amount. This can be added later as separate options.
+  * Cons: cannot search by amount.
 * **Alternative 2:** the whole displayed text of each transaction.
   * Pros: one search covers description, amount and category.
   * Cons: many unexpected matches, e.g. `food` would match every `#Food` withdrawal.
+<!-- @@author -->
+
+<!-- @@author chancheese -->
+**Aspect: where the category filter goes**
+
+* **Alternative 1 (current choice):** a `t/CATEGORY` option on `find`.
+  * Pros: reuses the `t/` prefix users already know from `withdraw`, and keeps the `recent` numbering that `delete`
+    uses. No new command to learn.
+  * Cons: `find` now has two optional parts, so the parser must reject a search with neither.
+* **Alternative 2:** a new command such as `category food`.
+  * Pros: a short command.
+  * Cons: `category NAME` already adds a category, so the same words would mean two different things.
 <!-- @@author -->
 
 ### Viewing the current balance
@@ -630,7 +786,7 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-*Figure 7. Calculating and displaying the current balance.
+*Figure 10. Calculating and displaying the current balance.
 [PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -660,7 +816,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
-*Figure 8. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+*Figure 11. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
 [PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
@@ -726,6 +882,8 @@ Users can add their own categories with `category NAME` and list all categories 
 The class diagram below shows how these classes are related. Only the members relevant to categories are shown.
 
 ![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
+
+*Figure 12. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
 
 `TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
 it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
@@ -811,6 +969,8 @@ the category from [Categorising spending](#categorising-spending) is resolved. L
 validation are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
+
+*Figure 13. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
 
 The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
 description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
@@ -943,7 +1103,7 @@ without the record load with no allowance. A record with an invalid day, amount,
 
 * **Alternative 1 (current choice):** a total and count in the summary.
   * Pros: short enough to check every day, alongside the countdown.
-  * Cons: does not list the withdrawals; a cycle filter on the planned `history` command is a better fit for that.
+  * Cons: does not list the withdrawals; a future cycle filter on `history` is a better fit for that.
 * **Alternative 2:** list every withdrawal of the cycle in the summary.
   * Pros: one command shows everything.
   * Cons: a month of logged meals and bus rides is 60 to 100 lines, which hides the countdown.
@@ -965,7 +1125,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 9. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 14. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -982,7 +1142,7 @@ protect data that could not be inspected.
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 10. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 15. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
@@ -1149,11 +1309,18 @@ criteria with the team.
 
 **Related story:** US-03
 
-**Preconditions:** At least one transaction has been recorded.
+<!-- @@author nkyjStar -->
+**Preconditions:** FinNUS is running.
 
-**Main success scenario:** The user enters `recent 2`. FinNUS displays up to two transactions, newest first, with descriptions and indices that can be used by `delete`.
+**Main success scenario:**
 
-**Extension:** If the ledger is empty, FinNUS displays an empty-list message.
+1. The user enters `history n/2`. FinNUS displays the two most recently recorded transactions.
+2. The user enters `next`. FinNUS displays the next two transactions, if available.
+3. The user enters `stop`. FinNUS returns to the normal command loop.
+
+**Extensions:** An empty ledger displays an empty-list message while keeping history mode active.
+During an active view, an out-of-range page or page size reports an error without changing the current view.
+<!-- @@author naieel04 -->
 <!-- @@author -->
 
 ---
@@ -1237,6 +1404,15 @@ For the spending-alert check, use a fresh folder and complete setup with opening
 `90`. Skip the allowance, enter `withdraw 20 d/Books`, answer `no`, then enter `balance`. The alert lists the balance
 threshold and opening balance; the withdrawal is cancelled, so the balance remains `$100.00`.
 <!-- @@author -->
+
+<!-- @@author nkyjStar -->
+### History navigation scenario
+
+| ID    | Preconditions       | Steps / input                                                       | Expected result                                                                                                           |
+|-------|---------------------|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| MT-14 | Sample ledger with two transactions | Enter `history n/1`, `next`, `prev`, `n/2`, `exit`, `stop`, then `exit`. | History shows ranges 1-1, 2-2, 1-1, and 1-2. The first `exit` is rejected in history mode; the second closes FinNUS. |
+| MT-15 | Saved sample ledger; restart FinNUS | Enter `history p/10000000000000000`. | FinNUS reports `History page is out of range.` |
+<!-- @@author naieel04 -->
 
 ### Storage and recovery scenarios
 

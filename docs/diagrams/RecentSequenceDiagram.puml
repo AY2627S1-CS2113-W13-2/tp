@@ -1,4 +1,10 @@
 @startuml RecentCommandSequenceDiagram
+' Sequence diagram for "recent 2".
+' Logging, allowance crediting, the ledger state check and saving are left out.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
 actor User
 participant ":FinNUS" as FinNUS
 participant "<<class>>\nParser" as Parser
@@ -6,29 +12,50 @@ participant "transactions:TransactionList" as Ledger
 participant ":Transaction" as Transaction
 participant "ui:Ui" as Ui
 
-User -> FinNUS: recent 2
-FinNUS -> Parser: parse("recent 2")
-Parser -> Parser: parseRecent("2")
-create "command:RecentTransactionCommand" as Recent
-Parser -> Recent: new RecentTransactionCommand(2)
-activate Recent
-Recent --> Parser: constructed command
-deactivate Recent
-Parser --> FinNUS: command
-FinNUS -> FinNUS: executeCommand()
+User -> FinNUS : recent 2
 activate FinNUS
-FinNUS -> Recent: execute(transactions, ui)
-Recent -> Ledger: getRecentTransactions(2)
-Ledger --> Recent: up to 2 transactions, newest first
+FinNUS -> FinNUS : executeCommand("recent 2")
+activate FinNUS
+FinNUS -> Parser : parse("recent 2", today)
+activate Parser
+Parser -> Parser : parseRecent("2")
+activate Parser
+create "command:RecentTransactionCommand" as Recent
+Parser -> Recent : new RecentTransactionCommand(2)
+activate Recent
+Recent --> Parser : command
+deactivate Recent
+Parser --> Parser : command
+deactivate Parser
+Parser --> FinNUS : command
+deactivate Parser
+
+FinNUS -> Recent : execute(transactions, ui)
+activate Recent
+Recent -> Ledger : getRecentTransactions(2)
+activate Ledger
+Ledger --> Recent : up to 2 transactions, newest first
+deactivate Ledger
 loop each returned transaction
-    Recent -> Transaction: toString()
-    Transaction --> Recent: formatted details
+    Recent -> Transaction : toString()
+    activate Transaction
+    Transaction --> Recent : formatted details
+    deactivate Transaction
 end
-Recent -> Ui: showMessage(heading and numbered lines)
-Ui --> User: recent transactions
-Ui --> Recent: return
-Recent --> FinNUS: return
-deactivate FinNUS
-note over FinNUS: executeCommand() returns after its ledger state check
+Recent -> Ui : showMessage(heading and numbered lines)
+activate Ui
+Ui -> User : recent transactions
+Ui --> Recent
+deactivate Ui
+Recent --> FinNUS
+deactivate Recent
+
+FinNUS -> Recent : isExit()
+activate Recent
+Recent --> FinNUS : false
+deactivate Recent
 destroy Recent
+FinNUS --> FinNUS : false
+deactivate FinNUS
+deactivate FinNUS
 @enduml
