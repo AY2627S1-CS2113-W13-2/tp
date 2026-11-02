@@ -793,12 +793,15 @@ public class Parser {
         if (pattern.matcher(rest).find()) {
             throw new FinNusException(duplicateMessage);
         }
+        //@@author lololol8484
         if (value.isEmpty() || startsWithRecognisedPrefix(value)) {
             throw new FinNusException(missingMessage);
         }
+        //@@author
         return new String[]{value, rest};
     }
 
+    //@@author lololol8484
     /**
      * Recognises a prefix that was supplied where the current prefix's value should be.
      * This prevents input such as {@code t/ d/Lunch} from reporting {@code d/Lunch} as an
@@ -809,6 +812,7 @@ public class Parser {
                 || value.startsWith(AMOUNT_PREFIX) || value.startsWith(CATEGORY_PREFIX)
                 || value.startsWith(DATE_PREFIX);
     }
+    //@@author
 
     /**
      * Removes an optional {@code t/CATEGORY} part from withdraw arguments,
@@ -949,13 +953,18 @@ public class Parser {
         }
         // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
         // description.
+        //@@author lololol8484
         int separator = findLastWhitespace(afterPrefix);
         if (separator == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
-        return new String[]{afterPrefix.substring(separator + 1), afterPrefix.substring(0, separator).trim()};
+        String amount = afterPrefix.substring(separator + 1);
+        String description = afterPrefix.substring(0, separator).trim();
+        //@@author
+        return new String[]{amount, description};
     }
 
+    //@@author lololol8484
     /** Returns the final whitespace position, including tabs and other Java whitespace. */
     private static int findLastWhitespace(String text) {
         for (int index = text.length() - 1; index >= 0; index--) {
@@ -965,6 +974,7 @@ public class Parser {
         }
         return -1;
     }
+    //@@author
 
     /**
      * Returns the index of the first {@code d/} that starts a word, or -1 if
