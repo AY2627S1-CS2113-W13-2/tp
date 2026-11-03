@@ -35,6 +35,7 @@ import finnus.command.Command;
 import finnus.command.CommandWord;
 import finnus.command.DeleteCommand;
 import finnus.command.DepositCommand;
+import finnus.command.EditCommand;
 import finnus.command.ExitCommand;
 import finnus.command.FindCommand;
 import finnus.command.ForeignTransactionCommand;
@@ -50,15 +51,19 @@ import finnus.money.Money;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
+//@@author naieel04
 /**
  * Checks command recognition and argument validation in the parser.
  */
+//@@author
 class ParserTest {
     private static final String FORMAT = "test format";
 
+    //@@author naieel04
     /**
      * Independent user inputs and expected types ensure every enum entry has parser coverage.
      */
+    //@@author
     // Map.ofEntries has no limit on the number of entries, unlike Map.of (at most 10).
     private static final Map<CommandWord, CommandExample> COMMAND_EXAMPLES = Map.ofEntries(
             Map.entry(CommandWord.DEPOSIT, new CommandExample("deposit 500 d/Allowance", DepositCommand.class)),
@@ -70,6 +75,9 @@ class ParserTest {
             //@@author
             Map.entry(CommandWord.FIND, new CommandExample("find lunch", FindCommand.class)),
             Map.entry(CommandWord.DELETE, new CommandExample("delete 1", DeleteCommand.class)),
+            //@@author naieel04
+            Map.entry(CommandWord.EDIT, new CommandExample("edit 1 a/5", EditCommand.class)),
+            //@@author
             Map.entry(CommandWord.BALANCE, new CommandExample("balance", BalanceCommand.class)),
             Map.entry(CommandWord.ALLOWANCE, new CommandExample("allowance 5 a/500", AllowanceCommand.class)),
             //@@author lololol8484
@@ -80,6 +88,7 @@ class ParserTest {
             Map.entry(CommandWord.HELP, new CommandExample("help", HelpCommand.class)),
             Map.entry(CommandWord.EXIT, new CommandExample("exit", ExitCommand.class)));
 
+    //@@author naieel04
     /**
      * Pairs literal user input with the concrete command the parser must produce.
      */
@@ -87,7 +96,9 @@ class ParserTest {
     }
 
     @ParameterizedTest
+    //@@author
     @EnumSource(value = CommandWord.class, names = "OPENING", mode = EnumSource.Mode.EXCLUDE)
+    //@@author naieel04
     public void parse_registeredCommand_returnsExpectedType(CommandWord command) throws FinNusException {
         CommandExample example = COMMAND_EXAMPLES.get(command);
         assertNotNull(example, "Add a valid input example for " + command);
@@ -119,13 +130,17 @@ class ParserTest {
     }
 
     @ParameterizedTest
+    //@@author
     @EnumSource(value = CommandWord.class, names = {"DEPOSIT", "WITHDRAW", "RATE", "FIND"})
+    //@@author naieel04
     public void parse_invalidArguments_reportsRegisteredUsage(CommandWord command) {
         Map<CommandWord, String> invalidInputs = Map.of(
                 CommandWord.DEPOSIT, "deposit",
                 CommandWord.WITHDRAW, "withdraw 1",
+                //@@author
                 CommandWord.RATE, "rate JPY",
                 CommandWord.FIND, "find   ");
+        //@@author naieel04
         FinNusException exception = assertThrows(FinNusException.class,
                 () -> Parser.parse(invalidInputs.get(command)));
         assertTrue(exception.getMessage().contains("Format: " + command.getUsage()));
@@ -136,6 +151,7 @@ class ParserTest {
         "delete 2147483648", "recent 2147483648"})
     public void parse_invalidIntegerArguments_throwsException(String input) {
         assertThrows(FinNusException.class, () -> Parser.parse(input));
+        //@@author
     }
 
     //@@author nkyjStar
@@ -178,10 +194,12 @@ class ParserTest {
     }
     //@@author
 
+    //@@author naieel04
     @Test
     public void parse_unknownCommand_preservesErrorMessage() {
         FinNusException exception = assertThrows(FinNusException.class, () -> Parser.parse("  NOPE 123  "));
         assertEquals("Unknown command: 'nope'. Type 'help' to see all commands.", exception.getMessage());
+        //@@author
     }
 
     @Test
@@ -220,6 +238,7 @@ class ParserTest {
         assertInstanceOf(ExitCommand.class, Parser.parse("exit"));
     }
 
+    //@@author naieel04
     @Test
     public void parse_help_returnsHelpCommand() throws FinNusException {
         assertInstanceOf(HelpCommand.class, Parser.parse("help"));
@@ -245,6 +264,7 @@ class ParserTest {
     @ValueSource(strings = {"exit 123", "exit anything else", "  EXIT\t123  "})
     public void parse_exitWithArguments_returnsExitCommand(String input) throws FinNusException {
         assertInstanceOf(ExitCommand.class, Parser.parse(input));
+        //@@author
     }
 
     @Test
@@ -267,6 +287,13 @@ class ParserTest {
     @Test
     public void splitAmountAndDescription_noPrefix_returnsEmptyDescription() throws FinNusException {
         assertArrayEquals(new String[] {"500", ""}, Parser.splitAmountAndDescription("500", FORMAT));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {" ", "\t", " \t", "\t "})
+    public void splitAmountAndDescription_descriptionFirst_acceptsWhitespace(String separator) throws FinNusException {
+        assertArrayEquals(new String[]{"4.50", "Chicken rice"},
+                Parser.splitAmountAndDescription("d/Chicken rice" + separator + "4.50", FORMAT));
     }
 
     @Test

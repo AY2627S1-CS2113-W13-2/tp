@@ -1,3 +1,5 @@
+<!-- @@author naieel04 -->
+
 # Ian Lee - Project Portfolio Page
 
 ## Overview
@@ -56,3 +58,5 @@ Examples: In [#71](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/71#discussio
 
 ### Contributions beyond the project team
 * Reviewed the Developer Guide of [ScheduleFlow PR](https://github.com/NUS-CS2113-AY2627-S1/tp/pull/29) [CS2113-T10-1]
+
+<!-- @@author -->

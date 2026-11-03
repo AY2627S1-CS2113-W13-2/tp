@@ -1,4 +1,4 @@
-package finnus;
+package finnus.storage;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -17,15 +17,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import finnus.FinNUS;
+import finnus.ScriptedUi;
 import finnus.money.Money;
-import finnus.storage.FileStorage;
-import finnus.storage.LedgerCodec;
-import finnus.storage.LedgerSnapshot;
-import finnus.storage.LoadResult;
-import finnus.storage.Storage;
 import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /**
  * Exercises command execution, real files and independent restarts as a complete persistence workflow.
  */
@@ -33,14 +33,96 @@ class PersistenceIntegrationTest {
     @TempDir
     Path directory;
 
+    @ParameterizedTest
+    @ValueSource(strings = {"67", "0"})
+    public void run_interruptedAfterConfirmation_restoresOpeningBalance(String amount) {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi interrupted = new ScriptedUi(amount, "yes") {
+            @Override
+            public String readCommand(String prompt) {
+                if (prompt.startsWith("Allowance day")) {
+                    throw new IllegalStateException("Interrupted optional setup");
+                }
+                return super.readCommand(prompt);
+            }
+        };
+
+        assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
+
+        LoadResult restored = new FileStorage(path).load();
+        assertFalse(restored.setupRequired());
+        assertEquals(Money.of(amount), restored.snapshot().openingBalance());
+    }
+
+    @Test
+    public void run_interruptedAtAllowanceAmount_restoresConfirmedBalance() {
+        Path path = directory.resolve("finnus.txt");
+        ScriptedUi interrupted = new ScriptedUi("67", "yes", "", "5") {
+            @Override
+            public String readCommand(String prompt) {
+                if (prompt.startsWith("Allowance amount")) {
+                    throw new IllegalStateException("Interrupted optional setup");
+                }
+                return super.readCommand(prompt);
+            }
+        };
+
+        assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
+        //@@author
+        assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
+        assertFalse(new FileStorage(path).load().setupRequired());
+    }
+
+    //@@author naieel04
+    @Test
+    public void run_allowanceSetup_persistsBalanceAndAllowance() {
+        Path path = directory.resolve("finnus.txt");
+        new FinNUS(new ScriptedUi("67", "yes", "", "5", "500", "", "exit"), new FileStorage(path)).run();
+
+        LedgerSnapshot restored = new FileStorage(path).load().snapshot();
+        assertEquals(Money.of("67"), restored.openingBalance());
+        assertEquals(new BigDecimal("500"), restored.allowance().amount());
+    }
+
+    @Test
+    public void run_openingSaveFails_retriesAfterOptionalSetup() {
+        Path path = directory.resolve("finnus.txt");
+        FileStorage delegate = new FileStorage(path);
+        Storage storage = new Storage() {
+            private int attempts;
+
+            @Override
+            public LoadResult load() {
+                return delegate.load();
+            }
+
+            @Override
+            public void save(LedgerSnapshot snapshot) throws IOException {
+                if (attempts++ == 0) {
+                    throw new IOException("Injected save failure");
+                }
+                delegate.save(snapshot);
+            }
+        };
+        ScriptedUi ui = new ScriptedUi("67", "yes", "", "exit");
+
+        new FinNUS(ui, storage).run();
+
+        assertTrue(ui.output().contains("Automatic save failed"));
+        assertEquals(Money.of("67"), new FileStorage(path).load().snapshot().openingBalance());
+    }
+
     @Test
     public void run_twoSessions_restoresBalanceRatesAndRecentOrdering() {
         Path path = directory.resolve("finnus.txt");
+        //@@author
         new FinNUS(new ScriptedUi("100.00", "yes", "", "", "deposit 50.00 d/Allowance", "withdraw 4.50 d/Lunch",
+                //@@author naieel04
                 "rate JPY 110.00", "exit"), new FileStorage(path)).run();
         ScriptedUi second = new ScriptedUi("balance", "recent", "rate", "deposit 1", "delete 2", "exit");
         new FinNUS(second, new FileStorage(path)).run();
         assertTrue(second.output().contains("$145.50"));
+        //@@author
         //@@author nabijonzzz
         // Each transaction now starts with the day it was recorded, e.g. [30 Oct 2026], which must survive a restart.
         String datePrefix = "\\[\\d{1,2} [A-Z][a-z]{2} \\d{4}\\] ";
@@ -48,12 +130,16 @@ class PersistenceIntegrationTest {
         assertTrue(second.output().matches("(?s).*2\\. " + datePrefix
                 + "\\[Deposit\\] \\+\\$50\\.00 \\(Allowance\\).*"));
         //@@author
+        //@@author naieel04
         assertTrue(second.output().contains("1 SGD = 110 JPY"));
         LedgerSnapshot restored = new FileStorage(path).load().snapshot();
+        //@@author
         assertEquals(Money.of("151.00"), restored.toTransactionList().getBalance());
+        //@@author naieel04
         assertEquals(2, restored.transactions().size());
         assertEquals(TransactionType.DEPOSIT, restored.transactions().getLast().type());
         assertEquals(new BigDecimal("110.00"), restored.rates().get("JPY"));
+        //@@author
     }
 
     //@@author lololol8484
@@ -190,7 +276,9 @@ class PersistenceIntegrationTest {
     //@@author
     @Test
     public void run_interruptedSetup_keepsPendingMarkerAndRepeatsSetup() throws IOException {
+        //@@author naieel04
         Path path = directory.resolve("finnus.txt");
+        //@@author
         new FinNUS(new ScriptedUi("67"), new FileStorage(path)).run();
 
         assertTrue(new FileStorage(path).load().setupRequired());
@@ -202,6 +290,7 @@ class PersistenceIntegrationTest {
     }
     //@@author
 
+    //@@author naieel04
     @Test
     public void run_corruptFileAndReadOnlyCommands_leavesRepairFileUntouched() throws IOException {
         Path path = Files.writeString(directory.resolve("finnus.txt"), "original damaged bytes");
@@ -254,17 +343,23 @@ class PersistenceIntegrationTest {
     public void run_bothFilesCorrupt_preservesBothAcrossSaves() throws IOException {
         Path path = Files.writeString(directory.resolve("finnus.txt"), "broken main");
         Files.writeString(directory.resolve("finnus.txt.bak"), "broken backup");
+        //@@author
         new FinNUS(new ScriptedUi("deposit 1", "exit"), new FileStorage(path)).run();
+        //@@author naieel04
         List<String> preserved = recoveryContents();
         assertTrue(preserved.contains("broken main"));
+        //@@author
         assertEquals("broken backup", Files.readString(directory.resolve("finnus.txt.bak")));
         assertEquals(Money.of("1"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
     }
 
+    //@@author naieel04
     @Test
     public void run_interruptedBeforeExit_changesAreAlreadySaved() {
         Path path = directory.resolve("finnus.txt");
+        //@@author
         ScriptedUi interrupted = new ScriptedUi("3", "yes", "", "", "deposit 3") {
+            //@@author naieel04
             @Override
             public String readCommand() {
                 String command = super.readCommand();
@@ -275,9 +370,11 @@ class PersistenceIntegrationTest {
             }
         };
         assertThrows(IllegalStateException.class, () -> new FinNUS(interrupted, new FileStorage(path)).run());
+        //@@author
         assertEquals(Money.of("6"), new FileStorage(path).load().snapshot().toTransactionList().getBalance());
     }
 
+    //@@author naieel04
     @Test
     public void run_failedSaves_preservesDiskStateAcrossRestart() throws IOException {
         Path path = Files.writeString(directory.resolve("finnus.txt"), "FINNUS|1\nOPENING|10\n");
@@ -311,6 +408,7 @@ class PersistenceIntegrationTest {
             }
         }
         return contents;
+        //@@author
     }
 
     //@@author lololol8484

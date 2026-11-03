@@ -21,20 +21,156 @@ import finnus.money.Money;
 import finnus.storage.LedgerSnapshot;
 import finnus.storage.LoadResult;
 import finnus.storage.Storage;
+import finnus.currency.ForeignAmount;
+import finnus.transaction.Transaction;
+import finnus.transaction.TransactionList;
+import finnus.transaction.TransactionType;
 
+//@@author naieel04
 /**
  * Verifies autosave timing and failure handling independently of filesystem behavior.
  */
 class FinNUSTest {
     @Test
+    public void run_foreignNoOpAndInvalidRate_doNotWrite() {
+        TransactionList ledger = new TransactionList();
+        ledger.add(new Transaction(TransactionType.DEPOSIT,
+                new ForeignAmount("JPY", new BigDecimal("1100"), new BigDecimal("110")), "Income"));
+        RecordingStorage storage = new RecordingStorage();
+        storage.loaded = new LoadResult(LedgerSnapshot.capture(ledger), List.of(), true);
+        ScriptedUi ui = new ScriptedUi("edit 1 a/1100.00 r/110.000000", "edit 1 r/0", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        assertEquals(0, storage.attempts);
+        assertTrue(ui.output().contains("No changes made."));
+    }
+
+    @Test
+    public void run_editSaveFails_retainsCorrectionAndRetries() {
+        TransactionList ledger = new TransactionList();
+        ledger.add(new Transaction(TransactionType.DEPOSIT, Money.of("5"), "Income"));
+        RecordingStorage storage = new RecordingStorage();
+        storage.loaded = new LoadResult(LedgerSnapshot.capture(ledger), List.of(), true);
+        storage.failuresRemaining = 1;
+        ScriptedUi ui = new ScriptedUi("edit 1 a/10", "balance", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        assertEquals(2, storage.attempts);
+        assertEquals(1, storage.saved.size());
+        //@@author
+        assertEquals(Money.of("10"), storage.saved.getFirst().toTransactionList().getBalance());
+        //@@author naieel04
+        assertTrue(ui.output().contains("Automatic save failed"));
+        assertTrue(ui.output().contains("Your current balance is: $10.00"));
+    }
+
+    @Test
+    public void run_editWhileHistoryActive_isBlockedUntilStop() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("deposit 5", "history", "edit 1 a/10", "stop", "balance", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        //@@author
+        assertEquals(1, storage.attempts);
+        //@@author naieel04
+        assertEquals(Money.of("5"), storage.saved.getLast().toTransactionList().getBalance());
+        assertTrue(ui.output().contains("While viewing history"));
+    }
+
+    @Test
+    public void run_allowanceBecomesDueBetweenListingAndEdit_editsDisplayedEntryBeforeCrediting() {
+        TransactionList ledger = new TransactionList();
+        ledger.add(new Transaction(TransactionType.DEPOSIT, Money.of("10"), "Original", null,
+                LocalDate.of(2026, 10, 10)));
+        ledger.setAllowance(new Allowance(5, new BigDecimal("500"), null, LocalDate.of(2026, 10, 5)));
+        RecordingStorage storage = new RecordingStorage();
+        storage.loaded = new LoadResult(LedgerSnapshot.capture(ledger), List.of(), true);
+        AtomicReference<Instant> time = new AtomicReference<>(fixedOn(LocalDate.of(2026, 11, 4)).instant());
+        //@@author
+        Clock clock = new Clock() {
+            @Override
+            public ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(ZoneId zone) {
+                //@@author naieel04
+                return Clock.fixed(time.get(), zone);
+                //@@author
+            }
+
+            @Override
+            public Instant instant() {
+                //@@author naieel04
+                return time.get();
+            }
+        };
+        ScriptedUi ui = new ScriptedUi("recent", "edit 1 a/20", "edit 1 d/Corrected allowance", "exit") {
+            //@@author
+            @Override
+            public String readCommand() {
+                //@@author naieel04
+                String input = super.readCommand();
+                if ("edit 1 a/20".equals(input)) {
+                    time.set(fixedOn(LocalDate.of(2026, 11, 5)).instant());
+                }
+                return input;
+                //@@author
+            }
+        };
+        new FinNUS(ui, storage, clock).run();
+        //@@author naieel04
+        LedgerSnapshot last = storage.saved.getLast();
+        assertEquals(2, last.transactions().size());
+        assertEquals("Original", last.transactions().getFirst().description());
+        assertEquals(Money.of("20"), last.transactions().getFirst().amount());
+        assertEquals("Corrected allowance", last.transactions().getLast().description());
+        assertEquals(Money.of("500"), last.transactions().getLast().amount());
+        assertEquals(LocalDate.of(2026, 11, 5), last.allowance().lastCredited());
+        assertEquals(new BigDecimal("500"), last.allowance().amount());
+        assertEquals(5, last.allowance().day());
+    }
+
+    @Test
+    public void run_editChangedValues_savesReplacementWithoutAddingEntry() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("deposit 50 d/Income", "edit 1 a/60", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        //@@author
+        assertEquals(2, storage.saved.size());
+        //@@author naieel04
+        LedgerSnapshot last = storage.saved.getLast();
+        assertEquals(1, last.transactions().size());
+        assertEquals(Money.of("60"), last.toTransactionList().getBalance());
+        assertEquals("Income", last.transactions().getFirst().description());
+    }
+
+    @Test
+    public void run_invalidAndUnchangedEdits_doNotSaveAgain() {
+        RecordingStorage storage = new RecordingStorage();
+        ScriptedUi ui = new ScriptedUi("deposit 50 d/Income", "edit 1 a/50.00", "edit 2 a/60",
+                "edit 1 a/60 t/food", "edit 1 on/2026-11-04", "exit");
+        new FinNUS(ui, storage, fixedOn(LocalDate.of(2026, 11, 3))).run();
+        //@@author
+        assertEquals(1, storage.attempts);
+        //@@author naieel04
+        assertEquals(Money.of("50"), storage.saved.getLast().toTransactionList().getBalance());
+        assertTrue(ui.output().contains("No changes made."));
+    }
+
+    @Test
     public void run_mutatingCommands_savesEachChangedSnapshot() {
         RecordingStorage storage = new RecordingStorage();
+        //@@author
         ScriptedUi ui = new ScriptedUi("deposit 50", "withdraw 5 d/Lunch",
+                //@@author naieel04
                 "rate JPY 110", "delete 1", "exit");
         new FinNUS(ui, storage).run();
+        //@@author
         assertEquals(4, storage.saved.size());
+        //@@author naieel04
         LedgerSnapshot last = storage.saved.getLast();
+        //@@author
         assertEquals(Money.of("50"), last.toTransactionList().getBalance());
+        //@@author naieel04
         assertEquals(new BigDecimal("110"), last.rates().get("JPY"));
         assertEquals(1, last.transactions().size());
     }
@@ -45,6 +181,7 @@ class FinNUSTest {
         ScriptedUi ui = new ScriptedUi("help", "recent", "balance", "rate", "unknown", "withdraw 0", "exit");
         new FinNUS(ui, storage).run();
         assertEquals(0, storage.attempts);
+        //@@author
     }
 
     //@@author nkyjStar
@@ -118,15 +255,22 @@ class FinNUSTest {
     }
     //@@author
 
+    //@@author naieel04
     @Test
+    //@@author
     public void run_repeatedRate_doesNotWriteAgain() {
+        //@@author naieel04
         RecordingStorage storage = new RecordingStorage();
+        //@@author
         new FinNUS(new ScriptedUi("rate JPY 110", "rate JPY 110", "exit"),
+                //@@author naieel04
                 storage).run();
+        //@@author
         assertEquals(1, storage.attempts);
     }
     //@@author
 
+    //@@author naieel04
     @Test
     public void run_failedSave_retainsStateAndRetriesAfterReadOnlyCommand() {
         RecordingStorage storage = new RecordingStorage();
@@ -134,7 +278,9 @@ class FinNUSTest {
         ScriptedUi ui = new ScriptedUi("deposit 10", "balance", "exit");
         new FinNUS(ui, storage).run();
         assertEquals(2, storage.attempts);
+        //@@author
         assertEquals(Money.of("10"), storage.saved.getFirst().toTransactionList().getBalance());
+        //@@author naieel04
         assertTrue(ui.output().contains("Automatic save failed"));
         assertTrue(ui.output().contains("Your current balance is: $10.00"));
     }
@@ -183,13 +329,16 @@ class FinNUSTest {
     @Test
     public void run_loadedState_isAvailableBeforeCommands() {
         RecordingStorage storage = new RecordingStorage();
+        //@@author
         storage.loaded = new LoadResult(new LedgerSnapshot(Money.of("12.30"), List.of(),
+                //@@author naieel04
                 Map.of("JPY", new BigDecimal("110"))), List.of(), true);
         ScriptedUi ui = new ScriptedUi("balance", "rate", "exit");
         new FinNUS(ui, storage).run();
         assertTrue(ui.output().contains("$12.30"));
         assertTrue(ui.output().contains("1 SGD = 110 JPY"));
         assertEquals(0, storage.attempts);
+        //@@author
     }
     //@@author chancheese
     /** Returns a clock that is always at the start of the given day. */
@@ -244,6 +393,7 @@ class FinNUSTest {
     }
     //@@author
 
+    //@@author naieel04
     /**
      * Records successful snapshots and fails a configurable number of saves without a mocking library.
      */
@@ -266,6 +416,7 @@ class FinNUSTest {
                 throw new IOException("Injected save failure");
             }
             saved.add(snapshot);
+            //@@author
         }
     }
 }
