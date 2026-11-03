@@ -1586,6 +1586,7 @@ Financial charts are implemented. A dedicated cycle-filtered transaction list is
 | US-07 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
 | US-08 | careless user            | edit a deposit's amount, description, date, or saved exchange rate       | a mistyped entry does not distort my balance |
 | US-09 | distracted user          | edit a withdrawal, including its category and saved exchange rate        | my spending records stay accurate          |
+
 <!-- @@author -->
 
 ---
@@ -1691,6 +1692,7 @@ also rounded half-up to the cent when they are recorded.
 ---
 
 <!-- @@author naieel04 -->
+
 ## Glossary
 
 | Term              | Meaning                                                                                       |
@@ -1702,6 +1704,7 @@ also rounded half-up to the cent when they are recorded.
 | Exchange rate     | Foreign-currency units equivalent to one SGD.                                                 |
 | Snapshot          | An immutable value copy of financial state for persistence and change detection.              |
 | Recent-list index | A one-based position counting from the newest transaction.                                    |
+
 <!-- @@author -->
 
 ---
@@ -1750,12 +1753,14 @@ threshold and opening balance; the withdrawal is cancelled, so the balance remai
 <!-- @@author -->
 
 <!-- @@author nkyjStar -->
+
 ### History navigation scenario
 
 | ID    | Preconditions       | Steps / input                                                       | Expected result                                                                                                           |
 |-------|---------------------|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | MT-14 | Sample ledger with two transactions | Enter `history n/1`, `next`, `prev`, `n/2`, `exit`, `stop`, then `exit`. | History shows ranges 1-1, 2-2, 1-1, and 1-2. The first `exit` is rejected in history mode; the second closes FinNUS. |
 | MT-15 | Saved sample ledger; restart FinNUS | Enter `history p/10000000000000000`. | FinNUS reports `History page is out of range.` |
+
 <!-- @@author naieel04 -->
 
 ### Transaction editing scenarios
@@ -1782,6 +1787,7 @@ Use disposable test copies and stop the application before editing fixture files
 <!-- @@author -->
 
 <!-- @@author chancheese -->
+
 | ID    | Setup | Steps | Expected result |
 |-------|-------|-------|-----------------|
 | MT-07 | Sample ledger; add the row `TRANSACTION\|WITHDRAWAL\|abc\|eA==` to `finnus.txt` | Launch, enter `balance`, then `deposit 1`. | A warning names the skipped row, and the balance is SGD 145.50. After `deposit 1`, the damaged file is kept as `finnus.txt.corrupt-*`. |
@@ -1795,6 +1801,7 @@ Boundary cases:
 - `rate JPY 1000000` is accepted; `rate JPY 1000001` is rejected.
 - `recent 0`, `delete 0` and an index past the end are rejected; `recent 99` lists every transaction.
 - `find` alone and `withdraw 4.50` without a description show the expected format.
+
 <!-- @@author -->
 
 ---
@@ -1804,10 +1811,12 @@ Boundary cases:
 <!-- @@author -->
 
 <!-- @@author chancheese -->
+
 These features are not in v2.1.
 
 | Enhancement | User need | Proposed design |
 |-------------|-----------|-----------------|
 | List one cycle's spending | Check every spend since the allowance arrived | A cycle filter on `history`, using the dates from `Allowance`. |
 | Daily budget | Know how much is safe to spend today | `balance` divides the balance by the days left until the next allowance. |
+
 <!-- @@author -->
