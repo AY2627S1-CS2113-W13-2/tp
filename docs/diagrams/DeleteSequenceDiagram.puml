@@ -23,7 +23,7 @@ FinNUS -> Delete: execute(transactions, ui)
 activate Delete
 
 alt index is invalid or out of range
-    Delete --> FinNUS: FinNusException
+    Delete --> FinNUS: throw FinNusException
     FinNUS -> Ui: showError(...)
 else valid recent-list index
     Delete -> Ledger: delete(size - index)
