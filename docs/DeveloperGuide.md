@@ -333,18 +333,26 @@ transactions are stored and where the balance is calculated.
 Given below is what happens when the user enters `withdraw 4.50 d/Lunch`.
 
 1. `FinNUS#run()` reads the line through `Ui` and passes it to `Parser#parse()`.
-2. `Parser#parse()` reads the command word `withdraw` and calls `parseWithdraw("4.50 d/Lunch")`.
+2. `Parser#parse()` reads the command word `withdraw` and calls `parseWithdraw()` with the arguments `4.50 d/Lunch`
+   and today's date.
 3. `splitAmountAndDescription()` splits the arguments into the amount `"4.50"` and the
    description `"Lunch"`. The `d/` prefix only counts when it starts a word, so text such as
    `and/or` inside a description is not mistaken for a prefix. The amount and `d/DESCRIPTION`
    may be given in either order, e.g. `withdraw d/Lunch 4.50`.
 4. `parseAmount()` checks the amount and converts it to a `Money` value. For a withdrawal,
    `parseWithdraw()` also checks that the description is not empty.
-5. The parser returns a new `WithdrawCommand(4.50, "Lunch")`.
-6. `FinNUS` calls `execute()`, which creates a `Transaction` of type `WITHDRAWAL`, adds it to the
-   `TransactionList` and shows a confirmation through `Ui`.
+5. The parser returns a new `WithdrawCommand` with the amount, the description, no category name and today's date.
+6. `FinNUS` calls `execute()`, which creates a `Transaction` of type `WITHDRAWAL`. If the withdrawal crosses a
+   [spending alert](#spending-alerts) threshold, the user must confirm it first; a cancelled withdrawal is not added.
+   Otherwise, the `Transaction` is added to the `TransactionList` and a confirmation is shown through `Ui`.
 
-A deposit follows the same steps, except that the description is optional.
+A deposit follows the same steps, except that the description is optional and no spending alert is checked.
+
+<!-- @@author lololol8484 -->
+Before extracting optional fields, `Parser` validates every supplied prefix value. A prefix followed by another
+recognised prefix is rejected as a missing value, regardless of the order in which the fields were entered. This
+prevents extraction of one field from hiding a malformed neighbouring field.
+<!-- @@author nabijonzzz -->
 
 #### Validation rules
 
@@ -410,7 +418,10 @@ collects and confirms this value once, before normal commands become available.
    percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
    configure either setting later with `alert`.
 
-See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
+The sequence diagram below shows this interaction flow.
+
+![Sequence diagram of first-run setup](images/SetupSequenceDiagram.png)
+
 The diagram summarises the prompts; the persistence callback between balance confirmation and optional questions
 is omitted. After optional setup completes, FinNUS saves any additional changes.
 
@@ -1028,24 +1039,25 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
 
 1. `Parser#parseWithdraw()` calls `extractCategory()`, which removes `t/FOOD` from the arguments and checks that
    `FOOD` has a valid format (one word of letters, digits and `-`, at most 20 characters).
-2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns
-   `WithdrawCommand(4.50, "Lunch", "FOOD")`.
+2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns a `WithdrawCommand` with
+   the category name `FOOD`.
 3. `WithdrawCommand#execute()` calls `CategoryList#resolve("FOOD")`, which returns `Food`. If the category did not
    exist, `resolve()` would throw a `FinNusException` listing the valid categories.
-4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
-   `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
+4. A `Transaction` with category `Food` is created and, after any spending alert confirmation, added to the
+   `TransactionList` and shown as `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
 
 The sequence diagram in [How a dated withdrawal is processed](#how-a-dated-withdrawal-is-processed) shows these
 steps for a withdrawal that also has a date.
 
-`c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
-the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
+`c/` (currency), `t/` and `on/` (date) are all one-word values that can appear anywhere in the command. To avoid
+several copies of the same logic, they are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
 given twice or has no value.
 
 #### Saving categories
 
 Custom categories are saved as `CATEGORY|NAME` records. The category of a transaction is saved as one extra, last
-field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food`.
+field of its `TRANSACTION` record before the date (empty for a deposit), e.g.
+`TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20`.
 
 * Rows saved before categories existed have no category field. Their withdrawals are loaded under `Others`, so old
   save files keep working.
@@ -1100,8 +1112,8 @@ the basis for features that look at spending over a period, such as a budget cyc
    `Transaction`.
 
 The sequence diagram below shows the whole flow for `withdraw 4.50 d/Lunch t/food on/2026-10-20`, including how
-the category from [Categorising spending](#categorising-spending) is resolved. Logging, output and amount
-validation are left out.
+the category from [Categorising spending](#categorising-spending) is resolved. Logging, output, amount validation and
+the [spending alert](#spending-alerts) check before `add()` are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
 
@@ -1446,23 +1458,6 @@ summarised; allowance handling is omitted. [PlantUML source](diagrams/ChartSeque
   chart syntax and out-of-range flow pages log at `WARNING`. Logs omit amounts and category names.
 
 <!-- @@author -->
-<!-- @@author naieel04 -->
-### Additional feature template
-
-Duplicate this subsection for any other feature that warrants a detailed explanation.
-
-**Feature and status:** [Insert feature name and implemented or proposed status here]
-
-**Commands and classes:** [Insert commands and responsible classes here]
-
-**Mechanism and walkthrough:** [Insert algorithm, state changes, and concrete example here]
-
-[Insert UML diagram of this feature here]
-
-**Design considerations:** [Insert chosen approach, alternatives, rationale, and tradeoffs here]
-
-**Validation and limitations:** [Insert failure cases, constraints, and known limitations here]
-<!-- @@author -->
 
 ---
 
@@ -1712,12 +1707,12 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 
 | ID    | Preconditions                                           | Steps / input                                                                          | Expected result                                                                                             |
 |-------|---------------------------------------------------------|----------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the balance threshold and allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits. [Insert exact output here]                              |
-| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50. [Insert exact output here]                              |
-| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00. [Insert exact output here]                         |
-| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. [Insert exact output here] |
-| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry. [Insert exact output here]                                    |
-| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored. [Insert exact output here]                            |
+| MT-01 | Fresh folder                                            | Launch, enter opening balance `100`, confirm with `yes`, press Enter to skip the balance threshold and allowance, then enter `help` and `exit`. | Setup, welcome, and help appear; the process exits.                              |
+| MT-02 | First-run setup completed with opening balance SGD 100  | Enter sample commands, then `balance`.                                                 | Two transactions, JPY rate 110, balance SGD 145.50.                              |
+| MT-03 | Sample ledger                                           | Enter `recent 2`, `delete 1`, then `balance`.                                          | Lunch is deleted, Allowance remains, balance SGD 150.00.                         |
+| MT-04 | Fresh folder; complete setup with opening balance SGD 0 | Enter `withdraw 4.50`, `deposit 0`, `delete 1`, then `balance`.                        | Each invalid operation reports an error; ledger remains empty with balance zero. |
+| MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry.                                    |
+| MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored.                            |
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
 | MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
 | MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |

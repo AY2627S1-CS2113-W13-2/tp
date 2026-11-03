@@ -293,6 +293,12 @@ public class Parser {
             return AllowanceCommand.stop(today);
         }
         String format = "\nFormat: " + CommandWord.ALLOWANCE.getUsage();
+        //@@author lololol8484
+        validatePrefixedValue(arguments, CURRENCY_PATTERN,
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        validatePrefixedValue(arguments, AMOUNT_PATTERN,
+                "Missing amount after " + AMOUNT_PREFIX + ", e.g. " + AllowanceCommand.EXAMPLE + "." + format);
+        //@@author
         String[] currencyAndRest = extractCurrency(arguments);
         String currencyCode = currencyAndRest[0];
         String[] amountAndRest = extractPrefixedValue(currencyAndRest[1], AMOUNT_PATTERN,
@@ -696,6 +702,12 @@ public class Parser {
      * Parses a positive deposit amount and its optional description.
      */
     private static Command parseDeposit(String arguments, LocalDate today) throws FinNusException {
+        //@@author lololol8484
+        validatePrefixedValue(arguments, CURRENCY_PATTERN,
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        validatePrefixedValue(arguments, DATE_PATTERN,
+                "Missing date after " + DATE_PREFIX + ", e.g. " + DATE_EXAMPLE + ".");
+        //@@author
         //@@author nabijonzzz
         if (CATEGORY_PATTERN.matcher(arguments).find()) {
             throw new FinNusException("Categories are only for spending, so " + CATEGORY_PREFIX
@@ -722,6 +734,14 @@ public class Parser {
      * Parses a positive withdrawal amount and requires a non-empty description.
      */
     private static Command parseWithdraw(String arguments, LocalDate today) throws FinNusException {
+        //@@author lololol8484
+        validatePrefixedValue(arguments, CATEGORY_PATTERN,
+                "Missing category after " + CATEGORY_PREFIX + ", e.g. " + CATEGORY_PREFIX + "food.");
+        validatePrefixedValue(arguments, DATE_PATTERN,
+                "Missing date after " + DATE_PREFIX + ", e.g. " + DATE_EXAMPLE + ".");
+        validatePrefixedValue(arguments, CURRENCY_PATTERN,
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        //@@author
         //@@author nabijonzzz
         String[] categoryAndRest = extractCategory(arguments);
         String categoryName = categoryAndRest[0];
@@ -803,11 +823,48 @@ public class Parser {
         if (pattern.matcher(rest).find()) {
             throw new FinNusException(duplicateMessage);
         }
-        if (value.isEmpty()) {
+        //@@author lololol8484
+        if (value.isEmpty() || startsWithRecognisedPrefix(value)) {
             throw new FinNusException(missingMessage);
         }
+        //@@author
         return new String[]{value, rest};
     }
+
+    //@@author lololol8484
+    /**
+     * Checks a prefixed field before any other field is removed from the arguments.
+     * This keeps a later prefix from being mistaken for the value of an earlier one.
+     *
+     * @param arguments The complete argument string before extraction.
+     * @param pattern The pattern for the prefix being validated.
+     * @param missingMessage The message to show when its value is missing.
+     * @throws FinNusException If a prefix is followed by another recognised prefix or no value.
+     */
+    private static void validatePrefixedValue(String arguments, Pattern pattern, String missingMessage)
+            throws FinNusException {
+        Matcher matcher = pattern.matcher(arguments);
+        while (matcher.find()) {
+            String value = matcher.group(1);
+            if (value.isEmpty() || startsWithRecognisedPrefix(value)) {
+                throw new FinNusException(missingMessage);
+            }
+        }
+    }
+    //@@author
+
+    //@@author lololol8484
+    /**
+     * Recognises a prefix that was supplied where the current prefix's value should be.
+     * This prevents input such as {@code t/ d/Lunch} from reporting {@code d/Lunch} as an
+     * invalid category instead of reporting the missing category value.
+     */
+    private static boolean startsWithRecognisedPrefix(String value) {
+        return value.startsWith(DESCRIPTION_PREFIX) || value.startsWith(CURRENCY_PREFIX)
+                || value.startsWith(AMOUNT_PREFIX) || value.startsWith(CATEGORY_PREFIX)
+                || value.startsWith(DATE_PREFIX);
+    }
+    //@@author
 
     /**
      * Removes an optional {@code t/CATEGORY} part from withdraw arguments,
@@ -948,15 +1005,28 @@ public class Parser {
         }
         // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
         // description.
-        int lastSpace = afterPrefix.length() - 1;
-        while (lastSpace >= 0 && !Character.isWhitespace(afterPrefix.charAt(lastSpace))) {
-            lastSpace--;
-        }
-        if (lastSpace == -1) {
+        //@@author lololol8484
+        int separator = findLastWhitespace(afterPrefix);
+        if (separator == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
-        return new String[]{afterPrefix.substring(lastSpace + 1), afterPrefix.substring(0, lastSpace).trim()};
+        String amount = afterPrefix.substring(separator + 1);
+        String description = afterPrefix.substring(0, separator).trim();
+        //@@author
+        return new String[]{amount, description};
     }
+
+    //@@author lololol8484
+    /** Returns the final whitespace position, including tabs and other Java whitespace. */
+    private static int findLastWhitespace(String text) {
+        for (int index = text.length() - 1; index >= 0; index--) {
+            if (Character.isWhitespace(text.charAt(index))) {
+                return index;
+            }
+        }
+        return -1;
+    }
+    //@@author
 
     /**
      * Returns the index of the first {@code d/} that starts a word, or -1 if
