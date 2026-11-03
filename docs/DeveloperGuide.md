@@ -412,7 +412,10 @@ collects and confirms this value once, before normal commands become available.
    percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
    configure either setting later with `alert`.
 
-See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
+The sequence diagram below shows this interaction flow.
+
+![Sequence diagram of first-run setup](images/SetupSequenceDiagram.png)
+
 The diagram summarises the prompts; the persistence callback between balance confirmation and optional questions
 is omitted. After optional setup completes, FinNUS saves any additional changes.
 
