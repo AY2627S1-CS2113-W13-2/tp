@@ -2,7 +2,7 @@
 
 ## Introduction
 
-FinNUS is a desktop finance tracker designed for tech-savvy university students managing a tight monthly budget. Whether you are an international student juggling foreign currency allowances or a local student managing daily campus expenses, FinNUS provides a streamlined Command Line Interface (CLI) to help you determine exactly how much is safe to spend each day.
+FinNUS is a desktop finance tracker designed for tech-savvy university students managing a tight monthly budget. Whether you are an international student juggling foreign currency allowances or a local student managing daily campus expenses, FinNUS provides a streamlined Command Line Interface (CLI) to help you track your spedning, review balance, and manage your monthly allowance.
 
 ## Quick Start
 
@@ -867,7 +867,6 @@ using an absolute path. Saved financial data remains beside the packaged JAR.
 
 <!-- @@author -->
 
-* View or change spending alerts: `alert`, `alert balance AMOUNT`, `alert balance off`, `alert allowance PERCENT`, `alert allowance off`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`
