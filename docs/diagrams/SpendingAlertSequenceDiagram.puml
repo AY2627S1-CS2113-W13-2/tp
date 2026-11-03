@@ -1,0 +1,51 @@
+@startuml SpendingAlertSequenceDiagram
+' @@author lololol8484
+' A proposed withdrawal is confirmed only when it crosses a new threshold.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+actor User
+participant ":FinNUS" as FinNUS
+participant "command:WithdrawCommand" as Withdraw
+participant "alerts:SpendingAlert" as Alerts
+participant "confirmation:Confirmation" as Confirmation
+participant "transactions:TransactionList" as Ledger
+participant ":Ui" as Ui
+
+User -> FinNUS: withdraw 20 d/Lunch
+FinNUS -> Withdraw: execute(transactions, ui)
+Withdraw -> Alerts: confirmWithdrawal(...)
+Alerts -> Ledger: inspect current balance and cycle spending
+Ledger --> Alerts: current state
+Alerts -> Alerts: crossedBy(withdrawal)
+
+alt new threshold crossed
+    Alerts -> Ui: show crossed thresholds
+    Alerts -> Confirmation: ask("Proceed ...?")
+    Confirmation -> Ui: read answer
+    User -> Ui: yes / no
+    Ui --> Confirmation: answer
+    Confirmation --> Alerts: YES / NO / INPUT_ENDED
+    alt YES
+        Alerts --> Withdraw: approved
+    else NO or INPUT_ENDED
+        Alerts -> Ui: show cancellation
+        Alerts --> Withdraw: rejected
+    end
+else no new threshold crossed
+    Alerts --> Withdraw: approved
+end
+
+opt approved
+    Withdraw -> Ledger: add(withdrawal)
+    Withdraw -> Ui: show withdrawal confirmation
+end
+FinNUS -> FinNUS: save changed snapshot
+
+note over Alerts
+    Checks optional thresholds, allowance limits,
+    opening balance and zero. Existing crossings
+    do not trigger another prompt until recovery.
+end note
+@enduml
