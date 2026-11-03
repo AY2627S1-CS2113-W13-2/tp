@@ -16,7 +16,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
    java -jar finnus.jar
    ```
 
-5. The first time you run FinNUS, it asks for your opening balance, and optionally your monthly allowance. See [First-run setup](#first-run-setup-opening-balance).
+5. The first time you run FinNUS, it asks for your opening balance, then offers optional balance-alert and monthly-allowance settings. See [First-run setup](#first-run-setup-opening-balance).
 6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
 7. Refer to the Features section below for details of each command.
 
@@ -26,8 +26,9 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 <!-- @@author -->
 
-FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
-file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
+FinNUS automatically saves transactions, the opening balance, exchange rates, custom categories, allowance settings,
+and spending-alert settings whenever they change. The main save file is `finnus.txt`, with the previous saved state kept
+in `finnus.txt.bak`.
 Successful transaction edits are saved automatically too; an unchanged edit does not create a new save by itself.
 
 <!-- @@author lololol8484 -->
@@ -147,7 +148,19 @@ Confirm opening balance $1200.50 SGD? [yes/no]: yes
 ```
 
 <!-- @@author chancheese -->
-Next, FinNUS asks when your monthly allowance arrives and how much it is. Both are optional:
+Next, FinNUS offers an optional balance-alert threshold before asking when your monthly allowance arrives and how much it
+is. The threshold is the balance below which FinNUS warns you before a withdrawal. All of these settings are optional:
+
+```
+____________________________________________________________
+Optional: set a balance threshold for spending alerts.
+FinNUS will ask before a withdrawal takes your balance below it.
+Press Enter to skip.
+____________________________________________________________
+Balance alert threshold in SGD: 100
+```
+
+Then, FinNUS asks about your monthly allowance:
 
 * Enter the day of the month it arrives (1 to 31), then its amount in SGD.
 * Press Enter at the day to skip the allowance, or at the amount to only count the days until it arrives.
@@ -867,7 +880,6 @@ using an absolute path. Saved financial data remains beside the packaged JAR.
 
 <!-- @@author -->
 
-* View or change spending alerts: `alert`, `alert balance AMOUNT`, `alert balance off`, `alert allowance PERCENT`, `alert allowance off`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`

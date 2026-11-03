@@ -58,4 +58,13 @@ destroy Recent
 FinNUS --> FinNUS : false
 deactivate FinNUS
 deactivate FinNUS
+
+' @@author lololol8484
+note over Ledger
+    TransactionList#add() inserts each new entry by date,
+    preserving entry order for equal dates. Therefore a
+    backdated entry is already in the correct position before
+    getRecentTransactions() selects and reverses the newest entries.
+end note
+' @@author
 @enduml

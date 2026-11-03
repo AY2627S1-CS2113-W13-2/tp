@@ -6,7 +6,7 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 
 **Release:** [Release Page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases)
 
-> Draft status: Some sections still contain prompts for team decisions or release-specific details.
+> Status: This guide documents the current implementation and testable behaviour.
 
 ---
 
@@ -113,7 +113,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 15's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 18's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -254,6 +254,9 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 - Saving uses temporary files and atomic replacement; loading can recover valid rows or a clean backup.
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
+
+The storage diagram is intentionally a high-level view of the persistence components. `LedgerSnapshot` also carries
+allowance settings and spending-alert settings, which are omitted from this simplified class diagram.
 
 <!-- @@author -->
 
@@ -425,6 +428,11 @@ The sequence diagram below shows this interaction flow.
 The diagram summarises the prompts; the persistence callback between balance confirmation and optional questions
 is omitted. After optional setup completes, FinNUS saves any additional changes.
 
+<!-- @@author lololol8484 -->
+*Figure 7. First-run setup, including opening-balance confirmation and optional alert and allowance settings.
+[PlantUML source](diagrams/SetupSequenceDiagram.puml).*
+<!-- @@author -->
+
 <!-- @@author chancheese -->
 <!-- @@author lololol8484 -->
 `Setup` asks for the optional balance threshold before the allowance prompts. The optional percentage prompt only
@@ -469,6 +477,16 @@ withdrawal. Comparisons report a threshold only when the value moves from its sa
 later recovers and crosses again, a new alert is shown. A single withdrawal can cross several thresholds and produces
 one confirmation listing them all. When the opening balance is zero, the opening-balance and zero conditions coincide
 and both descriptions are included.
+
+<!-- @@author lololol8484 -->
+The following sequence focuses on the confirmation boundary: a withdrawal is added only after the user approves any
+newly crossed thresholds.
+
+![Sequence diagram of spending-alert confirmation](images/SpendingAlertSequenceDiagram.png)
+
+*Figure 8. Checking spending thresholds and confirming a proposed withdrawal.
+[PlantUML source](diagrams/SpendingAlertSequenceDiagram.puml).*
+<!-- @@author -->
 
 `Confirmation#ask()` handles yes/no parsing and invalid-answer retries. It returns `YES`, `NO`, or `INPUT_ENDED`, leaving
 each caller to decide what those results mean. Setup uses it for opening-balance confirmation; spending alerts use it
@@ -539,6 +557,13 @@ An invalid or out-of-range index raises `FinNusException`; the main loop display
 continues without changing the ledger. `DeleteCommandTest` and `ParserTest` cover command
 validation and deletion behavior.
 
+<!-- @@author lololol8484 -->
+![Sequence diagram of deleting a transaction](images/DeleteSequenceDiagram.png)
+
+*Figure 9. Converting a newest-first display index before deleting a transaction.
+[PlantUML source](diagrams/DeleteSequenceDiagram.puml).*
+<!-- @@author -->
+
 #### Design considerations
 
 <!-- @@author lololol8484 -->
@@ -573,7 +598,7 @@ This sequence shows a successful `edit 1 a/6.50` on an SGD withdrawal:
 
 ![Sequence diagram of editing a withdrawal amount](images/EditSequenceDiagram.png)
 
-*Figure 7. A successful SGD edit that crosses no new alert threshold. Validation details, spending-alert confirmation,
+*Figure 10. A successful SGD edit that crosses no new alert threshold. Validation details, spending-alert confirmation,
 UI output, allowance handling and saving are omitted.
 [PlantUML source](diagrams/EditSequenceDiagram.puml).*
 
@@ -659,7 +684,7 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-*Figure 8. Retrieving and displaying up to two recent transactions.
+*Figure 11. Retrieving and displaying up to two recent transactions.
 [PlantUML source](diagrams/RecentSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -708,7 +733,7 @@ The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` 
 
 ![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
 
-*Figure 9. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
+*Figure 12. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
 allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
 
 The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
@@ -725,7 +750,7 @@ The class diagram shows the session reference and how history reads `Transaction
 
 ![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
 
-*Figure 10. History command state and its application, parser, transaction list, and UI
+*Figure 13. History command state and its application, parser, transaction list, and UI
 relationships.
 [PlantUML source](diagrams/HistoryClassDiagram.puml).*
 
@@ -911,7 +936,7 @@ The sequence below follows the calculation and display of one `balance` request:
 
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-*Figure 11. Calculating and displaying the current balance.
+*Figure 14. Calculating and displaying the current balance.
 [PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -939,11 +964,11 @@ original amount is kept so it can be shown later, e.g. `[30 Oct 2026] [Withdrawa
 #### How it works
 
 The sequence diagram below shows what happens when the user enters `withdraw 1100 d/Ramen c/JPY`.
-Logging, console output, input validation and saving the ledger afterwards are left out.
+Logging, console output, input validation, spending-alert confirmation and saving the ledger afterwards are left out.
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
-*Figure 12. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+*Figure 15. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
 [PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
@@ -1027,7 +1052,7 @@ The class diagram below shows how these classes are related. Only the members re
 
 ![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
 
-*Figure 13. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
+*Figure 16. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
 
 `TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
 it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
@@ -1117,7 +1142,7 @@ the [spending alert](#spending-alerts) check before `add()` are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
 
-*Figure 14. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
+*Figure 17. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
 
 The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
 description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
@@ -1266,7 +1291,8 @@ without the record load with no allowance. A record with an invalid day, amount,
 
 `FinNUS#executeCommand()` captures a `LedgerSnapshot` before a command runs and compares it with a snapshot captured
 after the command returns. A difference marks the session as having pending changes. Snapshots include the opening
-balance, transactions, exchange rates, and custom categories, so changes to any of these can trigger a save.
+balance, transactions, exchange rates, custom categories, allowance settings, and spending-alert settings, so changes
+to any of these can trigger a save.
 
 After a successful non-exit command, `savePendingChanges()` attempts to save the current snapshot if changes are pending
 and saving is allowed. A successful save clears the pending flag. An `IOException` leaves the flag set and displays an
@@ -1275,7 +1301,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 15. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 18. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -1298,7 +1324,7 @@ order. Simply starting the program and running read-only commands does not rewri
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 16. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 19. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
@@ -1371,13 +1397,13 @@ changing it.
 
 ![Class diagram for both chart commands and their shared period](images/ChartClassDiagram.png)
 
-*Figure 16. A flow command has one `ChartPeriod`; a spending command has zero or one. Both read a
+*Figure 20. A flow command has one `ChartPeriod`; a spending command has zero or one. Both read a
 `TransactionList`, which has one category list and zero or more transactions. Dashed dependencies
 have no multiplicity. [PlantUML source](diagrams/ChartClassDiagram.puml).*
 
 ![Sequence diagram for chart parsing, aggregation, and display](images/ChartSequenceDiagram.png)
 
-*Figure 17. Parsing and displaying either chart form. The enum lifeline receives static `parse()`;
+*Figure 21. Parsing and displaying either chart form. The enum lifeline receives static `parse()`;
 `period:ChartPeriod` receives calls on the returned constant. The chart command's lifeline ends when
 its local reference leaves scope, without implying immediate garbage collection. Activation bars
 show execution; dashed arrows show returns. Snapshot comparison and pending-save retry are
