@@ -8,7 +8,7 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 
 1. Ensure that JDK 25 is installed on your computer.
    - On macOS with SDKMAN, select the project version with `sdk use java 25.0.3.fx-zulu`.
-2. Download the latest `finnus.jar` file from here.
+2. Download the latest `finnus.jar` from the [release page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases).
 3. Copy the file to the folder you want to use as the home folder for your FinNUS.
 4. Open a terminal, `cd` to the folder containing the JAR file, and run the application using the following command:
 
@@ -20,10 +20,15 @@ FinNUS is a desktop finance tracker designed for tech-savvy university students 
 6. Type a command in the CLI and press Enter to execute it. For example, type `help` and press Enter to display a table of command names, descriptions and syntax so you can look up how to use them.
 7. Refer to the Features section below for details of each command.
 
+<!-- @@author naieel04 -->
+
 ## Saving and recovering your data
+
+<!-- @@author -->
 
 FinNUS automatically saves transactions, the opening balance, and exchange rates whenever they change. The main save
 file is `finnus.txt`, with the previous saved state kept in `finnus.txt.bak`.
+Successful transaction edits are saved automatically too; an unchanged edit does not create a new save by itself.
 
 <!-- @@author lololol8484 -->
 On a first run with no existing ledger or backup, FinNUS creates a pending setup file and asks for an opening balance.
@@ -107,8 +112,18 @@ The first time you run FinNUS, it asks how much money you currently have, so you
 
 * Enter the amount in SGD. It follows the same rules as for `deposit`, except that `0` is also allowed.
 * Answer `yes` (or `y`) to confirm, or `no` (or `n`) to enter a different amount.
-* The opening balance is not a transaction, so it does not show up in `recent` and cannot be removed with `delete`.
+
+<!-- @@author naieel04 -->
+
+* The opening balance is not a transaction, so it does not show up in `recent` and cannot be changed with `edit`
+  or removed with `delete`.
+
+<!-- @@author -->
+
 * The ledger is not changed until you confirm. An invalid confirmation answer repeats the confirmation prompt.
+* The confirmed balance is saved before optional questions begin. If you close the application during those
+  questions after a successful save, the next run uses that balance. You can configure optional settings later
+  with `allowance` and `alert`. If saving fails, FinNUS warns you and keeps the changes in memory for retry.
 <!-- @@author lololol8484 -->
 * If you close the application or input ends before confirmation, setup is incomplete and will resume the next time you
   run FinNUS.
@@ -211,6 +226,7 @@ Format: `deposit AMOUNT [d/DESCRIPTION] c/CURRENCY` or `withdraw AMOUNT d/DESCRI
 * `AMOUNT` is in `CURRENCY` and must be a positive number with at most 2 decimal places. After converting, it is rounded to the nearest cent, and must be at least `$0.01` and at most `$1000000`.
 * `c/CURRENCY` can be given anywhere after the command word, but only once. `c/SGD` is the same as leaving it out.
 * The rate is saved with the transaction, so changing a rate later does not change transactions you have already recorded.
+  To correct a recorded transaction's rate, use [`edit INDEX r/RATE`](#editing-a-transaction-edit).
 * Because `c/` marks the currency, a word starting with `c/` cannot be used inside a description.
 
 Examples:
@@ -320,7 +336,7 @@ Format: `deposit AMOUNT [d/DESCRIPTION] on/DATE` or `withdraw AMOUNT d/DESCRIPTI
   transactions from older save files appear after dated transactions, with the most recently entered undated
   transaction first.
 * Adding a backdated transaction can change the numbers shown by `recent` and `find`, so check the current list before
-  using an index with `delete`.
+  using an index with `edit` or `delete`.
 * If transaction rows in `finnus.txt` are out of date order, FinNUS sorts them in memory when it starts. The file is
   rewritten in that order the next time FinNUS saves a change; a read-only run leaves the file as it was.
 <!-- @@author nabijonzzz -->
@@ -376,6 +392,8 @@ How the allowance is added:
 * An amount in another currency is converted at the exchange rate set at the time it is added. If no rate is set,
   FinNUS waits and adds it once you set one with `rate`.
 * If you delete an allowance deposit, it is not added again. Changing the amount only affects later deposits.
+* Editing an allowance deposit changes only that recorded entry. It does not change the allowance setting or cause
+  the deposit to be added again. Use `allowance DAY a/AMOUNT` to change future allowances.
 
 The summary counts deposits and withdrawals dated in the current cycle, in SGD. Transactions saved by older versions of
 FinNUS have no date, so they are not counted.
@@ -522,6 +540,8 @@ Format: `recent [NUMBER]`
 * `[NUMBER]` is optional. It is set to 5 by default.
 * If `[NUMBER]` is more than the total number of transactions, the program outputs the entire list of transactions.
 * `[NUMBER]` must be positive 
+* "Recent" uses transaction dates, not the order of commands. On the same date, the most recently entered entry
+  appears first. Undated legacy entries follow all dated entries.
 
 Examples:
 
@@ -558,7 +578,7 @@ Format: `history [n/NUMBER] [p/PAGE]`
     * `p/PAGE` jumps to a page. Page 1 begins with the newest transaction.
     * `n/NUMBER` changes the page size and keeps the current page's first transaction at the top. A later `p/PAGE`
       jump uses page boundaries counted from transaction 1 at the new page size.
-    * `stop` leaves history mode. Use it before other commands, including `exit`.
+    * `stop` leaves history mode. Use it before other commands, including `edit`, `delete`, and `exit`.
 * At either end of the history, `next` or `prev` reports that there is no further page and keeps the current page.
   An empty history shows an empty-list message; `stop` remains available.
 
@@ -625,8 +645,8 @@ Format: `find [KEYWORD] [t/CATEGORY]`
 * The search is not case-sensitive, and matches part of a word, e.g. `lun` matches `Lunch`.
 * `KEYWORD` can be more than one word. The whole phrase is searched, e.g. `find chicken rice`.
 * Only descriptions are searched, not amounts.
-* Results are shown from the most recent. Each one has the same number as in `recent`, so you can remove it straight
-  away with `delete`.
+* Results are shown from the most recent. Each one has the same number as in `recent`, so you can use it directly
+  with `edit` or `delete`. These are global transaction numbers, not positions within the filtered results.
 
 Examples:
 
@@ -694,6 +714,45 @@ Transaction deleted: [27 Oct 2026] [Withdrawal] -$30.00 (BBQ) #Food
 
 ```
 
+<!-- @@author naieel04 -->
+
+### Editing a transaction: `edit`
+Corrects the amount, description, category, date or saved exchange rate of a deposit or withdrawal. Give at least one field, in any order, without duplicates. Omitted fields keep their values;
+type and currency cannot change.
+
+Format: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
+
+* `INDEX` must be a valid positive whole number from `recent`, `history` or `find`.
+* `AMOUNT` is in the existing currency: positive, with at most 2 decimal places.
+* `DESCRIPTION` can contain spaces. Empty `d/` clears a deposit's description but withdrawals require a nonblank description.
+* `CATEGORY` must already exist and applies only to withdrawals. Use `t/Others` to reset it; names ignore case.
+* `DATE` follows the [date rules](#recording-the-date-of-a-transaction-on). Changing it may change transaction numbers and require
+  checking `recent` again before another edit or deletion.
+* `RATE` applies only to foreign transactions and follows the [rate rules](#setting-an-exchange-rate-rate).
+  Amount-only edits keep the saved rate; `r/` changes it without needing or changing a global rate.
+* Prefixes `a/`, `d/`, `t/`, `on/`, `r/` and `c/` cannot start words inside a description; `c/` is not accepted by `edit`.
+* Successful changes are saved automatically. Invalid edits leave the selected entry unchanged;
+  identical values print `No changes made.`
+* A withdrawal edit that crosses a spending-alert threshold asks for confirmation before saving. This includes
+  changes to the amount, saved exchange rate, or date. Answering `no` or ending input leaves the entry unchanged.
+
+
+Examples:
+
+* `edit 1 a/6.50`
+* `edit 2 d/Scholarship allowance`
+* `edit 1 t/food on/2026-10-25`
+* `edit 3 a/55000 r/100`
+
+Expected output for `edit 1 a/6.50` when transaction 1 is a withdrawal of $4.50 for Lunch:
+```text
+____________________________________________________________
+Transaction updated:
+  Before: [30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Others
+  After:  [30 Oct 2026] [Withdrawal] -$6.50 (Lunch) #Others
+____________________________________________________________
+```
+
 ### Viewing command usage: `help`
 Displays a table of command names, descriptions and syntax so you can look up how to use them.
 
@@ -706,6 +765,9 @@ Format: `help`
 Example: `help` or `help 123`
 
 Expected output:
+
+<!-- @@author -->
+
 ```text
 ____________________________________________________________
 Available commands:
@@ -723,6 +785,9 @@ Available commands:
 | chart spending | Spending by category | chart spending [int/PERIOD on/DATE]  |
 | find           | Search transactions  | find [KEYWORD] [t/CATEGORY]          |
 | delete         | Delete a record      | delete INDEX                         |
+| edit           | Edit a record        | edit INDEX [a/AMOUNT]                |
+|                |                      | [d/DESCRIPTION] [t/CATEGORY]         |
+|                |                      | [on/DATE] [r/RATE]                   |
 | balance        | Current balance      | balance                              |
 | allowance      | Monthly allowance    | allowance [DAY [a/AMOUNT]            |
 |                |                      | [c/CURRENCY]] or off                 |
@@ -745,10 +810,12 @@ ____________________________________________________________
 **A**: Copy `finnus.txt` (and `finnus.txt.bak`, if it exists) from the folder containing `finnus.jar` into the folder
 where you put `finnus.jar` on the other computer. FinNUS loads it automatically the next time it starts.
 
-**Q**: What is the `finnus.log` file that appears next to `finnus.jar`?
+**Q**: What is the `finnus.log` file?
 
 **A**: It is a log file that records what FinNUS did, to help developers investigate problems. It is not needed to use
 FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`, not in the log.
+The log is created in the terminal's working directory, which can differ from the JAR's folder if you launch it
+using an absolute path. Saved financial data remains beside the packaged JAR.
 
 **Q**: Why does `opening` say it is not a command?
 
@@ -769,16 +836,39 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 * View balance: `balance`
 * Set your monthly allowance: `allowance DAY [a/AMOUNT] [c/CURRENCY]`
 * View or stop your allowance: `allowance` or `allowance off`
+
+<!-- @@author naieel04 -->
+
+* Manage spending alerts: `alert`, `alert balance AMOUNT`, `alert allowance PERCENT`,
+  `alert balance off`, or `alert allowance off`
+
+<!-- @@author naieel04 -->
+
 * View recent transactions: `recent [NUMBER]`
+
+<!-- @@author -->
+
 * View transaction history: `history [n/NUMBER] [p/PAGE]`, then `next`, `prev`, `p/PAGE`, `n/NUMBER`, or `stop`
 <!-- @@author nkyjStar -->
 * Summarise cash flow: `chart flow from/START to/END int/PERIOD [p/PAGE]`
 * View spending by category: `chart spending [int/PERIOD on/DATE]`
 <!-- @@author -->
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
+
+<!-- @@author naieel04 -->
+
 * Delete a transaction: `delete INDEX`
+* Edit a transaction: `edit INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]`
+
+<!-- @@author -->
+
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`
+
+<!-- @@author naieel04 -->
+
 * View command usage: `help`
 * Exit the application: `exit`
+
+<!-- @@author -->

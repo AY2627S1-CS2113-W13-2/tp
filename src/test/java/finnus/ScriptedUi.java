@@ -7,20 +7,23 @@ import java.util.Queue;
 
 import finnus.ui.Ui;
 
+//@@author naieel04
 /**
  * Supplies deterministic input and captures messages without changing global console streams.
  */
-class ScriptedUi extends Ui {
+public class ScriptedUi extends Ui {
     private final Queue<String> commands;
     private final List<String> messages = new ArrayList<>();
 
-    ScriptedUi(String... commands) {
+    /** Creates a console stub that returns the supplied commands in order. */
+    public ScriptedUi(String... commands) {
         this.commands = new ArrayDeque<>(List.of(commands));
     }
 
     @Override
     public String readCommand() {
         return commands.poll();
+        //@@author
     }
 
     //@@author lololol8484
@@ -30,6 +33,7 @@ class ScriptedUi extends Ui {
     }
     //@@author
 
+    //@@author naieel04
     @Override
     public void showMessage(String... lines) {
         messages.addAll(List.of(lines));
@@ -40,7 +44,9 @@ class ScriptedUi extends Ui {
         messages.addAll(lines);
     }
 
-    String output() {
+    /** Returns all captured messages in display order. */
+    public String output() {
         return String.join("\n", messages);
+        //@@author
     }
 }

@@ -53,6 +53,9 @@ class HelpCommandTest {
                 "| find           | Search transactions  | find [KEYWORD] [t/CATEGORY]          |",
                 //@@author nabijonzzz
                 "| delete         | Delete a record      | delete INDEX                         |",
+                "| edit           | Edit a record        | edit INDEX [a/AMOUNT]                |",
+                "|                |                      | [d/DESCRIPTION] [t/CATEGORY]         |",
+                "|                |                      | [on/DATE] [r/RATE]                   |",
                 "| balance        | Current balance      | balance                              |",
                 //@@author chancheese
                 "| allowance      | Monthly allowance    | allowance [DAY [a/AMOUNT]            |",

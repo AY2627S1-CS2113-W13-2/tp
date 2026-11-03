@@ -1,0 +1,52 @@
+@startuml EditSequenceDiagram
+' @@author naieel04
+' Successful edit of an SGD withdrawal from $4.50 to $6.50.
+' Assumes a valid, changed entry. Validation details, UI output, allowance handling and saving are omitted.
+hide footbox
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+
+participant ":FinNUS" as App
+participant "<<class>>\nParser" as Parser
+participant "<<class>>\nEditParser" as EditParser
+participant "command:EditCommand" as Command
+participant "transactions:TransactionList" as Ledger
+participant "replacement:Transaction" as Replacement
+
+activate App
+App -> Parser : parse("edit 1 a/6.50", today)
+activate Parser
+Parser -> EditParser : parse("1 a/6.50", today)
+activate EditParser
+create Command
+EditParser -> Command : new EditCommand(1, fields)
+activate Command
+Command --> EditParser : command
+deactivate Command
+EditParser --> Parser : command
+deactivate EditParser
+Parser --> App : command
+deactivate Parser
+
+App -> Command : execute(transactions, ui)
+activate Command
+Command -> Ledger : get(size - 1)
+activate Ledger
+Ledger --> Command : original
+deactivate Ledger
+
+create Replacement
+Command -> Replacement : new(WITHDRAWAL, 6.50, description, category, date)
+activate Replacement
+Replacement --> Command
+deactivate Replacement
+
+Command -> Ledger : replace(size - 1, replacement)
+activate Ledger
+Ledger --> Command
+deactivate Ledger
+Command --> App
+deactivate Command
+deactivate App
+' @@author
+@enduml

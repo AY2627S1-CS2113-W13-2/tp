@@ -214,6 +214,10 @@ public class Parser {
             new ExitCommand();
         case DELETE ->
             parseDelete(arguments);
+        //@@author naieel04
+        case EDIT ->
+            EditParser.parse(arguments, today);
+        //@@author
         case RATE ->
             parseRate(arguments);
         case CATEGORY ->
@@ -634,8 +638,10 @@ public class Parser {
         }
         String[] parts = arguments.split(WHITESPACE_SEPARATOR_REGEX);
         if (parts.length != 2) {
+            //@@author naieel04
             throw new FinNusException("Give a currency and a rate, e.g. " + CommandWord.RATE.getWord()
                     + " JPY 110.\nFormat: " + CommandWord.RATE.getUsage());
+            //@@author
         }
         return new RateCommand(parseCurrencyCode(parts[0]), parseRateValue(parts[1]));
     }
@@ -647,7 +653,9 @@ public class Parser {
      * @throws FinNusException If the code is not a real currency, or is SGD.
      */
     static String parseCurrencyCode(String text) throws FinNusException {
+        //@@author naieel04
         String code = text.toUpperCase(Locale.ROOT);
+        //@@author
         try {
             // Java's built-in currency list lets us reject typos such as "JYP" without
             // maintaining our own list.
@@ -728,7 +736,9 @@ public class Parser {
         String description = amountAndDescription[1];
         if (description.isEmpty()) {
             throw new FinNusException("A withdrawal needs a description so you know what you spent on.\n"
+                    //@@author naieel04
                     + "Format: " + CommandWord.WITHDRAW.getUsage());
+            //@@author
         }
         //@@author chancheese
         if (currencyCode != null) {
@@ -938,7 +948,10 @@ public class Parser {
         }
         // "d/DESCRIPTION AMOUNT": the last word is the amount, the rest is the
         // description.
-        int lastSpace = afterPrefix.lastIndexOf(' ');
+        int lastSpace = afterPrefix.length() - 1;
+        while (lastSpace >= 0 && !Character.isWhitespace(afterPrefix.charAt(lastSpace))) {
+            lastSpace--;
+        }
         if (lastSpace == -1) {
             throw new FinNusException("Missing amount.\nFormat: " + format);
         }
