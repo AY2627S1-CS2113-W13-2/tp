@@ -15,63 +15,59 @@ allowance, all by typing short commands. It is written in Java by a team of 5.
 
 ### Enhancements implemented
 
-* **Core structure of the app:** set up the structure that every command is built on: the abstract `Command`
-  class, the `Parser` that turns user input into commands, `Transaction` and `TransactionList` as the single
-  place where transactions are stored, `Ui`, `FinNusException` and the main command loop.
-  * Justification: the repo started as an empty template, so a shared structure let five developers add their
-    commands in parallel without changing each other's code.
-* **`deposit` and `withdraw` commands:** record money coming in and going out.
-  * The amount and the description can be given in any order, and `d/` only counts as a prefix at the start of a
-    word, so descriptions such as "and/or" are not misread.
-  * Amounts are validated with a single check that rejects negative numbers, scientific notation, `NaN`, `$` signs
-    and more than 2 decimal places. I chose `BigDecimal` over `double` so balances stay exact; a teammate later wrapped
-    it in the `Money` class.
-* **Spending categories (`t/CATEGORY`, `category`):** every withdrawal belongs to one
-  category, either one of nine predefined ones or a custom one, so users can see where their money goes.
-  * Unknown categories are rejected instead of being created, so a typo such as `t/fod` cannot split the user's
-    spending into a new category.
-  * Generalised the currency prefix parsing into one shared helper used by `c/`, `t/` and `on/`, instead of
-    copying it for each prefix.
-  * Extended the save file format so categories are saved, while files from older versions still load: their
-    withdrawals become `Others`, and an unknown category in a hand-edited file loads as `Others` with a warning
-    instead of losing the transaction.
-* **Transaction dates (`on/YYYY-MM-DD`):** every transaction records the day it happened, today by default.
-  * Rejects invalid, non-existent (e.g. `2026-02-30`), signed (e.g. `-2026-01-01`), pre-2000 and future dates,
-    with the same rules applied when loading the save file.
-  * Today's date is passed into the parser, so the tests never depend on the real date.
-  * The dates made it possible for the monthly allowance feature to show spending per budget cycle.
-* **`find KEYWORD`:** searches transaction descriptions, ignoring case. Results use the same numbers as
-  `recent`, so a user can `delete` a transaction straight from the results. A teammate later added category search.
-  * Matching compares one character at a time instead of lowercasing, so text such as "İstanbul" is still found.
-* **Logging:** made the app write all log messages to `finnus.log` instead of the console, so they never mix with
-  the output the user sees. If the log file cannot be created, the app keeps running without logging.
+* **Core structure of the app** ([#11](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/11)): the abstract
+  `Command` class, the `Parser`, `Transaction` and `TransactionList`, `Ui`, `FinNusException` and the main command
+  loop, so five developers could add commands in parallel without changing each other's code.
+* **`deposit` and `withdraw`** ([#11](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/11)): the amount and
+  description can be given in any order, and `d/` only counts as a prefix at the start of a word, so descriptions
+  such as "and/or" are not misread. One amount check rejects negative numbers, scientific notation, `NaN`, `$` signs
+  and more than 2 decimal places. I chose `BigDecimal` over `double` so balances stay exact (later wrapped in `Money`).
+* **Spending categories, `t/CATEGORY` and `category`**
+  ([#65](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/65)): every withdrawal belongs to one of nine predefined
+  categories or a custom one. Unknown categories are rejected, so a typo such as `t/fod` cannot split spending.
+  Generalised the currency prefix parsing into one helper shared by `c/`, `t/` and `on/`. Older save files still
+  load, and an unknown category in a hand-edited file loads as `Others` with a warning instead of being lost.
+* **Transaction dates, `on/YYYY-MM-DD`** ([#73](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/73)): every
+  transaction records its day, today by default. Invalid, non-existent (e.g. `2026-02-30`), signed, pre-2000 and
+  future dates are rejected, also when loading the save file. Today's date is passed into the parser, so tests never
+  depend on the real date. The allowance feature later used the dates to show spending per budget cycle.
+* **`find KEYWORD`** ([#71](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/71),
+  [#80](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/80)): case-insensitive search using the same numbers as
+  `recent`, so results can be deleted directly. Matching compares characters one at a time instead of lowercasing,
+  so "İstanbul" is still found.
+* **Logging** ([#31](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/31)): log messages go to `finnus.log`, not
+  the console, so they never mix with the user's output.
 
 ### Contributions to the User Guide
 
-* Wrote the sections for `deposit`, `withdraw`, categorising spending (`t/`, `category`), recording dates (`on/`)
-  and `find`.
-* Added the FAQ answers and completed the Command Summary.
-* Kept every transaction output example in the UG accurate when categories and dates changed the output.
+* Wrote the sections for `deposit`, `withdraw`, categories, dates and `find`
+  ([#18](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/18),
+  [#65](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/65),
+  [#71](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/71),
+  [#73](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/73)), the FAQ and the Command Summary
+  ([#64](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/64)), and kept all output examples accurate.
 
 ### Contributions to the Developer Guide
 
-* Wrote the sections "Adding a deposit or withdrawal", "Categorising spending", "Recording transaction dates" and
-  "Finding transactions": classes involved, step-by-step processing, save file format and design considerations.
-* Added UML diagrams:
-  * a class diagram of the classes involved in categorising spending;
-  * a sequence diagram of a withdrawal with a category and a date (`withdraw 4.50 d/Lunch t/food on/2026-10-20`).
+* Wrote "Adding a deposit or withdrawal", "Categorising spending", "Recording transaction dates" and "Finding
+  transactions": classes involved, step-by-step processing, save file format and design considerations
+  ([#45](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/45),
+  [#65](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/65),
+  [#71](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/71),
+  [#73](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/73)).
+* Added a class diagram of the classes involved in categorising spending and a sequence diagram of
+  `withdraw 4.50 d/Lunch t/food on/2026-10-20` ([#81](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/81)).
 
 ### Contributions to team-based tasks
 
-* Tested the v1.0 and v2.0 release JARs end to end before and after publishing them, and published the v2.0 release.
-* Checked that teammates' pull requests build and pass all tests when merged with `master` before approving them,
-  which caught several problems before they reached `master`, e.g.:
-  * the JAR entry point still pointing to the old `Duke` class after the package was renamed;
-  * a duplicate `getBalance()` method that would have broken the build;
-  * `recent` crashing on an empty transaction list;
-  * a merge that deleted two constants used by dates, which would have stopped the app from compiling.
-* Reviewed the UG and DG before releases and reported problems, e.g. descriptions of features the app did not have.
-* Replaced the template root `README.md` with FinNUS setup instructions, Gradle tasks and documentation links.
+* Tested the v1.0 and v2.0 release JARs end to end, published v2.0, and reported UG and DG problems before releases.
+* Built and tested teammates' pull requests merged with `master` before approving them, which caught e.g. the JAR
+  entry point still pointing to the old `Duke` class, a duplicate `getBalance()` that would have broken the build, `recent`
+  crashing on an empty list, and a merge that deleted two date constants.
+* Wrote the root `README.md` ([#86](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/86)). Before the final
+  submission, updated the UG, DG and README to the final behaviour, removed leftover template content, and tested
+  the final JAR and every documentation page ([#131](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/131),
+  [#134](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/134)).
 
 ### Review contributions
 
@@ -84,6 +80,10 @@ allowance, all by typing short commands. It is written in Java by a team of 5.
   [#78](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/78),
   [#79](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/79),
   [#83](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/83),
-  [#84](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/84) and
-  [#85](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/85).
+  [#84](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/84),
+  [#85](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/85) and
+  [#128](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/128).
+
+### Contributions beyond the project team
+
 * Reviewed the Developer Guide of team CS2113-T10-3 (BusyNotFree).
