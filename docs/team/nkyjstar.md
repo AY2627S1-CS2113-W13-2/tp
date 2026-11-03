@@ -7,9 +7,6 @@ international students who receive allowances in foreign currencies. Users recor
 view their balance and transaction history, and explore cash flow and spending charts, all by typing short commands.
 It is written in Java by a team of 5.
 
-My work focused on viewing financial activity: recent transactions, balance, paginated history, and text-based
-charts. I also introduced a shared money type and improved validation across the app.
-
 ## Summary of Contributions
 
 ### Code Contributed
@@ -89,8 +86,6 @@ charts. I also introduced a shared money type and improved validation across the
 [#59](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/59),
 [#100](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/100),
 [#101](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/101).
-
-* Examples: Verified the correctness of UML sequence diagrams for ForeignTransactionCommand in [#57](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/57#pullrequestreview-5670051976), suggested the adoption of conventional exception handling practice in [#11](https://github.com/AY2627S1-CS2113-W13-2/tp/pull/11#discussion_r4204387346), but we decided to use an app-wide handler instead via `FinNUSException`.
 
 ### Contributions beyond the project team
 * Reviewed the Developer Guide of CakeQueue (CS2113-W12-1)
