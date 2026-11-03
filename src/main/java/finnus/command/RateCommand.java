@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import finnus.FinNUS;
 import finnus.currency.CurrencyRates;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -43,8 +44,7 @@ public class RateCommand extends Command {
     /** Lists the configured rates or updates the selected currency rate. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         CurrencyRates rates = transactions.getRates();
         if (currencyCode == null) {
             listRates(rates, ui);

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import finnus.FinNUS;
 import finnus.category.CategoryList;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
@@ -42,8 +43,7 @@ public class ChartSpendingCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         logger.fine(period == null ? "Preparing overall spending chart"
                 : "Preparing spending chart for " + period + " containing " + date);
         Map<String, Money> totals = new HashMap<>();

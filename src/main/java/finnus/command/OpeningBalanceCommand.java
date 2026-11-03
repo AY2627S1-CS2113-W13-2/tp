@@ -2,6 +2,7 @@ package finnus.command;
 
 import java.util.logging.Logger;
 
+import finnus.FinNUS;
 import finnus.money.Money;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -27,8 +28,7 @@ public class OpeningBalanceCommand extends Command {
     /** Stores the opening balance without adding it to the transaction list. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         transactions.setOpeningBalance(amount);
         logger.info("Opening balance set during first-run setup");
     }
