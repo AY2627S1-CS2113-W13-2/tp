@@ -14,19 +14,26 @@ participant "transactions:TransactionList" as Ledger
 participant ":Ui" as Ui
 
 User -> FinNUS: withdraw 20 d/Lunch
+activate FinNUS
 FinNUS -> Withdraw: execute(transactions, ui)
+activate Withdraw
 Withdraw -> Alerts: confirmWithdrawal(...)
+activate Alerts
 Alerts -> Ledger: inspect current balance and cycle spending
+activate Ledger
 Ledger --> Alerts: current state
+deactivate Ledger
 Alerts -> Alerts: crossedBy(withdrawal)
 
 alt new threshold crossed
     Alerts -> Ui: show crossed thresholds
     Alerts -> Confirmation: ask("Proceed ...?")
+    activate Confirmation
     Confirmation -> Ui: read answer
     User -> Ui: yes / no
     Ui --> Confirmation: answer
     Confirmation --> Alerts: YES / NO / INPUT_ENDED
+    deactivate Confirmation
     alt YES
         Alerts --> Withdraw: approved
     else NO or INPUT_ENDED
@@ -36,12 +43,15 @@ alt new threshold crossed
 else no new threshold crossed
     Alerts --> Withdraw: approved
 end
+deactivate Alerts
 
 opt approved
     Withdraw -> Ledger: add(withdrawal)
     Withdraw -> Ui: show withdrawal confirmation
 end
+deactivate Withdraw
 FinNUS -> FinNUS: save changed snapshot
+deactivate FinNUS
 
 note over Alerts
     Checks optional thresholds, allowance limits,
