@@ -29,8 +29,8 @@ Prerequisites: JDK 25 (use the exact version), and the most recent version of In
 1. **Enable assertions** for the run configuration: `Run` > `Edit Configurations...` > `FinNUS` > `Modify options` >
    `Add VM options`, and enter `-ea`.
 
-FinNUS saves its data in `finnus.txt` (with a backup in `finnus.txt.bak`) and writes logs to `finnus.log`, all in
-the folder it is run from. These files are ignored by Git.
+FinNUS saves its data in `finnus.txt` (with a backup in `finnus.txt.bak`) next to the JAR, or in the current folder when
+run from IntelliJ or Gradle. It writes logs to `finnus.log` in the folder it is run from. These files are ignored by Git.
 
 **Warning:** Keep the `src/main/java` folder as the root folder for Java files (i.e., don't rename those folders or
 move Java files to another folder outside of this folder path), as this is the default location some tools (e.g.,

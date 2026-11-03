@@ -333,18 +333,20 @@ transactions are stored and where the balance is calculated.
 Given below is what happens when the user enters `withdraw 4.50 d/Lunch`.
 
 1. `FinNUS#run()` reads the line through `Ui` and passes it to `Parser#parse()`.
-2. `Parser#parse()` reads the command word `withdraw` and calls `parseWithdraw("4.50 d/Lunch")`.
+2. `Parser#parse()` reads the command word `withdraw` and calls `parseWithdraw()` with the arguments `4.50 d/Lunch`
+   and today's date.
 3. `splitAmountAndDescription()` splits the arguments into the amount `"4.50"` and the
    description `"Lunch"`. The `d/` prefix only counts when it starts a word, so text such as
    `and/or` inside a description is not mistaken for a prefix. The amount and `d/DESCRIPTION`
    may be given in either order, e.g. `withdraw d/Lunch 4.50`.
 4. `parseAmount()` checks the amount and converts it to a `Money` value. For a withdrawal,
    `parseWithdraw()` also checks that the description is not empty.
-5. The parser returns a new `WithdrawCommand(4.50, "Lunch")`.
-6. `FinNUS` calls `execute()`, which creates a `Transaction` of type `WITHDRAWAL`, adds it to the
-   `TransactionList` and shows a confirmation through `Ui`.
+5. The parser returns a new `WithdrawCommand` with the amount, the description, no category name and today's date.
+6. `FinNUS` calls `execute()`, which creates a `Transaction` of type `WITHDRAWAL`. If the withdrawal crosses a
+   [spending alert](#spending-alerts) threshold, the user must confirm it first; a cancelled withdrawal is not added.
+   Otherwise, the `Transaction` is added to the `TransactionList` and a confirmation is shown through `Ui`.
 
-A deposit follows the same steps, except that the description is optional.
+A deposit follows the same steps, except that the description is optional and no spending alert is checked.
 
 #### Validation rules
 
@@ -1028,24 +1030,25 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
 
 1. `Parser#parseWithdraw()` calls `extractCategory()`, which removes `t/FOOD` from the arguments and checks that
    `FOOD` has a valid format (one word of letters, digits and `-`, at most 20 characters).
-2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns
-   `WithdrawCommand(4.50, "Lunch", "FOOD")`.
+2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns a `WithdrawCommand` with
+   the category name `FOOD`.
 3. `WithdrawCommand#execute()` calls `CategoryList#resolve("FOOD")`, which returns `Food`. If the category did not
    exist, `resolve()` would throw a `FinNusException` listing the valid categories.
-4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
-   `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
+4. A `Transaction` with category `Food` is created and, after any spending alert confirmation, added to the
+   `TransactionList` and shown as `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
 
 The sequence diagram in [How a dated withdrawal is processed](#how-a-dated-withdrawal-is-processed) shows these
 steps for a withdrawal that also has a date.
 
-`c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
-the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
+`c/` (currency), `t/` and `on/` (date) are all one-word values that can appear anywhere in the command. To avoid
+several copies of the same logic, they are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
 given twice or has no value.
 
 #### Saving categories
 
 Custom categories are saved as `CATEGORY|NAME` records. The category of a transaction is saved as one extra, last
-field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food`.
+field of its `TRANSACTION` record before the date (empty for a deposit), e.g.
+`TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20`.
 
 * Rows saved before categories existed have no category field. Their withdrawals are loaded under `Others`, so old
   save files keep working.
@@ -1100,8 +1103,8 @@ the basis for features that look at spending over a period, such as a budget cyc
    `Transaction`.
 
 The sequence diagram below shows the whole flow for `withdraw 4.50 d/Lunch t/food on/2026-10-20`, including how
-the category from [Categorising spending](#categorising-spending) is resolved. Logging, output and amount
-validation are left out.
+the category from [Categorising spending](#categorising-spending) is resolved. Logging, output, amount validation and
+the [spending alert](#spending-alerts) check before `add()` are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
 

@@ -84,6 +84,9 @@ Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]`
 * `DATE` is optional and defaults to today. See [Recording the date of a transaction](#recording-the-date-of-a-transaction-on).
 * `CATEGORY` is optional. If you leave it out, the spending is recorded under `Others`.
   See [Categorising your spending](#categorising-your-spending-t-and-category).
+* If the withdrawal crosses a spending threshold, FinNUS first asks you to confirm it. For example, your first withdrawal
+  usually does this, because it takes your balance below your opening balance. See [Spending alerts](#spending-alerts).
+  The expected outputs in this guide show withdrawals that do not cross a threshold.
 
 Examples:
 
@@ -862,6 +865,7 @@ using an absolute path. Saved financial data remains beside the packaged JAR.
 
 <!-- @@author -->
 
+* View or change spending alerts: `alert`, `alert balance AMOUNT`, `alert balance off`, `alert allowance PERCENT`, `alert allowance off`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`
