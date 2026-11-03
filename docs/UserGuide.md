@@ -79,6 +79,9 @@ Format: `withdraw AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]`
 * `DATE` is optional and defaults to today. See [Recording the date of a transaction](#recording-the-date-of-a-transaction-on).
 * `CATEGORY` is optional. If you leave it out, the spending is recorded under `Others`.
   See [Categorising your spending](#categorising-your-spending-t-and-category).
+* If the withdrawal crosses a spending threshold, FinNUS first asks you to confirm it. For example, your first withdrawal
+  usually does this, because it takes your balance below your opening balance. See [Spending alerts](#spending-alerts).
+  The expected outputs in this guide show withdrawals that do not cross a threshold.
 
 Examples:
 
@@ -745,7 +748,7 @@ ____________________________________________________________
 **A**: Copy `finnus.txt` (and `finnus.txt.bak`, if it exists) from the folder containing `finnus.jar` into the folder
 where you put `finnus.jar` on the other computer. FinNUS loads it automatically the next time it starts.
 
-**Q**: What is the `finnus.log` file that appears next to `finnus.jar`?
+**Q**: What is the `finnus.log` file that appears in the folder I run FinNUS from?
 
 **A**: It is a log file that records what FinNUS did, to help developers investigate problems. It is not needed to use
 FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`, not in the log.
@@ -777,6 +780,7 @@ FinNUS, and it is safe to delete. Your financial data is stored in `finnus.txt`,
 <!-- @@author -->
 * Find transactions by description or category: `find [KEYWORD] [t/CATEGORY]`
 * Delete a transaction: `delete INDEX`
+* View or change spending alerts: `alert`, `alert balance AMOUNT`, `alert balance off`, `alert allowance PERCENT`, `alert allowance off`
 * Set or list exchange rates: `rate [CURRENCY RATE]`
 * Add a custom category: `category NAME`
 * List categories: `category`
