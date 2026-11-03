@@ -1541,7 +1541,7 @@ with a command-line interface.
 
 ### Value proposition
 
-FinNUS provides a streamlined desktop CLI to help students understand how much they can safely spend each day. It aims
+FinNUS provides a streamlined desktop CLI to help students understand how they can safely spend their allowance. It aims
 to make allowance and campus-expense tracking straightforward, including for students dealing with foreign currency.
 
 ### Release scope
@@ -1676,7 +1676,7 @@ The following quality requirements are derived from the product goals.
 | ID     | Quality            | Proposed requirement                                                                                                                                                                                                                                    | How to verify                                                                                                                    |
 |--------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
 | NFR-01 | Financial accuracy | Monetary calculations must use decimal arithmetic. Displayed SGD balances must equal the opening balance plus deposits minus withdrawals, to the cent. Converted allowances must use the rate recorded for that deposit and a documented rounding rule. | Test decimal edge cases, repeated additions, deposits in foreign currencies, and balance totals against hand-calculated results. |
-| NFR-02 | Data integrity     | A rejected command must leave the ledger unchanged. A completed state change must either be saved or clearly reported as unsaved.                                                                                                                       | Exercise invalid input and simulated storage failures; compare ledger state before and after.                                    |
+| NFR-02 | Data integrity     | A rejected command must not apply its requested changes. Independently due allowance credits may still be recorded and saved. A completed state change must either be saved or clearly reported as unsaved.                                                                                                                       | Exercise invalid input and simulated storage failures; compare ledger state before and after.                                    |
 | NFR-03 | Persistence        | The opening balance, transactions, and exchange rates must be available after restarting the application.                                                                                                                                               | Create sample ledger data, exit, restart using the same data folder, and compare restored values.                                |
 | NFR-04 | Usability          | The app must be usable from the desktop command line. Invalid input must produce a clear explanation and leave the app ready for the next command.                                                                                                      | Manually test documented commands, malformed inputs, and recovery with a following valid command.                                |
 | NFR-05 | Compatibility      | The application must run with Java 25 on the operating systems supported by the project.                                                                                                                                                                | Build and run the automated checks on Windows, macOS, and Linux CI environments.                                                 |
@@ -1740,8 +1740,8 @@ withdrawal. Restarting in the same folder does not reset the saved ledger.
 | MT-05 | Sample ledger                                           | Enter `rate JPY 120`, then `rate`.                                                     | JPY changes to 120 without a duplicate entry.                                    |
 | MT-06 | Saved sample ledger                                     | Exit, restart, then enter `balance`, `recent 2`, and `rate`.                           | Opening balance, transactions, and rate are restored.                            |
 | MT-11 | Fresh folder | Complete setup with opening balance 100, allowance day `5` and amount `500`, then enter `balance`. | The summary shows the cycle and countdown; `balance` adds a "Next allowance in ..." line. No deposit is added yet. |
-| MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on or after 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
-| MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
+| MT-12 | Save file with `ALLOWANCE\|5\|500\|\|2026-08-05`, run on 5 Oct 2026 | Launch, then enter `recent`. | `Allowance added:` lines for 5 Sep and 5 Oct; restarting adds nothing more. |
+| MT-13 | Save file with `ALLOWANCE\|5\|60000\|JPY\|2026-08-05` and no JPY rate; run on 5 Oct 2026 | Launch, then enter `rate JPY 120`. | A warning at startup; both allowances are added right after the rate is set. |
 
 <!-- @@author lololol8484 -->
 For the spending-alert check, use a fresh folder and complete setup with opening balance `100` and balance threshold
