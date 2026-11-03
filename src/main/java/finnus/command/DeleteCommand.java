@@ -3,7 +3,6 @@ package finnus.command;
 
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.exception.FinNusException;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -36,7 +35,7 @@ public class DeleteCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         if (index < 1 || index > transactions.size()) {
             logger.warning("Failed to delete transaction: invalid index " + index
                 + " for " + transactions.size() + " transaction(s).");

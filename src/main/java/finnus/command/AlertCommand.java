@@ -4,7 +4,6 @@ package finnus.command;
 import java.math.BigDecimal;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.alert.SpendingAlert;
 import finnus.money.Money;
 import finnus.transaction.TransactionList;
@@ -62,7 +61,7 @@ public class AlertCommand extends Command {
     /** Displays or updates alert settings while preserving the other optional threshold. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         SpendingAlert current = transactions.getSpendingAlert();
         if (setting == Setting.SHOW) {
             showSettings(current, ui);

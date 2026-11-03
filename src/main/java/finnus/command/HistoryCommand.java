@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.ValidationRegex;
 import finnus.exception.FinNusException;
 import finnus.transaction.TransactionList;
@@ -52,7 +51,7 @@ public class HistoryCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         if (firstIndex >= transactions.size() && (firstIndex != 0 || transactions.size() != 0)) {
             throw new FinNusException("History page is out of range.");
         }
@@ -72,7 +71,7 @@ public class HistoryCommand extends Command {
      */
     public boolean handleInput(String input, TransactionList transactions, Ui ui) throws FinNusException {
         assert input != null : "Input must not be null";
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
 
         String trimmed = input.trim().toLowerCase(Locale.ROOT);
         switch (trimmed) {
@@ -152,7 +151,7 @@ public class HistoryCommand extends Command {
      * @param ui Displays the page or empty-list message.
      */
     private void showPage(TransactionList transactions, Ui ui) {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         assert pageSize > 0 : "Page size must remain positive";
 
         int total = transactions.size();

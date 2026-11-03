@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import finnus.alert.SpendingAlert;
 import finnus.command.AllowanceCommand;
+import finnus.command.Command;
 import finnus.command.OpeningBalanceCommand;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
@@ -77,7 +78,7 @@ public class Setup {
     /** Prompts until an opening balance is confirmed or input ends. */
     boolean initializeOpeningBalance(Ui ui, TransactionList transactions) {
         //@@author lololol8484
-        FinNUS.assertExecutionContext(transactions, ui);
+        Command.assertExecutionContext(transactions, ui);
         assert transactions.size() == 0 : "First-run setup must not start with transactions";
         ui.showMessage("First-time setup", "Enter your current opening balance in SGD.",
                 "This is your starting balance and will not be recorded as a transaction.");

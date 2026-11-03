@@ -8,6 +8,7 @@ skinparam shadowing false
 skinparam classAttributeIconSize 0
 
 abstract class Command {
+  {static} +assertExecutionContext(transactions: TransactionList, ui: Ui) : void
   {abstract} +execute(transactions, ui)
 }
 
