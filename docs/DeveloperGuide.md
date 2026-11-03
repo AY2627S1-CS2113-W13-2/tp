@@ -1541,7 +1541,7 @@ with a command-line interface.
 
 ### Value proposition
 
-FinNUS provides a streamlined desktop CLI to help students understand how much they can safely spend each day. It aims
+FinNUS provides a streamlined desktop CLI to help students understand how they can safely spend their allowance. It aims
 to make allowance and campus-expense tracking straightforward, including for students dealing with foreign currency.
 
 ### Release scope
