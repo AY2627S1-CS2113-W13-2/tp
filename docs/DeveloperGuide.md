@@ -6,7 +6,7 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 
 **Release:** [Release Page](https://github.com/AY2627S1-CS2113-W13-2/tp/releases)
 
-> Draft status: Some sections still contain prompts for team decisions or release-specific details.
+> Status: This guide documents the current implementation and testable behaviour.
 
 ---
 
@@ -254,6 +254,9 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 - Saving uses temporary files and atomic replacement; loading can recover valid rows or a clean backup.
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
+
+The storage diagram is intentionally a high-level view of the persistence components. `LedgerSnapshot` also carries
+allowance settings and spending-alert settings, which are omitted from this simplified class diagram.
 
 <!-- @@author -->
 
@@ -939,7 +942,7 @@ original amount is kept so it can be shown later, e.g. `[30 Oct 2026] [Withdrawa
 #### How it works
 
 The sequence diagram below shows what happens when the user enters `withdraw 1100 d/Ramen c/JPY`.
-Logging, console output, input validation and saving the ledger afterwards are left out.
+Logging, console output, input validation, spending-alert confirmation and saving the ledger afterwards are left out.
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
@@ -1266,7 +1269,8 @@ without the record load with no allowance. A record with an invalid day, amount,
 
 `FinNUS#executeCommand()` captures a `LedgerSnapshot` before a command runs and compares it with a snapshot captured
 after the command returns. A difference marks the session as having pending changes. Snapshots include the opening
-balance, transactions, exchange rates, and custom categories, so changes to any of these can trigger a save.
+balance, transactions, exchange rates, custom categories, allowance settings, and spending-alert settings, so changes
+to any of these can trigger a save.
 
 After a successful non-exit command, `savePendingChanges()` attempts to save the current snapshot if changes are pending
 and saving is allowed. A successful save clears the pending flag. An `IOException` leaves the flag set and displays an
@@ -1371,13 +1375,13 @@ changing it.
 
 ![Class diagram for both chart commands and their shared period](images/ChartClassDiagram.png)
 
-*Figure 16. A flow command has one `ChartPeriod`; a spending command has zero or one. Both read a
+*Figure 17. A flow command has one `ChartPeriod`; a spending command has zero or one. Both read a
 `TransactionList`, which has one category list and zero or more transactions. Dashed dependencies
 have no multiplicity. [PlantUML source](diagrams/ChartClassDiagram.puml).*
 
 ![Sequence diagram for chart parsing, aggregation, and display](images/ChartSequenceDiagram.png)
 
-*Figure 17. Parsing and displaying either chart form. The enum lifeline receives static `parse()`;
+*Figure 18. Parsing and displaying either chart form. The enum lifeline receives static `parse()`;
 `period:ChartPeriod` receives calls on the returned constant. The chart command's lifeline ends when
 its local reference leaves scope, without implying immediate garbage collection. Activation bars
 show execution; dashed arrows show returns. Snapshot comparison and pending-save retry are
