@@ -3,7 +3,6 @@ package finnus.command;
 import java.time.LocalDate;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
@@ -61,7 +60,7 @@ public class WithdrawCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         // The category is checked here rather than in the parser, because the list of
         // categories (including custom ones) lives in the TransactionList.
         String category = transactions.getCategories().resolve(categoryName);

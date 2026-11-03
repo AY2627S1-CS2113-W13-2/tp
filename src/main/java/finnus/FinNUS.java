@@ -86,17 +86,6 @@ public class FinNUS {
         this.clock = Objects.requireNonNull(clock);
     }
 
-    /**
-     * Checks that a command has the transaction list and UI it needs to execute.
-     *
-     * @param transactions The transaction list passed to the command.
-     * @param ui The UI passed to the command.
-     */
-    public static void assertExecutionContext(TransactionList transactions, Ui ui) {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
-    }
-
     /** Returns today's date according to the clock. */
     private LocalDate today() {
         return LocalDate.now(clock);

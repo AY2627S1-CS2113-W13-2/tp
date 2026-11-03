@@ -3,7 +3,6 @@ package finnus.command;
 import java.time.LocalDate;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -49,7 +48,7 @@ public class DepositCommand extends Command {
     /** Adds the deposit to the ledger and confirms the updated transaction count. */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         Transaction deposit = new Transaction(TransactionType.DEPOSIT, amount, description, null, date);
         transactions.add(deposit);
         logger.info("Added " + deposit + ", total transactions: " + transactions.size());

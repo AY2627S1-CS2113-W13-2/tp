@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.currency.ForeignAmount;
 import finnus.exception.FinNusException;
 import finnus.transaction.Transaction;
@@ -99,7 +98,7 @@ public class ForeignTransactionCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         //@@author nabijonzzz
         String category = type == TransactionType.WITHDRAWAL
                 ? transactions.getCategories().resolve(categoryName) : null;

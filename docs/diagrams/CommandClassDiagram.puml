@@ -8,6 +8,7 @@ skinparam classAttributeIconSize 0
 
 package "Commands" {
     abstract class Command {
+        + {static} assertExecutionContext(...): void
         + {abstract} execute(...): void
     }
 

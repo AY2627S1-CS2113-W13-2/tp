@@ -10,6 +10,17 @@ import finnus.ui.Ui;
  */
 public abstract class Command {
     /**
+     * Checks that a command has the transaction list and UI it needs to execute.
+     *
+     * @param transactions The transaction list passed to the command.
+     * @param ui The UI passed to the command.
+     */
+    public static void assertExecutionContext(TransactionList transactions, Ui ui) {
+        assert transactions != null : "Transaction list must not be null";
+        assert ui != null : "UI must not be null";
+    }
+
+    /**
      * Carries out the command.
      *
      * @param transactions The list of transactions the command may read or modify.

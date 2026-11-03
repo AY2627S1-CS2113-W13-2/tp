@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.category.CategoryList;
 import finnus.exception.FinNusException;
 import finnus.transaction.TransactionList;
@@ -45,7 +44,7 @@ public class CategoryCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         CategoryList categories = transactions.getCategories();
         if (nameToAdd == null) {
             listCategories(categories, ui);

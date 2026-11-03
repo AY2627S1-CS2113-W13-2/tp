@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import finnus.FinNUS;
 import finnus.exception.FinNusException;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
@@ -62,7 +61,7 @@ public class FindCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        FinNUS.assertExecutionContext(transactions, ui);
+        assertExecutionContext(transactions, ui);
         //@@author chancheese
         // Resolved to its own spelling, e.g. "food" becomes "Food", as when recording a withdrawal.
         String category = categoryName == null ? null : transactions.getCategories().resolve(categoryName);
