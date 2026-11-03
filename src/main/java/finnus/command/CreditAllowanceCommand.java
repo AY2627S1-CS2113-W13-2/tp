@@ -18,8 +18,10 @@ import finnus.ui.Ui;
 
 /**
  * Adds the allowance as a deposit for each allowance date that has arrived but has not been
- * added yet. FinNUS runs this itself at startup, before opening history, and after other
- * non-exit commands, so the user never types it; it is not listed in {@link CommandWord}.
+ * added yet. FinNUS runs this itself at startup, before most commands, and after successful
+ * non-exit commands. Deletion consumes its displayed index before crediting, and history navigation
+ * defers crediting to keep its numbering stable. The user never types this command;
+ * it is not listed in {@link CommandWord}.
  *
  * <p>FinNUS only runs while it is open, so a missed allowance date (e.g. the app was closed
  * for two months) is added the next time it runs, dated on the allowance day itself.

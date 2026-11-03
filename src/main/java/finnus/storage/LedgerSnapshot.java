@@ -244,12 +244,14 @@ public record LedgerSnapshot(Money openingBalance, List<StoredTransaction> trans
         ledger.setAllowance(allowance);
         //@@author
         ledger.setSpendingAlert(spendingAlert);
+        //@@author naieel04
         return ledger;
     }
 
     /**
      * Checks the domain rules for a stored opening balance.
      */
+    //@@author
     //@@author
     static void validateOpeningBalance(Money amount) {
         if (amount == null || amount.isNegative()) {

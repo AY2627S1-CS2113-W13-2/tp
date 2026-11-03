@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+//@@author naieel04
 /**
  * Checks command lookup and the metadata required by parsing and help output.
  */
@@ -66,5 +67,6 @@ class CommandWordTest {
     public void getUsage_commandsWithAndWithoutArguments_returnsFullSyntax() {
         assertEquals("deposit AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]", CommandWord.DEPOSIT.getUsage());
         assertEquals("help", CommandWord.HELP.getUsage());
+        //@@author
     }
 }

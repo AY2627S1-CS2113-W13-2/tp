@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+//@@author naieel04
 /**
  * Defines command metadata shared by the parser and help table.
  * Declaration order determines the order of commands in help output.
  */
 public enum CommandWord {
+    //@@author
     DEPOSIT("deposit", "Record income", "AMOUNT [d/DESCRIPTION] [c/CURRENCY] [on/DATE]"),
     WITHDRAW("withdraw", "Record spending", "AMOUNT d/DESCRIPTION [c/CURRENCY] [t/CATEGORY] [on/DATE]"),
     RECENT("recent", "Recent activity", "[NUMBER]"),
@@ -25,36 +27,49 @@ public enum CommandWord {
                     "chart spending [int/PERIOD on/DATE]")),
     //@@author
     FIND("find", "Search transactions", "[KEYWORD] [t/CATEGORY]"),
+    //@@author naieel04
     DELETE("delete", "Delete a record", "INDEX"),
+    EDIT("edit", "Edit a record", "INDEX [a/AMOUNT] [d/DESCRIPTION] [t/CATEGORY] [on/DATE] [r/RATE]"),
+    //@@author
     OPENING("opening", "Opening balance (first-run setup only)", "AMOUNT", false),
+    //@@author naieel04
     BALANCE("balance", "Current balance", ""),
+    //@@author
     //@@author chancheese
     ALLOWANCE("allowance", "Monthly allowance", "[DAY [a/AMOUNT] [c/CURRENCY]] or off"),
     //@@author
     //@@author lololol8484
     ALERT("alert", "Manage spending alerts", "[balance AMOUNT or off] or [allowance PERCENT or off]"),
     //@@author
+    //@@author naieel04
     RATE("rate", "Manage FX rates", "[CURRENCY RATE]"),
+    //@@author
     CATEGORY("category", "Manage categories", "[NAME]"),
+    //@@author naieel04
     HELP("help", "List commands", ""),
     EXIT("exit", "Close FinNUS", "");
 
     private final String word;
     private final String description;
     private final String argumentSyntax;
+    //@@author
     private final boolean availableAfterSetup;
     //@@author nkyjStar
     private final List<HelpEntry> helpEntries;
     //@@author
 
+    //@@author naieel04
     CommandWord(String word, String description, String argumentSyntax) {
         this(word, description, argumentSyntax, true);
     }
+    //@@author
 
+    //@@author naieel04
     CommandWord(String word, String description, String argumentSyntax, boolean availableAfterSetup) {
         this.word = word;
         this.description = description;
         this.argumentSyntax = argumentSyntax;
+        //@@author
         this.availableAfterSetup = availableAfterSetup;
         //@@author nkyjStar
         this.helpEntries = List.of();
@@ -81,6 +96,7 @@ public enum CommandWord {
     /**
      * Returns the configured text for this command word.
      */
+    //@@author naieel04
     public String getWord() {
         return word;
     }
@@ -90,6 +106,7 @@ public enum CommandWord {
      */
     public String getDescription() {
         return description;
+        //@@author
     }
 
     /**
@@ -97,13 +114,17 @@ public enum CommandWord {
      *
      * @return The command syntax, or subcommand syntaxes joined by "or".
      */
+    //@@author naieel04
     public String getUsage() {
+        //@@author
         //@@author nkyjStar
         if (!helpEntries.isEmpty()) {
             return String.join(" or ", helpEntries.stream().map(HelpEntry::usage).toList());
         }
         //@@author
+        //@@author naieel04
         return argumentSyntax.isEmpty() ? word : word + " " + argumentSyntax;
+        //@@author
     }
 
     //@@author nkyjStar
@@ -140,13 +161,17 @@ public enum CommandWord {
      * @param word The command word without surrounding whitespace or arguments; must not be null.
      * @return The matching command, or an empty optional if the word is unknown.
      */
+    //@@author naieel04
     public static Optional<CommandWord> fromWord(String word) {
         String normalizedWord = word.toLowerCase(Locale.ROOT);
         for (CommandWord command : values()) {
+            //@@author
             if (command.availableAfterSetup && command.word.equals(normalizedWord)) {
+                //@@author naieel04
                 return Optional.of(command);
             }
         }
         return Optional.empty();
+        //@@author
     }
 }

@@ -1,3 +1,5 @@
+<!-- @@author naieel04 -->
+
 # FinNUS Developer Guide
 
 FinNUS is a command-line personal finance tracker. This guide explains how to set up, understand, extend, and test it.
@@ -22,6 +24,8 @@ FinNUS is a command-line personal finance tracker. This guide explains how to se
 - [Glossary](#glossary)
 - [Instructions for manual testing](#instructions-for-manual-testing)
 - [Planned enhancements](#planned-enhancements)
+
+<!-- @@author -->
 
 ---
 
@@ -71,7 +75,11 @@ The application entry point is `finnus.FinNUS`.
 
 ---
 
+<!-- @@author naieel04 -->
+
 ## Design
+
+<!-- @@author -->
 
 <!-- @@author naieel04 -->
 ### Architecture
@@ -105,7 +113,7 @@ modify the ledger and display results through the UI. Storage loads and saves co
 
 ![Successful deposit from console input to automatic saving](images/CommandExecutionSequenceDiagram.png)
 
-*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 14's saving sequence.
+*Figure 2. A successful SGD deposit after setup. The reference frame expands into Figure 15's saving sequence.
 Transaction construction and snapshot internals are omitted.
 [PlantUML source](diagrams/CommandExecutionSequenceDiagram.puml).*
 
@@ -134,7 +142,7 @@ Other subclasses, private members, and parser and UI relationships are omitted.
    - The user inputs `deposit 50 d/Allowance`.
    - `Parser#parseDeposit()` verifies that `50` is a valid positive monetary value at or below `Money.MAX_AMOUNT`, extracts the optional description, and constructs a `DepositCommand(amount, description)`.
    - When `DepositCommand#execute(transactions, ui)` runs, it creates a new immutable `Transaction(TransactionType.DEPOSIT, amount, description)` and invokes `transactions.add(transaction)`.
-   - `TransactionList` stores the new `Transaction` in entry order. The `Money` value object remains shared and immutable across calculations such as `TransactionList#getBalance()`.
+   - `TransactionList` inserts the new `Transaction` by date, retaining entry order for equal dates. The `Money` value object remains shared and immutable across calculations such as `TransactionList#getBalance()`.
 <!-- @@author -->
 
 <!-- @@author nkyjStar -->
@@ -237,6 +245,9 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 - The current text format starts with `FINNUS|1` and stores opening balance, rates, custom categories, transactions,
   allowance settings, and optional spending-alert thresholds.
 <!-- @@author -->
+
+<!-- @@author naieel04 -->
+
 - Foreign-currency transactions also store their currency code, original amount, and the rate used. The stored SGD
   value is checked against those details during loading so later rate changes do not alter past transactions.
 - Descriptions are Base64-encoded UTF-8 text. Base64 is an encoding, not encryption.
@@ -244,7 +255,11 @@ records and `LedgerSnapshot`. `LoadResult` carries recovered state, warnings, an
 
 ![Storage interface, file implementation, codec, snapshots, and load results](images/StorageClassDiagram.png)
 
+<!-- @@author -->
+
 *Figure 6. Storage component structure and state transfer. [PlantUML source](diagrams/StorageClassDiagram.puml).*
+
+<!-- @@author naieel04 -->
 
 A complete save file can contain the following records:
 
@@ -255,14 +270,17 @@ RATE|JPY|110
 CATEGORY|Meals
 ALLOWANCE|5|500||2026-10-05
 SPENDING_ALERT|100|90
-TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl|
-TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals
+TRANSACTION|DEPOSIT|50|QWxsb3dhbmNl||2026-10-20
+TRANSACTION|WITHDRAWAL|10.00|UmFtZW4=|JPY|1100|110|Meals|2026-10-20
 ```
 
 `OPENING` stores the starting SGD balance. `RATE` stores foreign-currency units per SGD, and `CATEGORY` declares a custom
 category; predefined categories need no separate records. A `TRANSACTION` stores its type, SGD amount, Base64 description,
-and final category field. The deposit's category field is empty. The descriptions above decode to `Allowance` and `Ramen`.
+followed by category and date fields. The deposit's category field is empty; an unknown date is also empty.
+The descriptions above decode to `Allowance` and `Ramen`.
 Foreign transactions place their currency code, original amount, and recorded rate before the category field.
+
+<!-- @@author -->
 
 <!-- @@author lololol8484 -->
 `SPENDING_ALERT|BALANCE_THRESHOLD|ALLOWANCE_PERCENTAGE` stores the optional alert settings. Either value may be empty
@@ -270,15 +288,26 @@ when the user skipped it. Files without this record load with both optional sett
 records are skipped with a warning.
 <!-- @@author -->
 
-Current SGD transaction rows have five fields and foreign rows have eight. The decoder also accepts older four- and
-seven-field rows without categories, assigning legacy withdrawals to `Others`. It validates amounts, rates, descriptions,
+<!-- @@author naieel04 -->
+
+Current SGD transaction rows have six fields and foreign rows have nine, including the date after the category.
+An empty date field represents an undated legacy entry. The decoder also accepts older five- and eight-field rows
+with categories but no dates, and four- and seven-field rows without categories, assigning legacy withdrawals to
+`Others`. It validates amounts, rates, descriptions,
 and categories before restoring the ledger. Unsupported numbered format versions disable saving; malformed rows can be
 skipped with warnings, as described in [Automatic saving and recovery](#automatic-saving-and-recovery).
+
+<!-- @@author -->
+
 <!-- @@author -->
 
 ---
 
+<!-- @@author naieel04 -->
+
 ## Implementation
+
+<!-- @@author -->
 
 <!-- @@author nabijonzzz -->
 ### Adding a deposit or withdrawal
@@ -304,18 +333,26 @@ transactions are stored and where the balance is calculated.
 Given below is what happens when the user enters `withdraw 4.50 d/Lunch`.
 
 1. `FinNUS#run()` reads the line through `Ui` and passes it to `Parser#parse()`.
-2. `Parser#parse()` reads the command word `withdraw` and calls `parseWithdraw("4.50 d/Lunch")`.
+2. `Parser#parse()` reads the command word `withdraw` and calls `parseWithdraw()` with the arguments `4.50 d/Lunch`
+   and today's date.
 3. `splitAmountAndDescription()` splits the arguments into the amount `"4.50"` and the
    description `"Lunch"`. The `d/` prefix only counts when it starts a word, so text such as
    `and/or` inside a description is not mistaken for a prefix. The amount and `d/DESCRIPTION`
    may be given in either order, e.g. `withdraw d/Lunch 4.50`.
 4. `parseAmount()` checks the amount and converts it to a `Money` value. For a withdrawal,
    `parseWithdraw()` also checks that the description is not empty.
-5. The parser returns a new `WithdrawCommand(4.50, "Lunch")`.
-6. `FinNUS` calls `execute()`, which creates a `Transaction` of type `WITHDRAWAL`, adds it to the
-   `TransactionList` and shows a confirmation through `Ui`.
+5. The parser returns a new `WithdrawCommand` with the amount, the description, no category name and today's date.
+6. `FinNUS` calls `execute()`, which creates a `Transaction` of type `WITHDRAWAL`. If the withdrawal crosses a
+   [spending alert](#spending-alerts) threshold, the user must confirm it first; a cancelled withdrawal is not added.
+   Otherwise, the `Transaction` is added to the `TransactionList` and a confirmation is shown through `Ui`.
 
-A deposit follows the same steps, except that the description is optional.
+A deposit follows the same steps, except that the description is optional and no spending alert is checked.
+
+<!-- @@author lololol8484 -->
+Before extracting optional fields, `Parser` validates every supplied prefix value. A prefix followed by another
+recognised prefix is rejected as a missing value, regardless of the order in which the fields were entered. This
+prevents extraction of one field from hiding a malformed neighbouring field.
+<!-- @@author nabijonzzz -->
 
 #### Validation rules
 
@@ -373,14 +410,17 @@ collects and confirms this value once, before normal commands become available.
    confirmation does `Setup` execute `OpeningBalanceCommand`.
 5. If input ends before confirmation, `Setup#run()` returns `false`. `FinNUS` stops startup
    without saving the unconfirmed amount. The pending marker remains, so setup is offered again
-   on the next run. Once the remaining setup prompts finish, `FinNUS` saves the ledger and later
-   runs skip setup.
+   on the next run. Immediately after confirmation, `Setup#run()` invokes the supplied callback and `FinNUS`
+   attempts to save the opening balance before any optional prompts. After a successful save, later runs skip setup
+   even if optional setup was interrupted. Failed saves remain pending and are retried.
 6. After confirming the opening balance, setup asks for an optional balance threshold, then the
    allowance day and optional amount. If an amount is entered, setup asks for an optional whole
    percentage from 1 to 100. End of input or Enter skips these optional settings. The user can
    configure either setting later with `alert`.
 
 See the [setup sequence diagram](diagrams/SetupSequenceDiagram.puml) for this interaction flow.
+The diagram summarises the prompts; the persistence callback between balance confirmation and optional questions
+is omitted. After optional setup completes, FinNUS saves any additional changes.
 
 <!-- @@author chancheese -->
 <!-- @@author lololol8484 -->
@@ -405,6 +445,11 @@ confirmation.
 and `ForeignTransactionCommand` both call `confirmWithdrawal()`, so SGD and converted foreign withdrawals use the same
 rules. A declined confirmation or ended input returns before `TransactionList#add()`; only explicit `yes` or `y` lets the
 command continue.
+
+`EditCommand` calls `confirmEdit()` before replacing a withdrawal. The original withdrawal is accounted for in both
+balance and cycle calculations, so only the replacement's net effect is tested. A date edit compares spending in
+the destination cycle before and after replacement. Undated edits remain excluded from allowance-cycle totals,
+but still undergo balance checks. A declined confirmation or ended input leaves the original entry unchanged.
 
 `SpendingAlert#crossedBy()` compares the current ledger with the proposed result and returns every threshold crossed:
 
@@ -501,6 +546,55 @@ displayed index to the matching position in the sorted list. A backdated additio
 transactions; users should check the current `recent` or `find` output before deleting.
 <!-- @@author -->
 
+<!-- @@author naieel04 -->
+
+### Editing a transaction
+
+The `edit INDEX` command corrects selected fields of a deposit or withdrawal using the number shown by
+`recent`, `history` or `find`. See the [User Guide](UserGuide.md#editing-a-transaction-edit) for syntax and examples.
+
+#### How it works
+
+1. `Parser#parse()` delegates to `EditParser#parse()`, which validates the index and field syntax, then creates an
+   `EditCommand` containing immutable `EditFields`. Null fields mean "keep the old value"; empty `d/` means clear it.
+2. `EditCommand#execute()` checks the index and reads the entry at `transactions.size() - index`. It retains omitted
+   values and validates the complete replacement before changing the ledger. Invalid edits raise `FinNusException`.
+3. A changed withdrawal is checked with `SpendingAlert#confirmEdit()` before mutation. If a threshold is newly crossed,
+   confirmation is required; declining or ending input leaves the entry unchanged. After approval, or if no alert
+   applies, `TransactionList#replace()` replaces the entry and applies a stable date sort without changing the count.
+   Date edits can change displayed indices; other edits retain the entry's position.
+4. The command displays the before/after entries and any saved FX rate. FinNUS detects the changed snapshot and
+   attempts to save it using the existing storage format. Failed saves remain pending for retry.
+
+This sequence shows a successful `edit 1 a/6.50` on an SGD withdrawal:
+
+![Sequence diagram of editing a withdrawal amount](images/EditSequenceDiagram.png)
+
+*Figure 7. A successful SGD edit that crosses no new alert threshold. Validation details, spending-alert confirmation,
+UI output, allowance handling and saving are omitted.
+[PlantUML source](diagrams/EditSequenceDiagram.puml).*
+
+Foreign amount edits retain the saved rate unless `r/` is supplied. `ForeignAmount#toSgd()` rounds half-up to cents;
+the command checks the SGD limit without using or changing global rates. Metadata-only edits retain the foreign value.
+Identical values print `No changes made.` without replacement; decimal scale alone does not count as a change.
+
+`FinNUS#prepareAllowance()` defers allowance crediting until after an edit consumes its index. Editing an allowance
+deposit leaves its schedule and `lastCredited` unchanged. History mode requires `stop` before editing.
+
+<!-- @@author -->
+
+#### Design considerations
+
+<!-- @@author naieel04 -->
+
+Immutable replacement avoids partial updates and preserves transaction type and currency. Mutable setters would need
+rollback on validation failure; deletion and re-entry would change the position of same-day transactions.
+
+Parser, command and replacement tests cover validation, retained fields, FX rounding, balances and ordering.
+`FinNUSTest` and `EditPersistenceTest` cover allowance timing, save retries, reports and restart persistence.
+
+<!-- @@author -->
+
 ### Setting exchange rates
 
 The `rate` command stores exchange rates used to convert foreign-currency transactions
@@ -562,7 +656,7 @@ This sequence shows the normal path for `recent 2`:
 
 ![Sequence diagram of recent command](images/RecentCommandSequenceDiagram.png)
 
-*Figure 7. Retrieving and displaying up to two recent transactions.
+*Figure 8. Retrieving and displaying up to two recent transactions.
 [PlantUML source](diagrams/RecentSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
@@ -611,11 +705,11 @@ The sequence diagram follows a successful `history n/2 p/2`, `next`, and `stop` 
 
 ![Sequence diagram of paginated history mode](images/HistorySequenceDiagram.png)
 
-*Figure 8. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
+*Figure 9. Opening, navigating, and leaving history mode. Snapshot comparison and automatic
 allowance handling are omitted. [PlantUML source](diagrams/HistorySequenceDiagram.puml).*
 
 The command stores a zero-based `firstIndex` in newest-first order and a `pageSize`. It reads
-transactions from `TransactionList` using `size - 1 - index`, leaving the stored insertion order
+transactions from `TransactionList` using `size - 1 - index`, leaving the stored chronological order
 untouched. Displayed transaction numbers are global newest-first indices, so they agree with
 `recent` and `delete`. The heading shows the visible range and total count instead of a page
 number because `n/NUMBER` preserves the first visible transaction even when that position is
@@ -628,7 +722,7 @@ The class diagram shows the session reference and how history reads `Transaction
 
 ![Class diagram of the history command and its collaborators](images/HistoryClassDiagram.png)
 
-*Figure 9. History command state and its application, parser, transaction list, and UI
+*Figure 10. History command state and its application, parser, transaction list, and UI
 relationships.
 [PlantUML source](diagrams/HistoryClassDiagram.puml).*
 
@@ -669,7 +763,7 @@ resizing, invalid input, empty history, and the command restriction in the appli
 **Aspect: transaction display order**
 
 * **Alternative 1 (current choice):** display newest first, as `recent` does, while keeping
-  `TransactionList` in oldest-first insertion order.
+`TransactionList` in chronological order, with stable entry order for equal dates.
   * Pros: recent activity appears first. The global displayed indices match `recent` and `delete`,
     and adding a transaction remains a simple append to the stored list.
   * Cons: the displayed order differs from storage order, so history translates each displayed
@@ -810,13 +904,17 @@ amount is capped (see [Representing money](#representing-money)).
 
 The sequence below follows the calculation and display of one `balance` request:
 
+<!-- @@author naieel04 -->
+
 ![Sequence diagram of a balance command](images/BalanceSequenceDiagram.png)
 
-*Figure 10. Calculating and displaying the current balance.
+*Figure 11. Calculating and displaying the current balance.
 [PlantUML source](diagrams/BalanceSequenceDiagram.puml).*
 
 An X represents an object that is no longer referenced and can be garbage-collected. It does not represent an explicit
 Java deletion or guarantee immediate collection.
+
+<!-- @@author -->
 
 #### Design considerations
 
@@ -842,7 +940,7 @@ Logging, console output, input validation and saving the ledger afterwards are l
 
 ![Sequence diagram of a foreign-currency withdrawal](images/ForeignTransactionSequenceDiagram.png)
 
-*Figure 11. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
+*Figure 12. Recording a JPY withdrawal, assuming a configured rate of 1 SGD = 110 JPY.
 [PlantUML source](diagrams/ForeignTransactionSequenceDiagram.puml).*
 
 1. `Parser#extractCurrency()` removes the `c/CURRENCY` part from the arguments, so the rest is
@@ -926,7 +1024,7 @@ The class diagram below shows how these classes are related. Only the members re
 
 ![Class diagram of the classes involved in categorising spending](images/CategoryClassDiagram.png)
 
-*Figure 12. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
+*Figure 13. Classes involved in categorising spending. [PlantUML source](diagrams/CategoryClassDiagram.puml).*
 
 `TransactionList` owns exactly one `CategoryList`. `WithdrawCommand` and `CategoryCommand` do not keep a reference to
 it; they get it from the `TransactionList` they are given when they run, which is why the existence of a category
@@ -938,24 +1036,25 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch t/FOOD`.
 
 1. `Parser#parseWithdraw()` calls `extractCategory()`, which removes `t/FOOD` from the arguments and checks that
    `FOOD` has a valid format (one word of letters, digits and `-`, at most 20 characters).
-2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns
-   `WithdrawCommand(4.50, "Lunch", "FOOD")`.
+2. The rest of the arguments (`4.50 d/Lunch`) are parsed as before, and the parser returns a `WithdrawCommand` with
+   the category name `FOOD`.
 3. `WithdrawCommand#execute()` calls `CategoryList#resolve("FOOD")`, which returns `Food`. If the category did not
    exist, `resolve()` would throw a `FinNusException` listing the valid categories.
-4. A `Transaction` with category `Food` is added to the `TransactionList` and shown as
-   `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
+4. A `Transaction` with category `Food` is created and, after any spending alert confirmation, added to the
+   `TransactionList` and shown as `[30 Oct 2026] [Withdrawal] -$4.50 (Lunch) #Food`.
 
 The sequence diagram in [How a dated withdrawal is processed](#how-a-dated-withdrawal-is-processed) shows these
 steps for a withdrawal that also has a date.
 
-`c/` (currency) and `t/` are both one-word values that can appear anywhere in the command. To avoid two copies of
-the same logic, both are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
+`c/` (currency), `t/` and `on/` (date) are all one-word values that can appear anywhere in the command. To avoid
+several copies of the same logic, they are removed by one helper, `Parser#extractPrefixedValue()`, which also rejects a prefix that is
 given twice or has no value.
 
 #### Saving categories
 
 Custom categories are saved as `CATEGORY|NAME` records. The category of a transaction is saved as one extra, last
-field of its `TRANSACTION` record (empty for a deposit), e.g. `TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food`.
+field of its `TRANSACTION` record before the date (empty for a deposit), e.g.
+`TRANSACTION|WITHDRAWAL|4.50|THVuY2g=|Food|2026-10-20`.
 
 * Rows saved before categories existed have no category field. Their withdrawals are loaded under `Others`, so old
   save files keep working.
@@ -998,8 +1097,8 @@ the basis for features that look at spending over a period, such as a budget cyc
 
 #### How a dated withdrawal is processed
 
-1. `Parser#parse(input, today)` receives today's date as a parameter. `Parser#parse(input)`, used by the app,
-   passes `LocalDate.now()`, while tests pass a fixed date so they never depend on the real date.
+1. `FinNUS` captures today's date from its injected `Clock` and passes it to `Parser#parse(input, today)`.
+   The convenience overload `Parser#parse(input)` uses `LocalDate.now()`; tests can pass a fixed date.
 2. `Parser#extractDate()` removes `on/2026-10-20` with the same `extractPrefixedValue()` helper used for `c/` and
    `t/`, and checks the date. `LocalDate.parse()` uses the strict ISO format, so it rejects both badly formatted
    text (`2026-2-3`) and dates that do not exist (`2026-02-30`). Before that, the text must match
@@ -1010,12 +1109,12 @@ the basis for features that look at spending over a period, such as a budget cyc
    `Transaction`.
 
 The sequence diagram below shows the whole flow for `withdraw 4.50 d/Lunch t/food on/2026-10-20`, including how
-the category from [Categorising spending](#categorising-spending) is resolved. Logging, output and amount
-validation are left out.
+the category from [Categorising spending](#categorising-spending) is resolved. Logging, output, amount validation and
+the [spending alert](#spending-alerts) check before `add()` are left out.
 
 ![Sequence diagram of a withdrawal with a category and a date](images/DatedCategorisedWithdrawSequenceDiagram.png)
 
-*Figure 13. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
+*Figure 14. Processing a dated, categorised withdrawal. [PlantUML source](diagrams/DatedCategorisedWithdrawSequenceDiagram.puml).*
 
 The parser removes `t/food` and `on/2026-10-20` first, so the remaining `4.50 d/Lunch` is split into amount and
 description exactly as for a plain withdrawal. The category name is passed to `WithdrawCommand` unchanged, and only
@@ -1037,7 +1136,7 @@ each count still means exactly one format, so older save files keep loading:
 
 Transactions loaded from rows without a date have a `null` date and are shown without one. A row with an invalid
 date is skipped with a warning, like other damaged rows. Loading uses the same format and earliest-date rules as
-the parser, so a hand-edited file cannot load a date that a command would reject.
+the parser. The loader does not compare saved dates with today's clock; future-date rejection applies to command input.
 
 #### Design considerations
 
@@ -1107,10 +1206,12 @@ FinNUS only runs while it is open, so "on the 5th" really means "the first time 
    both are added, each on its own date.
 3. A foreign amount is converted with `CurrencyRates#convert()` at the current rate. If no rate is set, `convert()`
    throws a `FinNusException`; the loop stops without moving `lastCredited`, so that date stays due.
-4. `FinNUS#executeCommand()` also runs `CreditAllowanceCommand` after every other command. This adds a waiting
-   allowance as soon as the user sets the missing rate, and handles FinNUS staying open past midnight. Only the run
-   at startup shows the warning, so it does not repeat after every command.
-5. Both runs happen before the snapshot comparison, so any added deposit is saved like any other change.
+4. Before most normal commands, `FinNUS#prepareAllowance()` credits and saves due allowances so lists and balances
+   include them. It skips `edit` and `delete` until those commands consume their displayed indices, and skips `exit`.
+   History navigation defers credits to keep its numbering stable. Successful non-exit commands outside history also
+   retry crediting afterwards, so a new rate can release a waiting allowance. The same captured command date is used
+   throughout. Only startup displays warnings about a due allowance that cannot yet be credited.
+5. Each credit updates the pending-change flag, so save failures can be retried even if the following command fails.
 
 Deleting an automatic deposit does not bring it back, because `lastCredited` has already moved past its date.
 
@@ -1129,7 +1230,7 @@ without the record load with no allowance. A record with an invalid day, amount,
 
 **Aspect: when an automatic deposit is added**
 
-* **Alternative 1 (current choice):** at startup and after each command, for every due date since `lastCredited`.
+* **Alternative 1 (current choice):** at startup and around normal commands, for every due date since `lastCredited`.
   * Pros: works even though FinNUS is not always running; missed months are added on their real dates.
   * Cons: needs the extra `lastCredited` field so the same month is never added twice.
 * **Alternative 2:** only add the allowance while FinNUS is open on the allowance day.
@@ -1171,7 +1272,7 @@ retry an earlier failed save even though it creates no new change itself.
 
 ![Automatic saving with encoding, backup rotation, and atomic replacement](images/AutomaticSaveSequenceDiagram.png)
 
-*Figure 14. One successful automatic save. File operations are summarised; failure handling is described in the notes
+*Figure 15. One successful automatic save. File operations are summarised; failure handling is described in the notes
 and recovery table. [PlantUML source](diagrams/AutomaticSaveSequenceDiagram.puml).*
 
 `FileStorage` writes UTF-8 text to a temporary file in the save directory. If the existing main file is known to be clean,
@@ -1194,7 +1295,7 @@ order. Simply starting the program and running read-only commands does not rewri
 
 ![Decisions for loading the main file, recovering a backup, and requesting setup](images/StorageRecoveryActivityDiagram.png)
 
-*Figure 15. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
+*Figure 16. Startup recovery policy. Guards select the next action; the final node ends loading, not the application.
 First-run setup runs afterwards when requested. [PlantUML source](diagrams/StorageRecoveryActivityDiagram.puml).*
 
 | Situation                                                                  | Recovered state and diagnostics                                                                                            | Saving and file protection                                                                                                                                                       |
@@ -1439,11 +1540,13 @@ to make allowance and campus-expense tracking straightforward, including for stu
 v2.1 includes:
 
 - deposits and withdrawals, with an optional date, category and foreign currency
-- the opening balance, `balance`, `recent`, `history`, `find` and `delete`
+- the opening balance, `balance`, `recent`, `history`, `find`, `edit` and `delete`
 - exchange rates, custom categories, and a monthly allowance that is added automatically
 - automatic saving, with recovery from damaged files
 
-It does not include editing transactions, listing one cycle's spending, charts or a daily budget. See
+It includes editing deposits and withdrawals, including their historical foreign amounts and exchange rates.
+It also includes cash-flow and category-spending charts, plus configurable spending alerts. It does not include
+a cycle-filtered transaction list or a daily budget. See
 [Planned enhancements](#planned-enhancements).
 <!-- @@author -->
 
@@ -1454,7 +1557,8 @@ It does not include editing transactions, listing one cycle's spending, charts o
 <!-- @@author -->
 
 <!-- @@author chancheese -->
-Listing one cycle's spending and visual charts are not implemented yet.
+Financial charts are implemented. A dedicated cycle-filtered transaction list is not implemented yet;
+`allowance` shows cycle totals, while `chart spending` supports calendar periods.
 <!-- @@author -->
 
 <!-- @@author naieel04 -->
@@ -1468,6 +1572,8 @@ Listing one cycle's spending and visual charts are not implemented yet.
 | US-05 | disciplined user         | list this cycle's spending                                              | I can check that nothing is missing        |
 | US-06 | power user               | see my balance through visual charts                                    | I can see my financial status clearly      |
 | US-07 | forward-planning student | see how many days remain until my next allowance                        | I can pace my spending                     |
+| US-08 | careless user            | edit a deposit's amount, description, date, or saved exchange rate       | a mistyped entry does not distort my balance |
+| US-09 | distracted user          | edit a withdrawal, including its category and saved exchange rate        | my spending records stay accurate          |
 <!-- @@author -->
 
 ---
@@ -1507,13 +1613,45 @@ Listing one cycle's spending and visual charts are not implemented yet.
 
 **Main success scenario:**
 
-1. The user enters `history n/2`. FinNUS displays the two most recently recorded transactions.
+1. The user enters `history n/2`. FinNUS displays the two transactions with the newest dates first.
 2. The user enters `next`. FinNUS displays the next two transactions, if available.
 3. The user enters `stop`. FinNUS returns to the normal command loop.
 
 **Extensions:** An empty ledger displays an empty-list message while keeping history mode active.
 During an active view, an out-of-range page or page size reports an error without changing the current view.
 <!-- @@author naieel04 -->
+<!-- @@author -->
+
+<!-- @@author naieel04 -->
+
+### UC-03: Correct a recorded transaction
+
+**Actor:** FinNUS user
+
+**Related stories:** US-08 and US-09 in this guide.
+
+**Preconditions:** Setup is complete, at least one transaction exists, and history mode is inactive.
+
+**Postconditions:** The selected entry is corrected without changing its type, currency, or the transaction count.
+The balance reflects the corrected values, and FinNUS attempts to save them.
+
+**Main success scenario:**
+
+1. The user enters `recent` or `find` and chooses a displayed transaction number.
+2. The user enters an edit such as `edit 1 a/6.50 t/food`.
+3. FinNUS validates all changes, requests confirmation for newly crossed withdrawal alert thresholds, and replaces
+   the selected entry only if approved or no confirmation is needed, maintaining chronological order.
+4. FinNUS displays the before/after entries and automatically saves the ledger.
+
+**Extensions:**
+
+- **2a. History is active:** The user must enter `stop` before `edit` is accepted.
+- **3a. Invalid index, field, category, or resulting amount:** FinNUS reports the error; the selected entry is unchanged.
+- **3b. All supplied values match:** FinNUS displays `No changes made.`; no edit-induced save is needed.
+- **3c. A date changes:** The corrected entry may get a different index; the user checks the list before editing again.
+- **3d. A spending alert is declined or its input ends:** FinNUS displays `Edit cancelled.` and retains the entry.
+- **4a. Saving fails:** FinNUS reports that the correction remains in memory and retries on a later command or at exit.
+
 <!-- @@author -->
 
 ---
@@ -1608,6 +1746,23 @@ threshold and opening balance; the withdrawal is cancelled, so the balance remai
 | MT-15 | Saved sample ledger; restart FinNUS | Enter `history p/10000000000000000`. | FinNUS reports `History page is out of range.` |
 <!-- @@author naieel04 -->
 
+### Transaction editing scenarios
+
+Run each case independently from the sample ledger above unless it says to restart the same session.
+
+| ID | Steps / input | Expected result |
+|----|---------------|-----------------|
+| MT-16 | Enter `recent`, `edit 1 a/6.50 t/food`, then `balance` and `find t/food`. | Lunch changes to SGD 6.50 in Food; the deposit is unchanged, count remains 2, and balance is SGD 143.50. |
+| MT-17 | Enter `deposit 55000 c/JPY d/Foreign allowance`, `rate JPY 120`, `edit 1 r/100`, `edit 1 a/60000`, then `rate` and `balance`. Exit, restart, and enter `recent` and `balance`. | The foreign deposit changes from SGD 500 to 550, then 600. Its saved rate remains 100 for the amount-only edit, global JPY stays 120, count is 3, and balance is SGD 745.50 before and after restart. |
+| MT-18 | Enter `edit 1 a/6.50 t/Unknown`, `edit 1 d/`, `edit 2 t/food`, `edit 99 a/1`, then `edit 1 a/4.50` and `balance`. | The first four edits report errors without changing entries. The fifth reports `No changes made.` Balance remains SGD 145.50 and count remains 2. |
+| MT-19 | Enter `edit 1 on/2000-01-01`, then `recent`. Exit, restart, and enter `history` and `stop`. | Lunch moves behind the newer deposit and has index 2 in both views. Its date survives restart; balance stays SGD 145.50. |
+| MT-20 | Use the folder permission procedure in MT-10, but issue `edit 1 a/6.50`. Restore write access, enter `balance`, then exit and restart. | The edit first reports an automatic-save failure while remaining visible in memory. After retry and restart, Lunch is SGD 6.50 and balance is SGD 143.50. |
+| MT-21 | Enter `edit 2 d/`, then `recent`, `history`, `edit 1 a/6.50`, `stop`, and `balance`. | The deposit description is cleared. History rejects the edit until `stop`; Lunch stays SGD 4.50 and balance stays SGD 145.50. |
+
+Also check `edit 1 a/0`, duplicate fields, an empty `r/`, `c/SGD`, and an SGD entry with `r/100`.
+For a foreign transaction, a correction that rounds to SGD zero or exceeds SGD 1000000 must be rejected atomically.
+The corresponding automated boundary and rounding cases are in `ForeignEditCommandTest`.
+
 ### Storage and recovery scenarios
 
 Use disposable test copies and stop the application before editing fixture files.
@@ -1641,7 +1796,6 @@ These features are not in v2.1.
 
 | Enhancement | User need | Proposed design |
 |-------------|-----------|-----------------|
-| Edit a transaction | Fix a typo without deleting and re-entering it | `edit INDEX` takes the same prefixes as `withdraw` and replaces the transaction at that `recent` index. |
 | List one cycle's spending | Check every spend since the allowance arrived | A cycle filter on `history`, using the dates from `Allowance`. |
 | Daily budget | Know how much is safe to spend today | `balance` divides the balance by the days left until the next allowance. |
 <!-- @@author -->

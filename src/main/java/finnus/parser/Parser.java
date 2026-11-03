@@ -214,6 +214,10 @@ public class Parser {
             new ExitCommand();
         case DELETE ->
             parseDelete(arguments);
+        //@@author naieel04
+        case EDIT ->
+            EditParser.parse(arguments, today);
+        //@@author
         case RATE ->
             parseRate(arguments);
         case CATEGORY ->
@@ -289,6 +293,12 @@ public class Parser {
             return AllowanceCommand.stop(today);
         }
         String format = "\nFormat: " + CommandWord.ALLOWANCE.getUsage();
+        //@@author lololol8484
+        validatePrefixedValue(arguments, CURRENCY_PATTERN,
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        validatePrefixedValue(arguments, AMOUNT_PATTERN,
+                "Missing amount after " + AMOUNT_PREFIX + ", e.g. " + AllowanceCommand.EXAMPLE + "." + format);
+        //@@author
         String[] currencyAndRest = extractCurrency(arguments);
         String currencyCode = currencyAndRest[0];
         String[] amountAndRest = extractPrefixedValue(currencyAndRest[1], AMOUNT_PATTERN,
@@ -634,8 +644,10 @@ public class Parser {
         }
         String[] parts = arguments.split(WHITESPACE_SEPARATOR_REGEX);
         if (parts.length != 2) {
+            //@@author naieel04
             throw new FinNusException("Give a currency and a rate, e.g. " + CommandWord.RATE.getWord()
                     + " JPY 110.\nFormat: " + CommandWord.RATE.getUsage());
+            //@@author
         }
         return new RateCommand(parseCurrencyCode(parts[0]), parseRateValue(parts[1]));
     }
@@ -647,7 +659,9 @@ public class Parser {
      * @throws FinNusException If the code is not a real currency, or is SGD.
      */
     static String parseCurrencyCode(String text) throws FinNusException {
+        //@@author naieel04
         String code = text.toUpperCase(Locale.ROOT);
+        //@@author
         try {
             // Java's built-in currency list lets us reject typos such as "JYP" without
             // maintaining our own list.
@@ -688,6 +702,12 @@ public class Parser {
      * Parses a positive deposit amount and its optional description.
      */
     private static Command parseDeposit(String arguments, LocalDate today) throws FinNusException {
+        //@@author lololol8484
+        validatePrefixedValue(arguments, CURRENCY_PATTERN,
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        validatePrefixedValue(arguments, DATE_PATTERN,
+                "Missing date after " + DATE_PREFIX + ", e.g. " + DATE_EXAMPLE + ".");
+        //@@author
         //@@author nabijonzzz
         if (CATEGORY_PATTERN.matcher(arguments).find()) {
             throw new FinNusException("Categories are only for spending, so " + CATEGORY_PREFIX
@@ -714,6 +734,14 @@ public class Parser {
      * Parses a positive withdrawal amount and requires a non-empty description.
      */
     private static Command parseWithdraw(String arguments, LocalDate today) throws FinNusException {
+        //@@author lololol8484
+        validatePrefixedValue(arguments, CATEGORY_PATTERN,
+                "Missing category after " + CATEGORY_PREFIX + ", e.g. " + CATEGORY_PREFIX + "food.");
+        validatePrefixedValue(arguments, DATE_PATTERN,
+                "Missing date after " + DATE_PREFIX + ", e.g. " + DATE_EXAMPLE + ".");
+        validatePrefixedValue(arguments, CURRENCY_PATTERN,
+                "Missing currency after " + CURRENCY_PREFIX + ", e.g. c/JPY.");
+        //@@author
         //@@author nabijonzzz
         String[] categoryAndRest = extractCategory(arguments);
         String categoryName = categoryAndRest[0];
@@ -728,7 +756,9 @@ public class Parser {
         String description = amountAndDescription[1];
         if (description.isEmpty()) {
             throw new FinNusException("A withdrawal needs a description so you know what you spent on.\n"
+                    //@@author naieel04
                     + "Format: " + CommandWord.WITHDRAW.getUsage());
+            //@@author
         }
         //@@author chancheese
         if (currencyCode != null) {
@@ -800,6 +830,28 @@ public class Parser {
         //@@author
         return new String[]{value, rest};
     }
+
+    //@@author lololol8484
+    /**
+     * Checks a prefixed field before any other field is removed from the arguments.
+     * This keeps a later prefix from being mistaken for the value of an earlier one.
+     *
+     * @param arguments The complete argument string before extraction.
+     * @param pattern The pattern for the prefix being validated.
+     * @param missingMessage The message to show when its value is missing.
+     * @throws FinNusException If a prefix is followed by another recognised prefix or no value.
+     */
+    private static void validatePrefixedValue(String arguments, Pattern pattern, String missingMessage)
+            throws FinNusException {
+        Matcher matcher = pattern.matcher(arguments);
+        while (matcher.find()) {
+            String value = matcher.group(1);
+            if (value.isEmpty() || startsWithRecognisedPrefix(value)) {
+                throw new FinNusException(missingMessage);
+            }
+        }
+    }
+    //@@author
 
     //@@author lololol8484
     /**

@@ -395,7 +395,9 @@ public class LedgerCodec {
      * including the predefined categories).
      */
     private void parseCategory(String[] fields, Records records) {
+        //@@author naieel04
         requireFields(fields, 2);
+        //@@author
         LedgerSnapshot.validateNewCategory(records.categories, fields[1]);
         records.categories.add(fields[1]);
     }

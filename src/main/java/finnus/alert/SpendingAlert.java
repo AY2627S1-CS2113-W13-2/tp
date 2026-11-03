@@ -54,16 +54,25 @@ public final class SpendingAlert {
      * A threshold already exceeded before the proposed entry is not reported again.
      */
     public List<String> crossedBy(TransactionList transactions, Transaction proposedWithdrawal) {
+        return crossedBy(transactions, null, proposedWithdrawal);
+    }
+
+    /** Compares the real ledger with a proposed addition or replacement, without mutating it. */
+    private List<String> crossedBy(TransactionList transactions, Transaction original,
+            Transaction proposedWithdrawal) {
         assert transactions != null : "Transaction list must not be null";
         assert proposedWithdrawal != null && proposedWithdrawal.getType() == TransactionType.WITHDRAWAL
                 : "A spending alert requires a proposed withdrawal";
         List<String> alerts = new ArrayList<>();
         Money balanceBefore = transactions.getBalance();
         Money balanceAfter = balanceBefore.add(proposedWithdrawal.getSignedAmount());
+        if (original != null) {
+            balanceAfter = balanceAfter.add(original.getAmount());
+        }
         if (balanceThreshold != null && crossesBelow(balanceBefore, balanceAfter, balanceThreshold)) {
             alerts.add("Balance would fall below your alert threshold of " + balanceThreshold.format() + ".");
         }
-        addAllowanceAlerts(alerts, transactions, proposedWithdrawal);
+        addAllowanceAlerts(alerts, transactions, original, proposedWithdrawal);
         if (crossesBelow(balanceBefore, balanceAfter, transactions.getOpeningBalance())) {
             alerts.add("Balance would fall below your opening balance of "
                     + transactions.getOpeningBalance().format() + ".");
@@ -77,8 +86,30 @@ public final class SpendingAlert {
 
     /** Displays crossed thresholds and returns whether the user explicitly approved the withdrawal. */
     public boolean confirmWithdrawal(TransactionList transactions, Transaction proposedWithdrawal, Ui ui) {
+        return confirmAlerts(crossedBy(transactions, proposedWithdrawal), ui,
+                "Proceed with this withdrawal? [yes/no]: ", "Withdrawal cancelled.");
+    }
+
+    /**
+     * Requests confirmation for thresholds newly crossed by replacing a withdrawal.
+     * The original entry is removed only from the calculation, leaving the ledger untouched until approval.
+     *
+     * @param transactions The ledger before the edit.
+     * @param index The zero-based position of the withdrawal being replaced.
+     * @param replacement The validated replacement withdrawal, including its SGD amount and date.
+     * @param ui The interface used for alert messages and confirmation.
+     * @return Whether the edit may proceed; declining or ending input cancels it.
+     */
+    public boolean confirmEdit(TransactionList transactions, int index, Transaction replacement, Ui ui) {
+        Transaction original = transactions.get(index);
+        assert original.getType() == TransactionType.WITHDRAWAL : "Only withdrawal edits require spending alerts";
+        return confirmAlerts(crossedBy(transactions, original, replacement), ui,
+                "Proceed with this edit? [yes/no]: ", "Edit cancelled.");
+    }
+
+    /** Shares confirmation behavior while keeping cancellation messages specific to the operation. */
+    private boolean confirmAlerts(List<String> alerts, Ui ui, String prompt, String cancellationMessage) {
         assert ui != null : "UI must not be null";
-        List<String> alerts = crossedBy(transactions, proposedWithdrawal);
         if (alerts.isEmpty()) {
             return true;
         }
@@ -86,17 +117,21 @@ public final class SpendingAlert {
         message.add("Spending alert:");
         message.addAll(alerts);
         ui.showMessage(message);
-        Result result = Confirmation.ask(ui, "Proceed with this withdrawal? [yes/no]: ");
+        Result result = Confirmation.ask(ui, prompt);
         boolean approved = result == Result.YES;
         if (!approved) {
-            ui.showMessage("Withdrawal cancelled.");
-            logger.info("Withdrawal cancelled after spending alert confirmation: " + result);
+            ui.showMessage(cancellationMessage);
+            logger.info(cancellationMessage + " Spending alert confirmation: " + result);
         }
         return approved;
     }
 
-    private void addAllowanceAlerts(List<String> alerts, TransactionList transactions,
+    private void addAllowanceAlerts(List<String> alerts, TransactionList transactions, Transaction original,
             Transaction proposedWithdrawal) {
+        // An undated legacy entry cannot be assigned to an allowance cycle, even during an edit.
+        if (proposedWithdrawal.getDate().isEmpty()) {
+            return;
+        }
         Optional<Allowance> allowanceSetting = transactions.getAllowance();
         if (allowanceSetting.isEmpty() || !allowanceSetting.get().hasAmount()) {
             return;
@@ -106,18 +141,20 @@ public final class SpendingAlert {
         if (allowanceAmount.isEmpty()) {
             return;
         }
-        LocalDate date = proposedWithdrawal.getDate().orElseGet(LocalDate::now);
+        LocalDate date = proposedWithdrawal.getDate().orElseThrow();
         LocalDate cycleStart = allowance.cycleStart(date);
         LocalDate nextCycleStart = allowance.nextDate(date);
         Money spentBefore = Money.ZERO;
         for (Transaction transaction : transactions.getAll()) {
             if (transaction.getType() == TransactionType.WITHDRAWAL
-                    && transaction.getDate().filter(day -> !day.isBefore(cycleStart)
-                            && day.isBefore(nextCycleStart)).isPresent()) {
+                    && isInCycle(transaction, cycleStart, nextCycleStart)) {
                 spentBefore = spentBefore.add(transaction.getAmount());
             }
         }
         Money spentAfter = spentBefore.add(proposedWithdrawal.getAmount());
+        if (original != null && isInCycle(original, cycleStart, nextCycleStart)) {
+            spentAfter = spentAfter.add(original.getAmount().negate());
+        }
         Money fullAllowance = allowanceAmount.get();
         if (allowancePercentage != null) {
             Money percentageLimit = Money.of(fullAllowance.toBigDecimal()
@@ -130,6 +167,11 @@ public final class SpendingAlert {
         if (crossesAbove(spentBefore, spentAfter, fullAllowance)) {
             alerts.add("Withdrawals would exceed 100% of your allowance (" + fullAllowance.format() + ").");
         }
+    }
+
+    /** Uses the replacement's cycle for both totals, including edits that move spending between cycles. */
+    private static boolean isInCycle(Transaction transaction, LocalDate start, LocalDate nextStart) {
+        return transaction.getDate().filter(day -> !day.isBefore(start) && day.isBefore(nextStart)).isPresent();
     }
 
     private static Optional<Money> allowanceAmountInSgd(Allowance allowance, TransactionList transactions) {

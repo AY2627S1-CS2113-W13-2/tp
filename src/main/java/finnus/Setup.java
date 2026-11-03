@@ -2,6 +2,7 @@ package finnus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -26,6 +27,7 @@ public class Setup {
     private static final Logger logger = Logger.getLogger(Setup.class.getName());
     //@@author lololol8484
 
+    //@@author chancheese
     /**
      * Runs setup using the real current date.
      *
@@ -47,6 +49,33 @@ public class Setup {
      * @return {@code true} if the user confirmed a balance; {@code false} if input ended first.
      */
     public boolean run(Ui ui, TransactionList transactions, LocalDate today) {
+        return run(ui, transactions, today, () -> {
+            // Standalone callers do not need a persistence checkpoint.
+        });
+    }
+
+    /**
+     * Runs all setup steps, allowing the application to persist the balance before optional prompts.
+     * Keep optional setup steps here so every application entry point follows the same workflow.
+     *
+     * @param ui The console interface used for prompts and responses.
+     * @param transactions The ledger being initialized.
+     * @param today The current date used for the allowance cycle.
+     * @param onBalanceConfirmed Called once after balance confirmation, before optional setup.
+     * @return Whether an opening balance was confirmed.
+     */
+    public boolean run(Ui ui, TransactionList transactions, LocalDate today, Runnable onBalanceConfirmed) {
+        Objects.requireNonNull(onBalanceConfirmed, "Balance confirmation callback must not be null");
+        if (!initializeOpeningBalance(ui, transactions)) {
+            return false;
+        }
+        onBalanceConfirmed.run();
+        configureOptionalSettings(ui, transactions, today);
+        return true;
+    }
+
+    /** Prompts until an opening balance is confirmed or input ends. */
+    boolean initializeOpeningBalance(Ui ui, TransactionList transactions) {
         //@@author lololol8484
         assert ui != null : "UI must not be null";
         assert transactions != null : "Transaction list must not be null";
@@ -86,15 +115,19 @@ public class Setup {
             //@@author nkyjStar
             logger.info("First-run opening balance confirmed");
             //@@author lololol8484
-            Optional<Money> balanceThreshold = askForBalanceThreshold(ui);
-            boolean hasAllowanceAmount = askForAllowance(ui, transactions, today);
-            Optional<BigDecimal> allowancePercentage = hasAllowanceAmount
-                    ? askForAllowancePercentage(ui) : Optional.empty();
-            transactions.setSpendingAlert(new SpendingAlert(balanceThreshold.orElse(null),
-                    allowancePercentage.orElse(null)));
-            logger.info("Spending alert settings recorded during setup");
             return true;
         }
+    }
+
+    /** Runs optional alert and allowance questions after the confirmed balance has been checkpointed. */
+    private void configureOptionalSettings(Ui ui, TransactionList transactions, LocalDate today) {
+        Optional<Money> balanceThreshold = askForBalanceThreshold(ui);
+        boolean hasAllowanceAmount = askForAllowance(ui, transactions, today);
+        Optional<BigDecimal> allowancePercentage = hasAllowanceAmount
+                ? askForAllowancePercentage(ui) : Optional.empty();
+        transactions.setSpendingAlert(new SpendingAlert(balanceThreshold.orElse(null),
+                allowancePercentage.orElse(null)));
+        logger.info("Spending alert settings recorded during setup");
     }
 
     //@@author chancheese

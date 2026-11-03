@@ -8,7 +8,7 @@ import java.io.IOException;
  */
 public interface Storage {
     /**
-     * Returns recovered state and diagnostics without rewriting files during startup.
+     * Returns recovered state and diagnostics, initializing a pending setup marker when needed.
      */
     LoadResult load();
 
