@@ -60,7 +60,9 @@ Setup --> FinNUS: true
 deactivate Setup
 
 note over Setup, Ledger
-    Invalid answers are retried; Enter or end of input skips optional settings.
+    Invalid amounts and confirmation answers are retried.
+    Input ending before confirmation returns false and stops setup.
+    Enter or end of input skips optional settings after confirmation.
     The percentage option requires an allowance amount.
     At withdrawal time, 100% of the allowance (if set), opening balance,
     and zero are checked automatically.
