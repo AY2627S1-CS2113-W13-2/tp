@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+import finnus.FinNUS;
 import finnus.allowance.Allowance;
 import finnus.currency.ForeignAmount;
 import finnus.exception.FinNusException;
@@ -48,8 +49,7 @@ public class CreditAllowanceCommand extends Command {
 
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         Optional<Allowance> setting = transactions.getAllowance();
         if (setting.isEmpty() || !setting.get().hasAmount()) {
             return;

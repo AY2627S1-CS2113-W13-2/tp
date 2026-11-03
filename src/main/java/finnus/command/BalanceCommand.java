@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import finnus.FinNUS;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
 
@@ -46,8 +47,7 @@ public class BalanceCommand extends Command {
     public void execute(TransactionList transactions, Ui ui) {
         logger.fine("Getting balance");
 
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         //@@author chancheese
         List<String> lines = new ArrayList<>();
         lines.add("Your current balance is: " + transactions.getBalance().format());

@@ -77,8 +77,7 @@ public class Setup {
     /** Prompts until an opening balance is confirmed or input ends. */
     boolean initializeOpeningBalance(Ui ui, TransactionList transactions) {
         //@@author lololol8484
-        assert ui != null : "UI must not be null";
-        assert transactions != null : "Transaction list must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         assert transactions.size() == 0 : "First-run setup must not start with transactions";
         ui.showMessage("First-time setup", "Enter your current opening balance in SGD.",
                 "This is your starting balance and will not be recorded as a transaction.");

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import finnus.FinNUS;
 import finnus.exception.FinNusException;
 import finnus.money.Money;
 import finnus.transaction.Transaction;
@@ -54,8 +55,7 @@ public class ChartFlowCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) throws FinNusException {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         logger.fine("Preparing cash-flow chart by " + period + " from " + from + " to " + to
                 + ", page " + page);
         List<LocalDate> starts = new ArrayList<>();

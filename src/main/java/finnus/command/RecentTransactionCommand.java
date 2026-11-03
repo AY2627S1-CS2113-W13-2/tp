@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import finnus.FinNUS;
 import finnus.transaction.Transaction;
 import finnus.transaction.TransactionList;
 import finnus.ui.Ui;
@@ -70,8 +71,7 @@ public class RecentTransactionCommand extends Command {
      */
     @Override
     public void execute(TransactionList transactions, Ui ui) {
-        assert transactions != null : "Transaction list must not be null";
-        assert ui != null : "UI must not be null";
+        FinNUS.assertExecutionContext(transactions, ui);
         logger.fine("Getting recent transactions");
 
         // Get a list of the most recent transactions with a specified length
