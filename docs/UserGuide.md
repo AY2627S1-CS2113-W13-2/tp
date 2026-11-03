@@ -231,6 +231,8 @@ Format: `deposit AMOUNT [d/DESCRIPTION] c/CURRENCY` or `withdraw AMOUNT d/DESCRI
 * The rate is saved with the transaction, so changing a rate later does not change transactions you have already recorded.
   To correct a recorded transaction's rate, use [`edit INDEX r/RATE`](#editing-a-transaction-edit).
 * Because `c/` marks the currency, a word starting with `c/` cannot be used inside a description.
+* A prefix must be followed by its value. For example, `c/ on/2026-01-15` is rejected as a missing currency rather
+  than being interpreted as a currency followed by a date.
 
 Examples:
 

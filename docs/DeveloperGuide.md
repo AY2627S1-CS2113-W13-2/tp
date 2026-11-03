@@ -348,6 +348,12 @@ Given below is what happens when the user enters `withdraw 4.50 d/Lunch`.
 
 A deposit follows the same steps, except that the description is optional and no spending alert is checked.
 
+<!-- @@author lololol8484 -->
+Before extracting optional fields, `Parser` validates every supplied prefix value. A prefix followed by another
+recognised prefix is rejected as a missing value, regardless of the order in which the fields were entered. This
+prevents extraction of one field from hiding a malformed neighbouring field.
+<!-- @@author nabijonzzz -->
+
 #### Validation rules
 
 An amount is accepted only if it:
