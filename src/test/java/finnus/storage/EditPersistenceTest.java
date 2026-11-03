@@ -1,6 +1,7 @@
 package finnus.storage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,6 +14,8 @@ import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import finnus.FinNUS;
 import finnus.ScriptedUi;
@@ -89,6 +92,52 @@ class EditPersistenceTest {
         new FinNUS(second, new FileStorage(path), CLOCK).run();
         assertEquals(before, Files.readString(path));
         assertTrue(second.output().contains("No changes made."));
-        //@@author
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"no", "EOF"})
+    void run_cancelledEdit_preservesSavedFileAcrossRestart(String answer) throws Exception {
+        Path path = directory.resolve("finnus.txt");
+        new FinNUS(new ScriptedUi("100", "yes", "50", "", "deposit 100 d/Funding",
+                "withdraw 20 d/Lunch", "exit"), new FileStorage(path), CLOCK).run();
+        String before = Files.readString(path);
+        LedgerSnapshot original = new FileStorage(path).load().snapshot();
+        ScriptedUi edit = answer.equals("EOF") ? new ScriptedUi("edit 1 a/160")
+                : new ScriptedUi("edit 1 a/160", answer, "exit");
+
+        new FinNUS(edit, new FileStorage(path), CLOCK).run();
+
+        assertTrue(edit.output().contains("Balance would fall below your alert threshold of $50.00."));
+        assertTrue(edit.output().contains("Edit cancelled."));
+        assertFalse(edit.output().contains("Transaction updated:"));
+        assertEquals(before, Files.readString(path));
+        ScriptedUi reopened = new ScriptedUi("balance", "recent", "exit");
+        new FinNUS(reopened, new FileStorage(path), CLOCK).run();
+        assertTrue(reopened.output().contains("Your current balance is: $180.00"));
+        assertTrue(reopened.output().contains("[Withdrawal] -$20.00 (Lunch) #Others"));
+        assertEquals(original, new FileStorage(path).load().snapshot());
+        assertEquals(before, Files.readString(path));
+    }
+
+    @Test
+    void run_rateEditWithUnchangedSgd_preservesCorrectedRateAcrossRestart() {
+        Path path = directory.resolve("finnus.txt");
+        new FinNUS(new ScriptedUi("100", "yes", "", "", "rate JPY 110",
+                "deposit 1100 c/JPY d/Income", "exit"), new FileStorage(path), CLOCK).run();
+        LedgerSnapshot before = new FileStorage(path).load().snapshot();
+        ScriptedUi edit = new ScriptedUi("edit 1 r/110.000001", "exit");
+
+        new FinNUS(edit, new FileStorage(path), CLOCK).run();
+
+        assertTrue(edit.output().contains("Transaction updated:"));
+        LedgerSnapshot saved = new FileStorage(path).load().snapshot();
+        assertEquals(before.transactions().getFirst().amount(), saved.transactions().getFirst().amount());
+        assertEquals(new BigDecimal("110.000001"), saved.transactions().getFirst().foreignAmount().rate());
+        assertEquals(before.rates(), saved.rates());
+        ScriptedUi reopened = new ScriptedUi("balance", "recent", "exit");
+        new FinNUS(reopened, new FileStorage(path), CLOCK).run();
+        assertTrue(reopened.output().contains("Your current balance is: $110.00"));
+        assertEquals(saved, new FileStorage(path).load().snapshot());
+    }
+    //@@author
 }
